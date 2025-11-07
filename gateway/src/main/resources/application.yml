@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - AddRequestHeader=X-Internal-Call, true
+      forwarded-headers:
+        enabled: true
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+          httpclient:
+            connect-timeout: 60000
+            response-timeout: 60s
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - http://localhost:5173
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - Authorization
+            allowCredentials: true
