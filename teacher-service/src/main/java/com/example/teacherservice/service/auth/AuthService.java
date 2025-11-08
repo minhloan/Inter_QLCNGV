@@ -6,7 +6,6 @@ import com.example.teacherservice.dto.auth.TokenDto;
 import com.example.teacherservice.enums.Role;
 import com.example.teacherservice.exception.WrongCredentialsException;
 import com.example.teacherservice.model.User;
-import com.example.teacherservice.repository.UserRepository;
 import com.example.teacherservice.request.auth.LoginRequest;
 import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.auth.UpdatePasswordRequest;
@@ -14,13 +13,11 @@ import com.example.teacherservice.service.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -36,12 +33,9 @@ import java.util.concurrent.TimeUnit;
 public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
-    private final UserRepository userRepository;
     private final JwtService jwtService;
     private final RedisTemplate<String,String> redisTemplate;
     private final EmailService emailService;
-    private final ModelMapper modelMapper;
-    private final PasswordEncoder passwordEncoder;
 
     private static final String OTP_KEY_PREFIX = "otp:";
     private static final String OTP_COOLDOWN_PREFIX = "otp:cooldown:";
@@ -61,25 +55,25 @@ public class AuthService {
     public void forgotPassword(ForgotPassword request) {
         final String email = normalizeEmail(request.getEmail());
 
-        // 1) Kiểm tra user có tồn tại không (nếu không => 404)
+        // 1) Kiểm tra user có tồn tại không
         try {
             userService.getUserByEmail(email);
         } catch (Exception e) {
-            throw new RuntimeException("User not found");
+            throw new RuntimeException("Email không tồn tại trong hệ thống");
         }
 
         // 2) Chặn spam: cooldown
         if (inCooldown(email)) {
-            throw new RuntimeException("Please wait before requesting another OTP.");
+            throw new RuntimeException("Vui lòng đợi trước khi yêu cầu mã OTP mới");
         }
 
         // 3) Chặn vượt hạn mức trong ngày
         if (isOverDailyLimit(email)) {
-            throw new RuntimeException("OTP request limit reached for today.");
+            throw new RuntimeException("Đã đạt giới hạn yêu cầu OTP trong ngày");
         }
 
-        // 4) Sinh OTP 6 số và lưu Redis với TTL
-        String otp = randomOtp(OTP_LENGTH);
+        // 4) Sinh OTP
+        String otp = randomOtp();
         String otpKey = OTP_KEY_PREFIX + email;
         redisTemplate.opsForValue().set(otpKey, otp, OTP_TTL);
 
@@ -87,7 +81,7 @@ public class AuthService {
         String cooldownKey = OTP_COOLDOWN_PREFIX + email;
         redisTemplate.opsForValue().set(cooldownKey, "1", COOLDOWN);
 
-        // 6) Tăng bộ đếm/ngày, tự set expire đến cuối ngày
+        // 6) Tăng bộ đếm
         bumpDailyCount(email);
 
         // 7) Gửi email
@@ -96,7 +90,7 @@ public class AuthService {
             // Nếu gửi lỗi, xoá OTP để khỏi chiếm TTL vô ích
             redisTemplate.delete(otpKey);
             redisTemplate.delete(cooldownKey);
-            throw new RuntimeException("Failed to send OTP email");
+            throw new RuntimeException("Không thể gửi email OTP. Vui lòng thử lại sau");
         }
     }
 
@@ -104,7 +98,7 @@ public class AuthService {
         final String normalizedEmail = email.trim().toLowerCase();
 
         String key = OTP_KEY_PREFIX + normalizedEmail;
-        String value = redisTemplate.opsForValue().get(key); // dùng String
+        String value = redisTemplate.opsForValue().get(key);
         if (value == null) return false;
 
         boolean isValid = value.equals(otp);
@@ -112,7 +106,7 @@ public class AuthService {
             // Xoá OTP để không dùng lại
             redisTemplate.delete(key);
 
-            // Đặt cờ đã xác minh, TTL ngắn
+            // Đặt cờ đã xác minh
             String verifiedKey = OTP_VERIFIED_PREFIX + normalizedEmail;
             redisTemplate.opsForValue().set(verifiedKey, "1", VERIFIED_TTL);
         }
@@ -125,19 +119,18 @@ public class AuthService {
 
         boolean allowed;
         if (otp != null && !otp.isBlank()) {
-            // Nhánh cũ: có OTP thì verify như trước
+            // có OTP thì verify như trước
             allowed = verifyOtp(email, otp);
         } else {
-            // Nhánh mới: không có OTP -> kiểm tra cờ verified
+            // không có OTP -> kiểm tra cờ verified
             String verifiedKey = OTP_VERIFIED_PREFIX + email;
             String flag = redisTemplate.opsForValue().get(verifiedKey);
             allowed = (flag != null);
-            // KHÔNG xoá cờ ở đây, chỉ xoá sau khi đổi pass thành công
+            // KHÔNG xoá flag ở đây, chỉ xoá sau khi đổi pass thành công
         }
 
         if (!allowed) return false;
 
-        // Gọi user-service đổi password
         userService.updatePasswordByEmail(email, request.getNewPassword());
 
         boolean ok = true;
@@ -153,10 +146,10 @@ public class AuthService {
         return email == null ? "" : email.trim().toLowerCase();
     }
 
-    private String randomOtp(int length) {
-        int bound = (int) Math.pow(10, length);
-        int base  = (int) Math.pow(10, length - 1);
-        int number = RNG.nextInt(bound - base) + base; // đảm bảo độ dài đúng (không bị 0 đầu)
+    private String randomOtp() {
+        int bound = (int) Math.pow(10, AuthService.OTP_LENGTH);
+        int base  = (int) Math.pow(10, AuthService.OTP_LENGTH - 1);
+        int number = RNG.nextInt(bound - base) + base; // đảm bảo độ dài đúng
         return String.valueOf(number);
     }
 

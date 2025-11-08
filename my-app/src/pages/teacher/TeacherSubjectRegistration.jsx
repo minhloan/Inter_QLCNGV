@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
+import Loading from '../../components/Common/Loading';
 
 const TeacherSubjectRegistration = () => {
   const navigate = useNavigate();
@@ -169,6 +170,10 @@ const TeacherSubjectRegistration = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const pageRegistrations = filteredRegistrations.slice(startIndex, startIndex + pageSize);
   const currentYear = new Date().getFullYear();
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang tải danh sách đăng ký môn học..." />;
+  }
 
   return (
     <MainLayout>

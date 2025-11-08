@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import SharedHeader from '../components/Layout/SharedHeader';
-import '../styles/ModuleSelection.css';
+import '../assets/styles/ModuleSelection.css';
 
 const ModuleSelection = () => {
   const { user, isManageLeader, isTeacher } = useAuth();

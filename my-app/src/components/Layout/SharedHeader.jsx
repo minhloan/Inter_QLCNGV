@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import '../../styles/Common.css';
+import '../../assets/styles/Common.css';
 
 const SharedHeader = () => {
   const [showDropdown, setShowDropdown] = useState(false);

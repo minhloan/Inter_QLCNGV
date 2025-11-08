@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
+import Loading from '../../components/Common/Loading';
 
 const TeacherPersonalReports = () => {
   const navigate = useNavigate();
@@ -155,6 +156,10 @@ const TeacherPersonalReports = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const pageReports = filteredReports.slice(startIndex, startIndex + pageSize);
   const currentYear = new Date().getFullYear();
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang tải báo cáo cá nhân..." />;
+  }
 
   return (
     <MainLayout>

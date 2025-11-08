@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import Toast from '../components/Common/Toast';
+import Loading from '../components/Common/Loading';
 
 const ManageSubjectAdd = () => {
   const navigate = useNavigate();

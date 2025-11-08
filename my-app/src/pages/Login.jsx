@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { login as apiLogin, getPrimaryRole, getUserInfo } from '../api/auth';
-import '../styles/Login.css';
-import '../styles/Common.css';
+import Loading from '../components/Common/Loading';
+import '../assets/styles/Login.css';
+import '../assets/styles/Common.css';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -14,13 +15,22 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     document.body.style.background = '';
     document.body.style.color = '';
     document.body.style.overflow = '';
+
+    // Kiểm tra thông báo thành công từ location state
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Xóa state để không hiển thị lại khi refresh
+      window.history.replaceState({}, document.title);
+    }
 
     if (isAuthenticated && user) {
       const userRole = user.role;
@@ -30,7 +40,7 @@ const Login = () => {
         navigate('/module-selection');
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, location]);
 
   useEffect(() => {
     // Check for remembered credentials
@@ -117,6 +127,10 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return <Loading fullscreen={true} message="Đang xử lý đăng nhập..." />;
+  }
 
   return (
     <div className="login-page-container">
@@ -237,12 +251,19 @@ const Login = () => {
             </div>
 
             <div className="mb-3 text-end">
-              <a href="#" className="forgot-password-link">Quên mật khẩu?</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="forgot-password-link">Quên mật khẩu?</a>
             </div>
 
             <div className="mb-3 terms-text">
               <small className="text-muted">Bằng cách nhấp vào đăng nhập, bạn chấp nhận <a href="#" className="terms-link">Điều khoản và điều kiện.</a></small>
             </div>
+
+            {successMessage && (
+              <div className="alert alert-success" role="alert" style={{ backgroundColor: '#d1e7dd', color: '#0f5132' }}>
+                <i className="bi bi-check-circle me-2"></i>
+                <span>{successMessage}</span>
+              </div>
+            )}
 
             {error && (
               <div className="alert alert-danger" role="alert">

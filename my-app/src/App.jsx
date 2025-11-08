@@ -3,6 +3,9 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import VerifyOtp from './pages/VerifyOtp';
+import UpdatePassword from './pages/UpdatePassword';
 import ManageTeacher from './pages/ManageTeacher';
 import AddTeacher from './pages/AddTeacher';
 import ManageSubjects from './pages/ManageSubjects';
@@ -27,7 +30,7 @@ import TeacherEvidence from './pages/teacher/TeacherEvidence';
 import TeacherTeachingAssignment from './pages/teacher/TeacherTeachingAssignment';
 import TeacherPersonalReports from './pages/teacher/TeacherPersonalReports';
 
-import './styles/Common.css';
+import './assets/styles/Common.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 function AppRoutes() {
@@ -48,6 +51,18 @@ function AppRoutes() {
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={user?.role === 'Manage-Leader' || user?.role === 'admin' ? '/module-selection' : '/module-selection'} replace /> : <Login />}
+      />
+      <Route
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to="/module-selection" replace /> : <ForgotPassword />}
+      />
+      <Route
+        path="/verify-otp"
+        element={isAuthenticated ? <Navigate to="/module-selection" replace /> : <VerifyOtp />}
+      />
+      <Route
+        path="/update-password"
+        element={isAuthenticated ? <Navigate to="/module-selection" replace /> : <UpdatePassword />}
       />
       <Route
         path="/module-selection"

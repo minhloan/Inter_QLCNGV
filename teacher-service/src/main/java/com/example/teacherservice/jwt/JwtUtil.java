@@ -26,6 +26,7 @@ public class JwtUtil {
                 .getBody();
     }
 
+    // Hàm dùng để lấy userId từ header Authorization
     public String ExtractUserId(HttpServletRequest request) {
         String auHeader = request.getHeader("Authorization");
         if (auHeader != null && auHeader.startsWith("Bearer ")) {

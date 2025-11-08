@@ -7,11 +7,13 @@ import lombok.Data;
 
 @Data
 public class UpdatePasswordRequest {
-    @NotBlank @Email
+    @NotBlank(message = "Email là bắt buộc") 
+    @Email(message = "Định dạng email không hợp lệ")
     private String email;
 
     // FE gửi "newPassword"
-    @NotBlank @Size(min = 8)
+    @NotBlank(message = "Mật khẩu mới là bắt buộc") 
+    @Size(min = 8, message = "Mật khẩu phải có ít nhất 8 ký tự")
     private String newPassword;
 
     // Tuỳ chọn (để BE vẫn hỗ trợ nhánh cũ dùng OTP trực tiếp)

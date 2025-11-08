@@ -2,9 +2,11 @@ package com.example.teacherservice.model;
 
 import com.example.teacherservice.enums.Active;
 import com.example.teacherservice.enums.Role;
+import com.example.teacherservice.enums.TeacherStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.List;
@@ -41,4 +43,17 @@ public class User extends BaseEntity {
     @Embedded
     @Builder.Default
     private UserDetails userDetails = new UserDetails();
+
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+
+    @Column(name = "avatar_file_id", length = 64)
+    private String avatarFileId;
+
+    @Column(name = "teacher_code", length = 20, unique = true)
+    private String teacherCode;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "teacher_status")
+    private TeacherStatus teacherStatus;
 }

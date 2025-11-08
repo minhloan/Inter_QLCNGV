@@ -34,7 +34,6 @@ public class FileServiceImpl implements FileService {
         }
 
         fileRepository.save(File.builder()
-                .id(uuid)
                 .type(file.getContentType())
                 .filePath(filePath).build()
         );

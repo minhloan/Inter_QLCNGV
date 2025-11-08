@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import Toast from '../components/Common/Toast';
+import Loading from '../components/Common/Loading';
 
 const AddTeacher = () => {
   const navigate = useNavigate();
@@ -82,6 +83,10 @@ const AddTeacher = () => {
     setToast({ show: true, title, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang lưu thông tin giáo viên..." />;
+  }
 
   return (
     <MainLayout>

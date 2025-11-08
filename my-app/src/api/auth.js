@@ -9,12 +9,11 @@ const api = createApiInstance(API_URL);
 export const login = async (data) => {
     const response = await api.post("/login", data);
     const { token } = response.data;
-    // Lưu token vào cookie với cấu hình an toàn
-    Cookies.set("accessToken", token, { 
+    Cookies.set("accessToken", token, {
         expires: 7, // 7 ngày
-        path: '/', // Có sẵn trên toàn bộ domain
+        path: '/',
         sameSite: 'strict', // Chống CSRF
-        secure: window.location.protocol === 'https:' // Chỉ gửi qua HTTPS nếu đang dùng HTTPS
+        secure: window.location.protocol === 'https:'
     });
     return response.data;
 };
@@ -110,4 +109,23 @@ export const getUserInfo = () => {
 
 export const isAuthenticated = () => {
     return !!getToken();
+};
+
+// Forgot Password API
+export const forgotPassword = async (email) => {
+    const response = await api.post("/forgotPassword", { email });
+    return response.data;
+};
+
+// Verify OTP API
+export const verifyOtp = async (email, otp) => {
+    const response = await api.post("/verifyOtp", { email, otp });
+    return response.data;
+};
+
+// Update Password API
+// OTP có thể là null - backend sẽ kiểm tra cờ verified thay vì verify OTP lại
+export const updatePassword = async (email, newPassword, otp = null) => {
+    const response = await api.post("/updatePassword", { email, newPassword, otp });
+    return response.data;
 };

@@ -16,7 +16,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session từ Cookies
     const token = getToken();
     if (token) {
       const role = getPrimaryRole();
@@ -41,8 +40,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (token, role, username, userData) => {
-    // Token đã được lưu trong Cookies bởi auth.js
-    // Chỉ cần cập nhật state
     const userInfo = getUserInfo();
     
     setUser({

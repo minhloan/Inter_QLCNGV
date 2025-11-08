@@ -38,26 +38,26 @@ public class AuthController {
     @PostMapping("/forgotPassword")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPassword request) {
         authService.forgotPassword(request);
-        return ResponseEntity.ok(Map.of("ok", true, "message", "OTP sent to your email"));
+        return ResponseEntity.ok(Map.of("ok", true, "message", "Mã OTP đã được gửi đến email của bạn"));
     }
 
     @PostMapping("/verifyOtp")
     public ResponseEntity<?> verifyOtp(@Valid @RequestBody VerifyOtp request) {
         boolean ok = authService.verifyOtp(request.getEmail(), request.getOtp());
         if (ok) {
-            return ResponseEntity.ok(Map.of("ok", true, "message", "OTP verified successfully"));
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Xác thực OTP thành công"));
         }
-        return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Invalid OTP"));
+        return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Mã OTP không đúng"));
     }
 
     @PostMapping("/updatePassword")
     public ResponseEntity<?> updatePassword(@Valid @RequestBody UpdatePasswordRequest request) {
         boolean ok = authService.resetPassword(request);
         if (ok) {
-            return ResponseEntity.ok(Map.of("ok", true, "message", "Password updated successfully"));
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Cập nhật mật khẩu thành công"));
         }
         return ResponseEntity.badRequest().body(
-                Map.of("ok", false, "message", "OTP not verified or verification expired")
+                Map.of("ok", false, "message", "Mã OTP chưa được xác thực hoặc đã hết hạn")
         );
     }
 

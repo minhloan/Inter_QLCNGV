@@ -7,9 +7,10 @@ import lombok.Setter;
 
 @Getter @Setter
 public class VerifyOtp {
-    @NotBlank @Email
+    @NotBlank(message = "Email là bắt buộc") 
+    @Email(message = "Định dạng email không hợp lệ")
     private String email;
-    @NotBlank
+    @NotBlank(message = "Mã OTP là bắt buộc")
     private String otp;
 }
 

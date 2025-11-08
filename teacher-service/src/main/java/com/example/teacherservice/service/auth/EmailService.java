@@ -46,7 +46,6 @@ public class EmailService {
             String html = buildOtpHtml(otp, minutesValid, brand);
             String plain = buildOtpPlainText(otp, minutesValid, brand);
 
-            // set text (plain, html)
             helper.setText(plain, html);
 
             mailSender.send(message);

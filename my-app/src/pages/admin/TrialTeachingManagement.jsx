@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
+import Loading from '../../components/Common/Loading';
 
 const TrialTeachingManagement = () => {
   const navigate = useNavigate();
@@ -121,6 +122,10 @@ const TrialTeachingManagement = () => {
   const totalPages = Math.ceil(filteredTrials.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const pageTrials = filteredTrials.slice(startIndex, startIndex + pageSize);
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang tải danh sách giảng thử..." />;
+  }
 
   return (
     <MainLayout>

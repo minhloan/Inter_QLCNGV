@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
+import Loading from '../../components/Common/Loading';
 
 const TeacherTeachingAssignment = () => {
   const navigate = useNavigate();
@@ -115,6 +116,10 @@ const TeacherTeachingAssignment = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const pageAssignments = filteredAssignments.slice(startIndex, startIndex + pageSize);
   const currentYear = new Date().getFullYear();
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang tải danh sách phân công giảng dạy..." />;
+  }
 
   return (
     <MainLayout>

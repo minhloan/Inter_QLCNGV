@@ -4,6 +4,7 @@ import MainLayout from '../components/Layout/MainLayout';
 import TeacherModal from '../components/Teacher/TeacherModal';
 import DeleteModal from '../components/Teacher/DeleteModal';
 import Toast from '../components/Common/Toast';
+import Loading from '../components/Common/Loading';
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
@@ -154,6 +155,10 @@ const ManageTeacher = () => {
   const totalPages = Math.ceil(filteredTeachers.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const pageTeachers = filteredTeachers.slice(startIndex, startIndex + pageSize);
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang tải danh sách giáo viên..." />;
+  }
 
   return (
     <MainLayout>

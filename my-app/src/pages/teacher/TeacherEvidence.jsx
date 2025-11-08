@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
+import Loading from '../../components/Common/Loading';
 
 const TeacherEvidence = () => {
   const navigate = useNavigate();
@@ -147,6 +148,10 @@ const TeacherEvidence = () => {
   const totalPages = Math.ceil(filteredEvidences.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const pageEvidences = filteredEvidences.slice(startIndex, startIndex + pageSize);
+
+  if (loading) {
+    return <Loading fullscreen={true} message="Đang tải danh sách minh chứng..." />;
+  }
 
   return (
     <MainLayout>
