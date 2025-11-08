@@ -4,6 +4,7 @@
 - Java 17+
 - Maven
 - Docker Desktop (chưa cài thì tải tại: https://www.docker.com/products/docker-desktop)
+- Node.js 18+ và npm (chưa cài thì tải tại: https://nodejs.org/)
 
 ---
 
@@ -54,6 +55,23 @@
 - Đợi đến khi thấy log: `Started GatewayApplication`
 - Kiểm tra trên Eureka: http://localhost:8761 (sẽ thấy gateway đã đăng ký)
 
+### 5. Frontend - my-app (Port 5173)
+- Mở Terminal/PowerShell tại thư mục `my-app`
+- **Lần đầu chạy:** Cài đặt dependencies:
+  ```bash
+  npm install
+  ```
+- Chạy development server:
+  ```bash
+  npm run dev
+  ```
+- Đợi đến khi thấy log: `Local: http://localhost:5173`
+- Mở browser: http://localhost:5173 để xem ứng dụng
+
+**Lưu ý:** 
+- Frontend sẽ tự động reload khi có thay đổi code
+- Để dừng frontend: Nhấn `Ctrl + C` trong terminal
+
 ---
 
 ## Kiểm Tra
@@ -62,13 +80,15 @@
 - **Gateway:** http://localhost:8080
 - **Teacher Service:** http://localhost:8002
 - **Config Server:** http://localhost:8888
+- **Frontend (my-app):** http://localhost:5173
 
 ---
 
 ## Dừng Services
 
-1. **Dừng các service:** Nhấn `Stop` trong IntelliJ cho từng service
-2. **Dừng Redis:**
+1. **Dừng Frontend:** Nhấn `Ctrl + C` trong terminal đang chạy `npm run dev`
+2. **Dừng các service:** Nhấn `Stop` trong IntelliJ cho từng service
+3. **Dừng Redis:**
    ```bash
    docker-compose down
    ```
@@ -80,4 +100,22 @@
 - Nếu lỗi kết nối Redis: Kiểm tra Docker Desktop đã chạy chưa
 - Nếu lỗi port đã được sử dụng: Đóng các ứng dụng đang dùng port đó
 - Nếu service không đăng ký được Eureka: Kiểm tra Eureka đã chạy chưa
+- Nếu frontend không kết nối được API: 
+  - Kiểm tra Gateway đã chạy chưa (http://localhost:8080)
+  - Kiểm tra file `my-app/src/config.js` có cấu hình đúng API URL chưa
+  - Có thể cần cấu hình proxy trong `vite.config.js` nếu gặp lỗi CORS
+
+---
+
+## Demo Login Credentials
+
+Để test ứng dụng, sử dụng các tài khoản demo sau:
+
+- **Admin:**
+  - Username: `admin`
+  - Password: `admin123`
+
+- **Teacher:**
+  - Username: `teacher`
+  - Password: `teacher123`
 

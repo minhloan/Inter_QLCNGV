@@ -1,0 +1,350 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import MainLayout from '../../components/Layout/MainLayout';
+import Toast from '../../components/Common/Toast';
+
+const TeacherEvidence = () => {
+  const navigate = useNavigate();
+  const [evidences, setEvidences] = useState([]);
+  const [filteredEvidences, setFilteredEvidences] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
+
+  useEffect(() => {
+    loadEvidences();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [evidences, statusFilter]);
+
+  const loadEvidences = async () => {
+    try {
+      setLoading(true);
+      // Demo data - replace with actual API call
+      const demoEvidences = [
+        {
+          id: 1,
+          subject_id: 1,
+          subject_name: 'Elementary Programming in C-INTL',
+          file_id: 1,
+          file_path: '/evidences/evidence_001.pdf',
+          ocr_full_name: 'Nguyễn Văn A',
+          ocr_evaluator: 'Trường Đại học Công nghệ',
+          ocr_result: 'PASS',
+          ocr_text: 'Đại học Công nghệ Thông tin - Nguyễn Văn A - 2020',
+          status: 'VERIFIED',
+          submitted_date: '2024-01-10',
+          verified_at: '2024-01-12'
+        },
+        {
+          id: 2,
+          subject_id: 2,
+          subject_name: 'Intelligent Data Management with SQL Server',
+          file_id: 2,
+          file_path: '/evidences/evidence_002.pdf',
+          ocr_full_name: 'Nguyễn Văn A',
+          ocr_evaluator: 'Microsoft',
+          ocr_result: 'PASS',
+          ocr_text: 'Microsoft SQL Server Certification - Nguyễn Văn A',
+          status: 'PENDING',
+          submitted_date: '2024-01-15',
+          verified_at: null
+        },
+        {
+          id: 3,
+          subject_id: 3,
+          subject_name: 'Elegant and Effective Website Design with UI and UX',
+          file_id: 3,
+          file_path: '/evidences/evidence_003.pdf',
+          ocr_full_name: null,
+          ocr_evaluator: null,
+          ocr_result: null,
+          ocr_text: null,
+          status: 'REJECTED',
+          submitted_date: '2024-01-20',
+          verified_at: null
+        }
+      ];
+      
+      setEvidences(demoEvidences);
+      setFilteredEvidences(demoEvidences);
+    } catch (error) {
+      showToast('Lỗi', 'Không thể tải danh sách minh chứng', 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...evidences];
+
+    if (statusFilter) {
+      filtered = filtered.filter(evidence => evidence.status === statusFilter);
+    }
+
+    setFilteredEvidences(filtered);
+    setCurrentPage(1);
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !selectedSubject) {
+      showToast('Lỗi', 'Vui lòng chọn file và môn học', 'danger');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Simulate API call
+      const newEvidence = {
+        id: Date.now(),
+        subject_id: parseInt(selectedSubject),
+        subject_name: `Môn học ${selectedSubject}`,
+        file_id: Date.now(),
+        file_path: `/evidences/evidence_${Date.now()}.pdf`,
+        ocr_full_name: null,
+        ocr_evaluator: null,
+        ocr_result: null,
+        ocr_text: null,
+        status: 'PENDING',
+        submitted_date: new Date().toISOString().split('T')[0],
+        verified_at: null
+      };
+
+      setEvidences(prev => [newEvidence, ...prev]);
+      setShowUploadModal(false);
+      setSelectedFile(null);
+      setSelectedSubject('');
+      showToast('Thành công', 'Upload minh chứng thành công', 'success');
+    } catch (error) {
+      showToast('Lỗi', 'Không thể upload minh chứng', 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showToast = (title, message, type) => {
+    setToast({ show: true, title, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      VERIFIED: { label: 'Đã xác minh', class: 'success' },
+      REJECTED: { label: 'Từ chối', class: 'danger' },
+      PENDING: { label: 'Chờ xác minh', class: 'warning' }
+    };
+    const statusInfo = statusMap[status] || { label: status, class: 'secondary' };
+    return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
+  };
+
+  const totalPages = Math.ceil(filteredEvidences.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageEvidences = filteredEvidences.slice(startIndex, startIndex + pageSize);
+
+  return (
+    <MainLayout>
+      <div className="content-header">
+        <div className="content-title">
+          <button className="back-button" onClick={() => navigate(-1)}>
+            <i className="bi bi-arrow-left"></i>
+          </button>
+          <h1 className="page-title">Minh chứng</h1>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>
+          <i className="bi bi-upload"></i>
+          Upload Minh chứng
+        </button>
+      </div>
+
+      {/* Filter Section */}
+      <div className="filter-section">
+        <div className="filter-row">
+          <div className="filter-group">
+            <label className="filter-label">Trạng thái</label>
+            <select
+              className="filter-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">Tất cả</option>
+              <option value="VERIFIED">Đã xác minh</option>
+              <option value="REJECTED">Từ chối</option>
+              <option value="PENDING">Chờ xác minh</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <button className="btn btn-secondary" onClick={() => setStatusFilter('')} style={{ width: '100%' }}>
+              <i className="bi bi-arrow-clockwise"></i>
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Evidences Table */}
+      <div className="table-container">
+        <div className="table-responsive">
+          <table className="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th width="5%">#</th>
+                <th width="25%">Môn học</th>
+                <th width="15%">Ngày nộp</th>
+                <th width="15%">OCR - Họ tên</th>
+                <th width="15%">OCR - Kết quả</th>
+                <th width="10%">Trạng thái</th>
+                <th width="15%" className="text-center">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageEvidences.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="text-center">
+                    <div className="empty-state">
+                      <i className="bi bi-inbox"></i>
+                      <p>Không tìm thấy minh chứng nào</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                pageEvidences.map((evidence, index) => (
+                  <tr key={evidence.id} className="fade-in">
+                    <td>{startIndex + index + 1}</td>
+                    <td>{evidence.subject_name || 'N/A'}</td>
+                    <td>{evidence.submitted_date || 'N/A'}</td>
+                    <td>{evidence.ocr_full_name || '-'}</td>
+                    <td>
+                      {evidence.ocr_result ? (
+                        <span className={`badge badge-status ${evidence.ocr_result === 'PASS' ? 'success' : 'danger'}`}>
+                          {evidence.ocr_result === 'PASS' ? 'ĐẠT' : 'KHÔNG ĐẠT'}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td>{getStatusBadge(evidence.status)}</td>
+                    <td className="text-center">
+                      <div className="action-buttons">
+                        <button
+                          className="btn btn-sm btn-info btn-action"
+                          onClick={() => navigate(`/evidence-detail/${evidence.id}`)}
+                          title="Chi tiết & OCR"
+                        >
+                          <i className="bi bi-eye"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <nav aria-label="Page navigation" className="mt-4">
+            <ul className="pagination justify-content-center">
+              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <i className="bi bi-chevron-left"></i>
+                </button>
+              </li>
+              {[...Array(totalPages)].map((_, i) => {
+                const page = i + 1;
+                if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                  return (
+                    <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(page)}>
+                        {page}
+                      </button>
+                    </li>
+                  );
+                }
+                return null;
+              })}
+              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
+      </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="modal-content" style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '600px' }}>
+            <h3 style={{ marginBottom: '20px' }}>Upload Minh chứng</h3>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label">Chọn Môn học</label>
+              <select
+                className="form-control"
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+              >
+                <option value="">-- Chọn môn học --</option>
+                <option value="1">Elementary Programming in C-INTL</option>
+                <option value="2">Intelligent Data Management with SQL Server</option>
+                <option value="3">Elegant and Effective Website Design with UI and UX</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label">Chọn File</label>
+              <input
+                type="file"
+                className="form-control"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setSelectedFile(e.target.files[0])}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => {
+                setShowUploadModal(false);
+                setSelectedFile(null);
+                setSelectedSubject('');
+              }}>
+                Hủy
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleFileUpload}
+                disabled={!selectedFile || !selectedSubject}
+              >
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast.show && (
+        <Toast
+          title={toast.title}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(prev => ({ ...prev, show: false }))}
+        />
+      )}
+    </MainLayout>
+  );
+};
+
+export default TeacherEvidence;
+

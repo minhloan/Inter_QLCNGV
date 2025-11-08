@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -195,34 +196,42 @@ public class AuthService {
     }
 
     public TokenDto login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
-        if (authentication.isAuthenticated()) {
-            return TokenDto.builder()
-                    .token(jwtService.generateToken(loginRequest.getEmail()))
-                    .build();
-        } else {
-            throw new WrongCredentialsException("Invalid email or password");
-        }
-    }
-
-    public TokenDto loginWithRoleSelection(LoginRequest loginRequest, String selectedRole) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
-
-        if (authentication.isAuthenticated()) {
-            // Lấy user info để check roles
-            User user = userService.getUserByEmail(loginRequest.getEmail());
-
-            if (user != null && user.getRoles().contains(Role.valueOf(selectedRole.toUpperCase()))) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+            if (authentication.isAuthenticated()) {
                 return TokenDto.builder()
                         .token(jwtService.generateToken(loginRequest.getEmail()))
                         .build();
             } else {
-                throw new WrongCredentialsException("You don't have permission for this role");
+                throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
             }
-        } else {
-            throw new WrongCredentialsException("Invalid email or password");
+        } catch (BadCredentialsException e) {
+            throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
+        }
+    }
+
+    public TokenDto loginWithRoleSelection(LoginRequest loginRequest, String selectedRole) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+
+            if (authentication.isAuthenticated()) {
+                // Lấy user info để check roles
+                User user = userService.getUserByEmail(loginRequest.getEmail());
+
+                if (user != null && user.getRoles().contains(Role.valueOf(selectedRole.toUpperCase()))) {
+                    return TokenDto.builder()
+                            .token(jwtService.generateToken(loginRequest.getEmail()))
+                            .build();
+                } else {
+                    throw new WrongCredentialsException("Bạn không có quyền truy cập với vai trò này");
+                }
+            } else {
+                throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
+            }
+        } catch (BadCredentialsException e) {
+            throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
         }
     }
 }

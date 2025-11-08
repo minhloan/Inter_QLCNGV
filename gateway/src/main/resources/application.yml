@@ -7,7 +7,7 @@ spring:
   cloud:
     gateway:
       default-filters:
-        - AddRequestHeader=X-Internal-Call, true
+        - AddRequestHeader=X-Internal-Call, true 
       forwarded-headers:
         enabled: true
       server:
@@ -29,7 +29,9 @@ spring:
               - PUT
               - DELETE
               - OPTIONS
+              - PATCH
             allowedHeaders: "*"
             exposedHeaders:
               - Authorization
+              - Content-Type
             allowCredentials: true

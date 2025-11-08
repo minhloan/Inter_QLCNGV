@@ -1,0 +1,287 @@
+/* Module Selection Page Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.module-selection-page {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
+
+/* Navigation */
+.navbar {
+    padding: 15px 30px;
+}
+
+.logo-container-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-circle-nav {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+}
+
+.logo-name-nav {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    letter-spacing: 1px;
+}
+
+.navbar-brand {
+    text-decoration: none;
+}
+
+.navbar-brand:hover {
+    text-decoration: none;
+}
+
+/* Main Content */
+.main-content {
+    padding: 60px 20px;
+    min-height: calc(100vh - 70px);
+}
+
+.page-header {
+    margin-bottom: 50px;
+}
+
+.page-title {
+    font-size: 42px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 15px;
+    line-height: 1.3;
+}
+
+.page-subtitle {
+    font-size: 20px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Module Cards */
+.module-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 30px;
+}
+
+.module-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.module-image {
+    height: 250px;
+    background: linear-gradient(135deg, #ffb366 0%, #ff8c00 50%, #ff6b00 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.module-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+}
+
+.module-icon {
+    font-size: 80px;
+    color: white;
+    position: relative;
+    z-index: 1;
+    opacity: 0.9;
+}
+
+.module-content {
+    padding: 30px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.module-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.module-description {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.module-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ff8c00;
+    font-weight: 600;
+    font-size: 16px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.module-card:hover .module-action {
+    color: #ff6b00;
+    gap: 15px;
+}
+
+.module-action i {
+    font-size: 20px;
+    transition: transform 0.3s ease;
+}
+
+.module-card:hover .module-action i {
+    transform: translateX(5px);
+}
+
+/* User Dropdown Styles */
+.user-dropdown {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 280px;
+    padding: 20px;
+    margin-top: 10px;
+}
+
+.user-dropdown-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.user-avatar-large {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: white;
+    font-size: 24px;
+}
+
+.user-dropdown-info {
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.user-email {
+    font-size: 12px;
+    color: #666;
+}
+
+.user-dropdown-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.user-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.user-dropdown-item:hover {
+    background: #f5f5f5;
+    color: #ff8c00;
+}
+
+.user-dropdown-item i:first-child {
+    font-size: 18px;
+    width: 20px;
+}
+
+.user-dropdown-item span {
+    flex: 1;
+    font-size: 14px;
+}
+
+.user-dropdown-item i:last-child {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 28px;
+    }
+
+    .page-subtitle {
+        font-size: 16px;
+    }
+
+    .module-image {
+        height: 200px;
+    }
+
+    .module-icon {
+        font-size: 60px;
+    }
+
+    .module-content {
+        padding: 20px;
+    }
+
+    .module-title {
+        font-size: 20px;
+    }
+
+    .navbar {
+        padding: 10px 15px;
+    }
+}
+

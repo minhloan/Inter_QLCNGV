@@ -64,6 +64,13 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(WrongCredentialsException.class)
+    public ResponseEntity<?> wrongCredentialsException(WrongCredentialsException exception) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("error", exception.getMessage());
+        return new ResponseEntity<>(errors, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<?> accessDeniedException(AccessDeniedException exception) {
         Map<String, String> errors = new HashMap<>();
@@ -77,7 +84,6 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         String message = exception.getMessage();
         errors.put("error", message);
         
-        // If it's a duplicate email error, return CONFLICT status
         if (message != null && message.contains("Email already exists")) {
             return new ResponseEntity<>(errors, HttpStatus.CONFLICT);
         }
