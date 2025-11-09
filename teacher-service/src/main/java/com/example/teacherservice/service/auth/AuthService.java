@@ -10,6 +10,7 @@ import com.example.teacherservice.request.auth.LoginRequest;
 import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.auth.UpdatePasswordRequest;
 import com.example.teacherservice.service.user.UserService;
+import io.jsonwebtoken.Claims;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,8 @@ public class AuthService {
     private static final String OTP_COOLDOWN_PREFIX = "otp:cooldown:";
     private static final String OTP_DAILY_COUNT_PREFIX = "otp:count:";
     private static final String OTP_VERIFIED_PREFIX = "otp:verified:";
+    private static final String REFRESH_TOKEN_PREFIX = "refresh:";
+    private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(7);
 
     private static final Duration OTP_TTL = Duration.ofMinutes(5);
     private static final Duration COOLDOWN = Duration.ofSeconds(60);
@@ -49,7 +52,6 @@ public class AuthService {
     private static final int MAX_PER_DAY = 10;
 
     private static final SecureRandom RNG = new SecureRandom();
-
 
 
     public void forgotPassword(ForgotPassword request) {
@@ -177,7 +179,6 @@ public class AuthService {
         }
     }
 
-
     @Transactional
     public RegisterDto register(RegisterRequest request) {
         User savedUser = userService.SaveUser(request);
@@ -193,8 +194,18 @@ public class AuthService {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
             if (authentication.isAuthenticated()) {
+                String accessToken = jwtService.generateToken(loginRequest.getEmail());
+                String refreshToken = jwtService.generateRefreshToken(loginRequest.getEmail());
+
+                // Lưu refreshToken vào Redis
+                User user = userService.getUserByEmail(loginRequest.getEmail());
+                String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
+                redisTemplate.opsForValue().set(refreshKey, user.getId(), REFRESH_TOKEN_TTL);
+
                 return TokenDto.builder()
-                        .token(jwtService.generateToken(loginRequest.getEmail()))
+                        .token(accessToken)
+                        .access(accessToken)
+                        .refresh(refreshToken)
                         .build();
             } else {
                 throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
@@ -214,8 +225,17 @@ public class AuthService {
                 User user = userService.getUserByEmail(loginRequest.getEmail());
 
                 if (user != null && user.getRoles().contains(Role.valueOf(selectedRole.toUpperCase()))) {
+                    String accessToken = jwtService.generateToken(loginRequest.getEmail());
+                    String refreshToken = jwtService.generateRefreshToken(loginRequest.getEmail());
+
+                    // Lưu refreshToken vào Redis
+                    String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
+                    redisTemplate.opsForValue().set(refreshKey, user.getId(), REFRESH_TOKEN_TTL);
+
                     return TokenDto.builder()
-                            .token(jwtService.generateToken(loginRequest.getEmail()))
+                            .token(accessToken)
+                            .access(accessToken)
+                            .refresh(refreshToken)
                             .build();
                 } else {
                     throw new WrongCredentialsException("Bạn không có quyền truy cập với vai trò này");
@@ -225,6 +245,32 @@ public class AuthService {
             }
         } catch (BadCredentialsException e) {
             throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
+        }
+    }
+
+    public TokenDto refreshToken(String refreshToken){
+        if(!jwtService.validateRefreshToken(refreshToken))
+            throw new WrongCredentialsException("Refresh token không hợp lệ");
+
+        String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
+        String userId = redisTemplate.opsForValue().get(refreshKey);
+        if (userId == null)
+            throw new WrongCredentialsException("Refresh token không hợp lệ hoặc đã hết hạn");
+
+        Claims claims = jwtService.getClaims(refreshToken);
+        String username = claims.getSubject();
+        String newAccessToken = jwtService.generateToken(username);
+        return TokenDto.builder()
+                .token(newAccessToken)
+                .access(newAccessToken)
+                .access(refreshToken)
+                .build();
+    }
+
+    public void logout(String refreshToken) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
+            redisTemplate.delete(refreshKey);
         }
     }
 }

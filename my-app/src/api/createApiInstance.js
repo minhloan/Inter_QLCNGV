@@ -32,28 +32,44 @@ const createApiInstance = (baseURL) => {
         "/v1/teacher/auth/forgotPassword",
         "/v1/teacher/auth/verifyOtp",
         "/v1/teacher/auth/updatePassword",
+        "/v1/teacher/auth/refresh",
         "/eureka",
     ];
 
     api.interceptors.response.use(
         (response) => response,
-        (error) => {
+        async (error) => {
+            const originalRequest = error?.config;
             const status = error?.response?.status;
-            if (status === 401) {
-                const reqUrl = error?.config?.url || "";
+
+            if (status === 401 && !originalRequest._retry) {
+                originalRequest._retry = true;
+
+                const reqUrl = originalRequest?.url || "";
                 const isPublicEndpoint = PUBLIC_401_ALLOWLIST.some((p) => reqUrl.includes(p));
-                // Thêm các trang auth/forgot password vào danh sách để không redirect
-                const onAuthPage = ["/login", "/auth", "/forgot", "/verify-otp", "/reset-password"].some((p) => window.location.pathname.startsWith(p));
+                const onAuthPage = ["/login", "/auth", "/forgot", "/verify-otp", "/reset-password"]
+                    .some((p) => window.location.pathname.startsWith(p));
 
                 if (isPublicEndpoint || onAuthPage) {
                     return Promise.reject(error);
                 }
 
-                Cookies.remove("accessToken");
-                const current = window.location.pathname + window.location.search;
-                window.location.href = `/login?from=${encodeURIComponent(current)}`;
-                return;
+                try {
+                    const { refreshAccessToken } = await import('./auth.js');
+                    const newAccessToken = await refreshAccessToken();
+
+                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                    return api(originalRequest);
+                } catch (refreshError) {
+                    // Refresh thất bại -> logout và redirect
+                    const { logout } = await import('./auth.js');
+                    await logout();
+                    const current = window.location.pathname + window.location.search;
+                    window.location.href = `/login?from=${encodeURIComponent(current)}`;
+                    return Promise.reject(refreshError);
+                }
             }
+
             return Promise.reject(error);
         }
     );

@@ -8,13 +8,27 @@ const api = createApiInstance(API_URL);
 
 export const login = async (data) => {
     const response = await api.post("/login", data);
-    const { token } = response.data;
-    Cookies.set("accessToken", token, {
-        expires: 7, // 7 ngày
+    const accessToken = response.data.accessToken || response.data.token;
+    const refreshToken = response.data.refreshToken;
+
+    // Lưu accessToken trong cookie
+    Cookies.set("accessToken", accessToken, {
+        expires: 1, // 1 ngày (token thực tế chỉ có 1 giờ)
         path: '/',
-        sameSite: 'strict', // Chống CSRF
+        sameSite: 'strict',
         secure: window.location.protocol === 'https:'
     });
+
+    // Lưu refreshToken trong cookie
+    if (refreshToken) {
+        Cookies.set("refreshToken", refreshToken, {
+            expires: 7, // 7 ngày
+            path: '/',
+            sameSite: 'strict',
+            secure: window.location.protocol === 'https:'
+        });
+    }
+
     return response.data;
 };
 
@@ -22,8 +36,61 @@ export const getToken = () => {
     return Cookies.get("accessToken") || null;
 };
 
-export const logout = () => {
+export const getRefreshToken = () => {
+    return Cookies.get("refreshToken") || null;
+};
+
+export const refreshAccessToken = async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+        throw new Error("No refresh token available");
+    }
+
+    try {
+        const response = await api.post("/refresh", { refreshToken });
+        const accessToken = response.data.accessToken || response.data.token;
+        const newRefreshToken = response.data.refreshToken;
+
+        // Cập nhật accessToken
+        Cookies.set("accessToken", accessToken, {
+            expires: 1,
+            path: '/',
+            sameSite: 'strict',
+            secure: window.location.protocol === 'https:'
+        });
+
+        // Cập nhật refreshToken nếu có (trong trường hợp rotate token)
+        if (newRefreshToken && newRefreshToken !== refreshToken) {
+            Cookies.set("refreshToken", newRefreshToken, {
+                expires: 7,
+                path: '/',
+                sameSite: 'strict',
+                secure: window.location.protocol === 'https:'
+            });
+        }
+
+        return accessToken;
+    } catch (error) {
+        // Nếu refresh thất bại, xóa cả 2 token
+        Cookies.remove("accessToken");
+        Cookies.remove("refreshToken");
+        throw error;
+    }
+};
+
+export const logout = async () => {
+    const refreshToken = getRefreshToken();
+
+    if (refreshToken) {
+        try {
+            await api.post("/logout", { refreshToken });
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
+    }
+
     Cookies.remove("accessToken");
+    Cookies.remove("refreshToken");
 };
 
 export const getUserRole = () => {
@@ -69,7 +136,7 @@ export const getPrimaryRole = () => {
     if (roles.some(r => r === 'ROLE_MANAGE' || r.includes('MANAGE'))) {
         return 'Manage-Leader';
     }
-    
+
     // Nếu có TEACHER
     if (roles.some(r => r === 'ROLE_TEACHER' || r.includes('TEACHER'))) {
         return 'Teacher';

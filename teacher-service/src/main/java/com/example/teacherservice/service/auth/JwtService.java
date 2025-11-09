@@ -1,5 +1,6 @@
 package com.example.teacherservice.service.auth;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -31,8 +32,20 @@ public class JwtService {
 
         claims.put("userId", userId);
         claims.put("roles", roles);
+        claims.put("type", "access");
 
         return createToken(claims, userDetails);
+    }
+
+    public String generateRefreshToken(String username) {
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+        Map<String, Object> claims = new HashMap<>();
+        String userId = ((CustomUserDetails) userDetails).getId();
+
+        claims.put("userId", userId);
+        claims.put("type", "refresh");
+
+        return createRefreshToken(claims, userDetails);
     }
 
 
@@ -42,13 +55,41 @@ public class JwtService {
                 .setSubject(userDetails.getUsername())
                 .setIssuer("user-service")
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 hour
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60)) // 1 hour
+                .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
+    }
+
+    private String createRefreshToken(Map<String, Object> claims, UserDetails userDetails) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(userDetails.getUsername())
+                .setIssuer("user-service")
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 7)) // 7 days
                 .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
     }
 
     private Key getSignKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public Claims getClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSignKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    public boolean validateRefreshToken(String token) {
+        try {
+            Claims claims = getClaims(token);
+            String type = claims.get("type", String.class);
+            return "refresh".equals(type);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
 

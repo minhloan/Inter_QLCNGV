@@ -1,5 +1,6 @@
 package com.example.teacherservice.model;
 
+import com.example.teacherservice.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -25,8 +26,9 @@ public class Notification extends BaseEntity {
     @Column(name = "message", columnDefinition = "TEXT")
     private String message;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 50)
-    private String type;
+    private NotificationType type;
 
     @Column(name = "is_read", nullable = false)
     @Builder.Default
@@ -38,4 +40,3 @@ public class Notification extends BaseEntity {
     @Column(name = "related_id", length = 64)
     private String relatedId;
 }
-

@@ -68,5 +68,17 @@ public class AuthController {
         return ResponseEntity.ok(authService.loginWithRoleSelection(request, role));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenDto> refresh(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        return ResponseEntity.ok(authService.refreshToken(refreshToken));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        authService.logout(refreshToken);
+        return ResponseEntity.ok(Map.of("ok", true, "message", "Đăng xuất thành công"));
+    }
 }
 

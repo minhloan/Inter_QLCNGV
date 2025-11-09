@@ -78,7 +78,7 @@
 
 - **Eureka Dashboard:** http://localhost:8761
 - **Gateway:** http://localhost:8080
-- **Teacher Service:** http://localhost:8002
+- **Teacher Service:** http://localhost:8000
 - **Config Server:** http://localhost:8888
 - **Frontend (my-app):** http://localhost:5173
 
@@ -106,16 +106,3 @@
   - Có thể cần cấu hình proxy trong `vite.config.js` nếu gặp lỗi CORS
 
 ---
-
-## Demo Login Credentials
-
-Để test ứng dụng, sử dụng các tài khoản demo sau:
-
-- **Admin:**
-  - Username: `admin`
-  - Password: `admin123`
-
-- **Teacher:**
-  - Username: `teacher`
-  - Password: `teacher123`
-

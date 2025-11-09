@@ -37,7 +37,14 @@ const ManageTeacher = () => {
       const demoTeachers = [
         { id: 1, code: 'GV001', full_name: 'Nguyễn Văn A', email: 'nguyenvana@example.com', phone: '0123456789', status: 'active' },
         { id: 2, code: 'GV002', full_name: 'Trần Thị B', email: 'tranthib@example.com', phone: '0987654321', status: 'active' },
-        { id: 3, code: 'GV003', full_name: 'Lê Văn C', email: 'levanc@example.com', phone: '0123456780', status: 'inactive' }
+        { id: 3, code: 'GV003', full_name: 'Lê Văn C', email: 'levanc@example.com', phone: '0123456780', status: 'inactive' },
+        { id: 4, code: 'GV004', full_name: 'Phạm Văn D', email: 'phamvand@example.com', phone: '0123456781', status: 'active' },
+        { id: 5, code: 'GV005', full_name: 'Nguyễn Thị E', email: 'nguyenthi@example.com', phone: '0123456782', status: 'inactive' },
+        { id: 6, code: 'GV006', full_name: 'Trần Văn F', email: 'tranvanf@example.com', phone: '0123456783', status: 'active' },
+        { id: 7, code: 'GV007', full_name: 'Lê Văn G', email: 'levang@example.com', phone: '0123456784', status: 'inactive' },
+        { id: 8, code: 'GV008', full_name: 'Phạm Văn H', email: 'phamvanh@example.com', phone: '0123456785', status: 'active' },
+        { id: 9, code: 'GV009', full_name: 'Nguyễn Thị I', email: 'nguyenthi@example.com', phone: '0123456786', status: 'inactive' },
+        { id: 10, code: 'GV010', full_name: 'Trần Văn K', email: 'tranvank@example.com', phone: '0123456787', status: 'active' }
       ];
       
       setTeachers(demoTeachers);

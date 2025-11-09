@@ -82,6 +82,33 @@ const ManageSubjects = () => {
       course: 'DISM',
       imagePattern: 2,
       gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    {
+      id: 9,
+      title: 'Digital Image Processing',
+      subtitle: 'Digital Image Processing',
+      term: 2,
+      course: 'DISM',
+      imagePattern: 1,
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
+    {
+      id: 10,
+      title: 'Professional Communication Skills',
+      subtitle: 'Database Design and Optimization',
+      term: 2,
+      course: 'ADSE',
+      imagePattern: 2,
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    {
+      id: 11,
+      title: 'Professional Communication Skills',
+      subtitle: 'Introduction to Programming with Python',
+      term: 2,
+      course: 'ADSE',
+      imagePattern: 3,
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     }
   ];
 
@@ -198,7 +225,7 @@ const ManageSubjects = () => {
       </div>
 
       {/* Course Term Label */}
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-dark)' }}>
           ACCP-Term {termFilter === 'all' ? '1' : termFilter}
         </h3>
