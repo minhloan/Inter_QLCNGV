@@ -128,7 +128,7 @@
 
 ### 4. Aptech Exam Management (Quản lý Kỳ thi Aptech)
 
-#### 4.1. Tạo kỳ thi Aptech
+#### 4.1. Tạo kỳ thi Aptech (Toàn)
 - Tạo phiên thi (AptechExamSession)
   - Ngày thi (exam_date)
   - Giờ thi (exam_time)
@@ -142,26 +142,26 @@
   - Số lần thi (attempt)
   - Ngày thi (exam_date)
 
-#### 4.2. Quản lý attempt (lần thi)
+#### 4.2. Quản lý attempt (lần thi) (Toàn)
 - Theo dõi số lần thi của giảng viên cho mỗi môn
 - Tự động tăng attempt khi tạo kỳ thi mới
 - Validation: Không cho phép thi lại nếu đã PASS
 - Hiển thị lịch sử các lần thi
 
-#### 4.3. Tính PASS/FAIL
+#### 4.3. Tính PASS/FAIL (Toàn)
 - Nhập điểm thi (score)
 - Tự động tính kết quả:
   - **PASS:** Điểm >= điểm chuẩn (ví dụ: >= 70)
   - **FAIL:** Điểm < điểm chuẩn
 - Cập nhật trạng thái result (PASS/FAIL)
 
-#### 4.4. Điều kiện thi lại
+#### 4.4. Điều kiện thi lại (Toàn)
 - Kiểm tra điều kiện thi lại:
   - Chỉ được thi lại nếu lần trước FAIL
   - Giới hạn số lần thi (nếu có)
 - Hiển thị thông báo nếu không đủ điều kiện
 
-#### 4.5. Upload certificate
+#### 4.5. Upload certificate (Toàn)
 - Upload file chứng chỉ (certificate_file_id)
 - Liên kết file với kỳ thi
 - Xem và tải certificate
@@ -411,7 +411,7 @@
 
 ### 3. Thi Aptech
 
-#### 3.1. Xem kỳ thi
+#### 3.1. Xem kỳ thi (Toàn)
 - Xem danh sách kỳ thi Aptech:
   - Phiên thi (session): ngày, giờ, phòng
   - Môn thi
@@ -420,7 +420,7 @@
 - Xem chi tiết kỳ thi
 - Lọc theo môn học, năm
 
-#### 3.2. Xem kết quả PASS/FAIL
+#### 3.2. Xem kết quả PASS/FAIL (Toàn)
 - Xem kết quả thi:
   - Điểm số (score)
   - Kết quả (result): PASS/FAIL
@@ -428,12 +428,12 @@
 - Xem lịch sử các lần thi
 - Xem điều kiện thi lại
 
-#### 3.3. Tải certificate
+#### 3.3. Tải certificate (Toàn)
 - Tải file chứng chỉ (certificate_file_id)
 - Xem thông tin chứng chỉ
 - Chỉ hiển thị khi đã PASS
 
-#### 3.4. Xem điều kiện thi lại
+#### 3.4. Xem điều kiện thi lại (Toàn)
 - Xem điều kiện thi lại:
   - Chỉ được thi lại nếu lần trước FAIL
   - Số lần thi hiện tại
