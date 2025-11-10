@@ -32,6 +32,8 @@ import TeacherPersonalReports from './pages/teacher/TeacherPersonalReports';
 
 import './assets/styles/Common.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import AdminManageSubjects from "./pages/admin/AdminManageSubject.jsx";
+import AdminManageSubjectAdd from "./pages/admin/AdminManageSubjectAdd.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -76,7 +78,7 @@ function AppRoutes() {
         path="/manage-teacher"
         element={
           <ProtectedRoute requiredRole="Manage-Leader">
-            <ManageTeacher />
+            <AdminManageSubjects />
           </ProtectedRoute>
         }
       />
@@ -100,7 +102,7 @@ function AppRoutes() {
         path="/manage-subject-add"
         element={
           <ProtectedRoute requiredRole="Manage-Leader">
-            <ManageSubjectAdd />
+            <AdminManageSubjectAdd />
           </ProtectedRoute>
         }
       />
