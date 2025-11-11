@@ -92,6 +92,13 @@ const Login = () => {
         return;
       }
 
+      const fullName =
+        userInfo?.full_name ||
+        response.full_name ||
+        response.fullName ||
+        response.name ||
+        null;
+
       // Save remember me
       if (formData.rememberMe) {
         localStorage.setItem('rememberMe', 'true');
@@ -105,7 +112,8 @@ const Login = () => {
       login(token, role, userInfo?.email || formData.email, {
         id: userInfo?.userId,
         email: userInfo?.email || formData.email,
-        roles: userInfo?.roles || []
+        roles: userInfo?.roles || [],
+        full_name: fullName
       });
 
       // Redirect based on role

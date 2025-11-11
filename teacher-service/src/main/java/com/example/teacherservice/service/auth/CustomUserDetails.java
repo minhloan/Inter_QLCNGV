@@ -18,6 +18,14 @@ public class CustomUserDetails implements UserDetails {
         this.user = user;
     }
 
+    public String getProfileUsername() {
+        return user.getUsername();
+    }
+
+    public String getEmail() {
+        return user.getEmail();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         Stream<Role> stream;

@@ -31,8 +31,8 @@ const Header = () => {
   };
 
   // Get user display name and email
-  const displayName = user?.userData?.full_name || user?.username || 'THUAN NGUYEN TRUNG';
-  const displayEmail = user?.userData?.email || user?.username || 'ntthuana23127@cusc.ctu.edu.vn';
+  const displayName = user?.username  || 'USER';
+  const displayEmail = user?.userData?.email || user?.email || '';
 
   return (
     <div className="top-header">

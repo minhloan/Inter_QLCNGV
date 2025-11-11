@@ -23,7 +23,8 @@ public class JwtService {
     public String generateToken(String username) {
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
         Map<String, Object> claims = new HashMap<>();
-        String userId = ((CustomUserDetails) userDetails).getId();
+        CustomUserDetails custom = (CustomUserDetails) userDetails;
+        String userId = custom.getId();
         Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
 
         List<String> roles = authorities.stream()
@@ -31,6 +32,8 @@ public class JwtService {
                 .collect(Collectors.toList());
 
         claims.put("userId", userId);
+        claims.put("username", custom.getProfileUsername());
+        claims.put("email", custom.getEmail());
         claims.put("roles", roles);
         claims.put("type", "access");
 
@@ -40,9 +43,12 @@ public class JwtService {
     public String generateRefreshToken(String username) {
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
         Map<String, Object> claims = new HashMap<>();
-        String userId = ((CustomUserDetails) userDetails).getId();
+        CustomUserDetails custom = (CustomUserDetails) userDetails;
+        String userId = custom.getId();
 
         claims.put("userId", userId);
+        claims.put("username", custom.getProfileUsername());
+        claims.put("email", custom.getEmail());
         claims.put("type", "refresh");
 
         return createRefreshToken(claims, userDetails);

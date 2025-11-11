@@ -24,6 +24,7 @@ public class UserDetails {
     private String aboutMe;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date birthDate;
+    private String address;
     private String academic_rank;
     private String imageUrl;
 }

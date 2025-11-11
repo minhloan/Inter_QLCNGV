@@ -206,6 +206,9 @@ public class AuthService {
                         .token(accessToken)
                         .access(accessToken)
                         .refresh(refreshToken)
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .full_name(buildFullName(user))
                         .build();
             } else {
                 throw new WrongCredentialsException("Email hoặc mật khẩu không đúng");
@@ -236,6 +239,9 @@ public class AuthService {
                             .token(accessToken)
                             .access(accessToken)
                             .refresh(refreshToken)
+                            .username(user.getUsername())
+                            .email(user.getEmail())
+                            .full_name(buildFullName(user))
                             .build();
                 } else {
                     throw new WrongCredentialsException("Bạn không có quyền truy cập với vai trò này");
@@ -263,7 +269,7 @@ public class AuthService {
         return TokenDto.builder()
                 .token(newAccessToken)
                 .access(newAccessToken)
-                .access(refreshToken)
+                .refresh(refreshToken)
                 .build();
     }
 
@@ -272,6 +278,16 @@ public class AuthService {
             String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
             redisTemplate.delete(refreshKey);
         }
+    }
+
+    private String buildFullName(User user) {
+        if (user == null || user.getUserDetails() == null) return null;
+        String first = user.getUserDetails().getFirstName();
+        String last = user.getUserDetails().getLastName();
+        if (first == null && last == null) return null;
+        if (first == null) return last;
+        if (last == null) return first;
+        return first + " " + last;
     }
 }
 

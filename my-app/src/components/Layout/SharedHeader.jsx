@@ -74,8 +74,8 @@ const SharedHeader = () => {
                     </div>
                   </div>
                   <div className="user-dropdown-info">
-                    <div className="user-name">{(user?.userData?.full_name || user?.username || 'USER').toUpperCase()}</div>
-                    <div className="user-email">{user?.userData?.email || user?.email || user?.username || ''}</div>
+                    <div className="user-name">{(user?.username || 'USER').toUpperCase()}</div>
+                    <div className="user-email">{user?.userData?.email || user?.email || ''}</div>
                   </div>
                   <div className="user-dropdown-menu">
                     <Link 

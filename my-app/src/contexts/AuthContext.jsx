@@ -20,18 +20,23 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       const role = getPrimaryRole();
       const userInfo = getUserInfo();
+      const fullName = localStorage.getItem('full_name') || userInfo?.full_name || null;
+      if (fullName && !localStorage.getItem('full_name')) {
+        localStorage.setItem('full_name', fullName);
+      }
       
       if (role && userInfo) {
         setUser({
           token,
           role,
-          username: userInfo.email || 'User',
+          username: userInfo.username || userInfo.email || 'User',
           email: userInfo.email,
           userId: userInfo.userId,
           userData: {
             email: userInfo.email,
             userId: userInfo.userId,
-            roles: userInfo.roles
+            roles: userInfo.roles,
+            full_name: fullName
           }
         });
       }
@@ -41,11 +46,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = (token, role, username, userData) => {
     const userInfo = getUserInfo();
+    if (userData?.full_name) {
+      localStorage.setItem('full_name', userData.full_name);
+    }
     
     setUser({
       token,
       role,
-      username: username || userInfo?.email || 'User',
+      username: userInfo?.username || username || userInfo?.email || 'User',
       email: userInfo?.email || username,
       userId: userInfo?.userId || userData?.id,
       userData: userData || {

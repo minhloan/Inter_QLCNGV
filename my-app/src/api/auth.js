@@ -2,14 +2,12 @@ import Cookies from "js-cookie";
 import createApiInstance from "./createApiInstance.js";
 
 const API_URL = "/v1/teacher/auth";
-
 const api = createApiInstance(API_URL);
-
 
 export const login = async (data) => {
     const response = await api.post("/login", data);
-    const accessToken = response.data.accessToken || response.data.token;
-    const refreshToken = response.data.refreshToken;
+    const accessToken = response.data.access || response.data.token;
+    const refreshToken = response.data.refresh || response.data.refreshToken;
 
     // Lưu accessToken trong cookie
     Cookies.set("accessToken", accessToken, {
@@ -48,8 +46,8 @@ export const refreshAccessToken = async () => {
 
     try {
         const response = await api.post("/refresh", { refreshToken });
-        const accessToken = response.data.accessToken || response.data.token;
-        const newRefreshToken = response.data.refreshToken;
+        const accessToken = response.data.access || response.data.token;
+        const newRefreshToken = response.data.refresh || response.data.refreshToken;
 
         // Cập nhật accessToken
         Cookies.set("accessToken", accessToken, {
@@ -82,11 +80,9 @@ export const logout = async () => {
     const refreshToken = getRefreshToken();
 
     if (refreshToken) {
-        try {
-            await api.post("/logout", { refreshToken });
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
+        // Làm mới access token để tránh 401 nếu token đã hết hạn
+        try { await refreshAccessToken(); } catch (_) {}
+        try { await api.post("/logout", { refreshToken }); } catch (_) {}
     }
 
     Cookies.remove("accessToken");
@@ -109,14 +105,12 @@ export const getUserRole = () => {
             roles = [payload.role];
         }
 
-        const normalized = [...new Set(
+        return [...new Set(
             roles
                 .filter(Boolean)
                 .map(String)
                 .map(r => r.startsWith('ROLE_') ? r : `ROLE_${r.toUpperCase()}`)
         )];
-
-        return normalized;
     } catch (error) {
         console.error("Error decoding token:", error);
         return [];
@@ -165,6 +159,7 @@ export const getUserInfo = () => {
         const payload = JSON.parse(atob(token.split('.')[1]));
         return {
             email: payload.sub || payload.email,
+            username: payload.username,
             userId: payload.userId,
             roles: getUserRole()
         };
@@ -172,10 +167,6 @@ export const getUserInfo = () => {
         console.error("Error decoding token:", error);
         return null;
     }
-};
-
-export const isAuthenticated = () => {
-    return !!getToken();
 };
 
 // Forgot Password API
@@ -191,7 +182,6 @@ export const verifyOtp = async (email, otp) => {
 };
 
 // Update Password API
-// OTP có thể là null - backend sẽ kiểm tra cờ verified thay vì verify OTP lại
 export const updatePassword = async (email, newPassword, otp = null) => {
     const response = await api.post("/updatePassword", { email, newPassword, otp });
     return response.data;

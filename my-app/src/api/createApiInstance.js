@@ -33,6 +33,7 @@ const createApiInstance = (baseURL) => {
         "/v1/teacher/auth/verifyOtp",
         "/v1/teacher/auth/updatePassword",
         "/v1/teacher/auth/refresh",
+        "/v1/teacher/auth/logout",
         "/eureka",
     ];
 

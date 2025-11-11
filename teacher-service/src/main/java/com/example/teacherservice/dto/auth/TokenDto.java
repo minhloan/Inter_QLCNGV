@@ -9,5 +9,10 @@ public class TokenDto {
     private String token;
     private String access;
     private String refresh;
+
+    // Extra user info for frontend display
+    private String username;
+    private String email;
+    private String full_name;
 }
 

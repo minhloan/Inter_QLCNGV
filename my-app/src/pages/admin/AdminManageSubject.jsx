@@ -154,7 +154,7 @@ const AdminManageSubjects = () => {
                     </button>
                     <h1 className="page-title">Admin Courses ({filteredCourses.length})</h1>
                 </div>
-                <Link to="/manage-subject-add" className="btn btn-primary">
+                <Link to="/manage-x`-add" className="btn btn-primary">
                     <i className="bi bi-plus-circle"></i>
                     Thêm Môn Học
                 </Link>

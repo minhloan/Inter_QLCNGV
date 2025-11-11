@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import Toast from '../components/Common/Toast';
 import Loading from '../components/Common/Loading';
+import { saveUser } from '../api/user';
 
 const AddTeacher = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    code: '',
-    user_id: '',
-    full_name: '',
+    username:'',
     email: '',
-    phone: '',
+    password:'',
     status: 'active',
+    gender:'',
     address: '',
     notes: ''
   });
@@ -30,22 +30,23 @@ const AddTeacher = () => {
 
   const validate = () => {
     const newErrors = {};
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'Vui lòng nhập tên đăng nhập';
+    } else if (formData.username.length < 6) {
+      newErrors.username = 'Tên đăng nhập phải có ít nhất 6 ký tự';
+    }
     
-    if (!formData.code.trim()) {
-      newErrors.code = 'Vui lòng nhập mã giáo viên';
-    }
-    if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Vui lòng nhập họ và tên';
-    }
     if (!formData.email.trim()) {
       newErrors.email = 'Vui lòng nhập email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Email không hợp lệ';
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{10,11}$/.test(formData.phone)) {
-      newErrors.phone = 'Số điện thoại phải có 10-11 chữ số';
+    
+    if (!formData.password.trim()) {
+      newErrors.password = 'Vui lòng nhập mật khẩu';
+    } else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(formData.password)) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái và số';
     }
 
     setErrors(newErrors);
@@ -54,26 +55,34 @@ const AddTeacher = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validate()) {
       return;
     }
 
     try {
       setLoading(true);
-      // Simulate API call
-      console.log('Submitting teacher data:', {
-        ...formData,
-        user_id: formData.user_id ? parseInt(formData.user_id) : null
-      });
       
-      showToast('Thành công', 'Giáo viên đã được thêm thành công!', 'success');
-      
+      // Chuẩn bị dữ liệu gửi lên API (chỉ gửi các trường mà RegisterRequest yêu cầu)
+      const userData = {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        status: formData.status,
+        gender: formData.gender || null,
+        address: formData.address.trim() || null
+      };
+
+      await saveUser(userData);
+
+      showToast('Thành công', 'Người dùng đã được thêm thành công!', 'success');
+
       setTimeout(() => {
         navigate('/manage-teacher');
       }, 1500);
     } catch (error) {
-      showToast('Lỗi', 'Không thể thêm giáo viên', 'danger');
+      const errorMessage = error.response?.data?.message || error.message || 'Không thể thêm người dùng';
+      showToast('Lỗi', errorMessage, 'danger');
     } finally {
       setLoading(false);
     }
@@ -105,57 +114,20 @@ const AddTeacher = () => {
             <div className="col-md-6">
               <div className="form-group">
                 <label className="form-label">
-                  Mã Giáo viên
+                  Tên đăng nhập
                   <span className="required">*</span>
                 </label>
                 <input
                   type="text"
-                  className={`form-control ${errors.code ? 'is-invalid' : ''}`}
-                  id="teacherCode"
-                  name="code"
-                  value={formData.code}
+                  className={`form-control ${errors.username ? 'is-invalid' : ''}`}
+                  id="username"
+                  name="username"
+                  value={formData.username}
                   onChange={handleChange}
+                  placeholder="Nhập tên đăng nhập (tối thiểu 6 ký tự)"
                   required
                 />
-                {errors.code && <div className="invalid-feedback">{errors.code}</div>}
-              </div>
-            </div>
-            <div className="col-md-6">
-              <div className="form-group">
-                <label className="form-label">User ID (nếu có)</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  id="userId"
-                  name="user_id"
-                  value={formData.user_id}
-                  onChange={handleChange}
-                  placeholder="ID người dùng"
-                />
-                <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666' }}>
-                  Liên kết với tài khoản người dùng
-                </small>
-              </div>
-            </div>
-          </div>
-
-          <div className="row">
-            <div className="col-md-6">
-              <div className="form-group">
-                <label className="form-label">
-                  Họ và Tên
-                  <span className="required">*</span>
-                </label>
-                <input
-                  type="text"
-                  className={`form-control ${errors.full_name ? 'is-invalid' : ''}`}
-                  id="fullName"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  required
-                />
-                {errors.full_name && <div className="invalid-feedback">{errors.full_name}</div>}
+                {errors.username && <div className="invalid-feedback">{errors.username}</div>}
               </div>
             </div>
             <div className="col-md-6">
@@ -171,6 +143,7 @@ const AddTeacher = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  placeholder="Nhập email"
                   required
                 />
                 {errors.email && <div className="invalid-feedback">{errors.email}</div>}
@@ -182,20 +155,23 @@ const AddTeacher = () => {
             <div className="col-md-6">
               <div className="form-group">
                 <label className="form-label">
-                  Số điện thoại
+                  Mật khẩu
                   <span className="required">*</span>
                 </label>
                 <input
-                  type="tel"
-                  className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
+                  type="password"
+                  className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                  id="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleChange}
+                  placeholder="Nhập mật khẩu (tối thiểu 8 ký tự, có chữ và số)"
                   required
-                  pattern="[0-9]{10,11}"
                 />
-                {errors.phone && <div className="invalid-feedback">{errors.phone}</div>}
+                {errors.password && <div className="invalid-feedback">{errors.password}</div>}
+                <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666' }}>
+                  Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái và số
+                </small>
               </div>
             </div>
             <div className="col-md-6">
@@ -212,8 +188,27 @@ const AddTeacher = () => {
                   onChange={handleChange}
                   required
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Không hoạt động</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6">
+              <div className="form-group">
+                <label className="form-label">Giới tính</label>
+                <select
+                  className="form-select"
+                  id="gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                >
+                  <option value="">Chọn giới tính</option>
+                  <option value="MALE">Nam</option>
+                  <option value="FEMALE">Nữ</option>
                 </select>
               </div>
             </div>

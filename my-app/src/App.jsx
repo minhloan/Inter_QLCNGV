@@ -78,7 +78,7 @@ function AppRoutes() {
         path="/manage-teacher"
         element={
           <ProtectedRoute requiredRole="Manage-Leader">
-            <AdminManageSubjects />
+            <ManageTeacher />
           </ProtectedRoute>
         }
       />

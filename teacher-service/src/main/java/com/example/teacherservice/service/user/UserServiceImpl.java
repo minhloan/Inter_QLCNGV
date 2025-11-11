@@ -4,6 +4,7 @@ import com.example.teacherservice.dto.UserInformationDto;
 import com.example.teacherservice.service.file.FileService;
 import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.enums.Active;
+import com.example.teacherservice.enums.Gender;
 import com.example.teacherservice.enums.Role;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.model.UserDetails;
@@ -29,7 +30,7 @@ public class UserServiceImpl implements UserService {
     private final ModelMapper modelMapper;
 
     @Override
-    public User SaveUser(RegisterRequest registerRequest) {
+    public User SaveUser(RegisterRequest registerRequest)   {
         if (userRepository.existsByEmailIgnoreCase(registerRequest.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
@@ -37,14 +38,37 @@ public class UserServiceImpl implements UserService {
         Set<Role> initialRoles = new HashSet<>();
         initialRoles.add(Role.TEACHER);
 
+        Active activeStatus = Active.ACTIVE; // default
+        if (registerRequest.getStatus() != null) {
+            try {
+                activeStatus = Active.valueOf(registerRequest.getStatus().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                activeStatus = Active.ACTIVE;
+            }
+        }
+
+        Gender genderEnum = null;
+        if (registerRequest.getGender() != null && !registerRequest.getGender().trim().isEmpty()) {
+            try {
+                genderEnum = Gender.valueOf(registerRequest.getGender().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                genderEnum = null;
+            }
+        }
+
+        UserDetails userDetails = UserDetails.builder()
+                .gender(genderEnum)
+                .address(registerRequest.getAddress())
+                .build();
+
         User toSave = User.builder()
                 .username(registerRequest.getUsername())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .email(registerRequest.getEmail())
                 .primaryRole(Role.TEACHER)
                 .roles(initialRoles)     
-                .active(Active.ACTIVE)
-                .userDetails(new UserDetails())
+                .active(activeStatus)
+                .userDetails(userDetails)
                 .build();
         return userRepository.save(toSave);
     }
