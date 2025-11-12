@@ -9,6 +9,7 @@ import com.example.teacherservice.model.User;
 import com.example.teacherservice.request.auth.LoginRequest;
 import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.auth.UpdatePasswordRequest;
+import com.example.teacherservice.service.auditlog.AuditLogService;
 import com.example.teacherservice.service.user.UserService;
 import io.jsonwebtoken.Claims;
 import jakarta.transaction.Transactional;
@@ -37,6 +38,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final RedisTemplate<String,String> redisTemplate;
     private final EmailService emailService;
+    private final AuditLogService auditLogService;
 
     private static final String OTP_KEY_PREFIX = "otp:";
     private static final String OTP_COOLDOWN_PREFIX = "otp:cooldown:";
@@ -201,6 +203,11 @@ public class AuthService {
                 User user = userService.getUserByEmail(loginRequest.getEmail());
                 String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
                 redisTemplate.opsForValue().set(refreshKey, user.getId(), REFRESH_TOKEN_TTL);
+
+                auditLogService.writeAndBroadcast(user.getId(),
+                        "LOGIN", "USER", user.getId(),
+                        "{\"method\":\"PASSWORD\"}"
+                );
 
                 return TokenDto.builder()
                         .token(accessToken)

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logo2 from '../../assets/images/logo2.jpg';
 
 const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -37,7 +38,13 @@ const Header = () => {
   return (
     <div className="top-header">
       <div className="logo-container">
-        <div className="logo-icon">CUSC</div>
+        <div className="logo-icon" style={{ overflow: 'hidden', borderRadius: '50%', width: '40px', height: '40px' }}>
+          <img 
+            src={logo2} 
+            alt="logo" 
+            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px', backgroundColor: '#fff' }} 
+          />
+        </div>
         <Link to="/" className="logo-text">Aptech CanTho</Link>
       </div>
       <div className="header-actions">

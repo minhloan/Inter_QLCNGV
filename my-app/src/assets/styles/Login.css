@@ -16,7 +16,6 @@ body {
     min-height: 100vh;
 }
 
-/* Left Column - Help Section */
 .login-left-column {
     flex: 1;
     background: linear-gradient(180deg, #ffb366 0%, #ff8c00 50%, #ffffff 100%);

@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import TeacherModal from '../components/Teacher/TeacherModal';
 import DeleteModal from '../components/Teacher/DeleteModal';
 import Toast from '../components/Common/Toast';
 import Loading from '../components/Common/Loading';
+import { getAllUsers, searchUsers, updateUser, deleteUser } from '../api/user';
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
-  const [teachers, setTeachers] = useState([]);
-  const [filteredTeachers, setFilteredTeachers] = useState([]);
+  const [allTeachers, setAllTeachers] = useState([]); // Lưu tất cả dữ liệu từ server để filter client-side
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
@@ -21,79 +23,139 @@ const ManageTeacher = () => {
   const [deleteTeacher, setDeleteTeacher] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const searchTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    loadTeachers();
+  const showToast = useCallback((title, message, type) => {
+    setToast({ show: true, title, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [teachers, searchTerm, statusFilter, sortBy]);
-
-  const loadTeachers = async () => {
+  const loadTeachers = useCallback(async (page, size) => {
     try {
       setLoading(true);
-      // Demo data - replace with actual API call
-      const demoTeachers = [
-        { id: 1, code: 'GV001', full_name: 'Nguyễn Văn A', email: 'nguyenvana@example.com', phone: '0123456789', status: 'active' },
-        { id: 2, code: 'GV002', full_name: 'Trần Thị B', email: 'tranthib@example.com', phone: '0987654321', status: 'active' },
-        { id: 3, code: 'GV003', full_name: 'Lê Văn C', email: 'levanc@example.com', phone: '0123456780', status: 'inactive' },
-        { id: 4, code: 'GV004', full_name: 'Phạm Văn D', email: 'phamvand@example.com', phone: '0123456781', status: 'active' },
-        { id: 5, code: 'GV005', full_name: 'Nguyễn Thị E', email: 'nguyenthi@example.com', phone: '0123456782', status: 'inactive' },
-        { id: 6, code: 'GV006', full_name: 'Trần Văn F', email: 'tranvanf@example.com', phone: '0123456783', status: 'active' },
-        { id: 7, code: 'GV007', full_name: 'Lê Văn G', email: 'levang@example.com', phone: '0123456784', status: 'inactive' },
-        { id: 8, code: 'GV008', full_name: 'Phạm Văn H', email: 'phamvanh@example.com', phone: '0123456785', status: 'active' },
-        { id: 9, code: 'GV009', full_name: 'Nguyễn Thị I', email: 'nguyenthi@example.com', phone: '0123456786', status: 'inactive' },
-        { id: 10, code: 'GV010', full_name: 'Trần Văn K', email: 'tranvank@example.com', phone: '0123456787', status: 'active' }
-      ];
+      const response = await getAllUsers(page, size);
       
-      setTeachers(demoTeachers);
-      setFilteredTeachers(demoTeachers);
+      const mappedTeachers = (response.content || []).map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        phone: user.phoneNumber,
+        status: user.active === 'ACTIVE' || user.active === 'active' ? 'active' : 'inactive'
+      }));
+
+      setAllTeachers(mappedTeachers);
+      setTotalPages(response.totalPages || 0);
+      setTotalElements(response.totalElements || 0);
+      setHasLoaded(true);
     } catch (error) {
+      console.error('Error loading teachers:', error);
       showToast('Lỗi', 'Không thể tải danh sách giáo viên', 'danger');
+      setAllTeachers([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
-  const applyFilters = () => {
-    let filtered = [...teachers];
-
-    // Search filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(teacher =>
-        (teacher.full_name && teacher.full_name.toLowerCase().includes(term)) ||
-        (teacher.email && teacher.email.toLowerCase().includes(term)) ||
-        (teacher.code && teacher.code.toLowerCase().includes(term)) ||
-        (teacher.phone && teacher.phone.includes(term))
-      );
+  const handleSearch = useCallback(async (term, page, size) => {
+    if (!term.trim()) {
+      return;
     }
 
-    // Status filter
+    try {
+      setLoading(true);
+      const response = await searchUsers(term.trim(), page, size);
+      
+      const mappedTeachers = (response.content || []).map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        phone: user.phoneNumber,
+        status: user.active === 'ACTIVE' || user.active === 'active' ? 'active' : 'inactive'
+      }));
+
+      setAllTeachers(mappedTeachers);
+      setTotalPages(response.totalPages || 0);
+      setTotalElements(response.totalElements || 0);
+    } catch (error) {
+      console.error('Error searching teachers:', error);
+      showToast('Lỗi', 'Không thể tìm kiếm giáo viên', 'danger');
+      setAllTeachers([]);
+      setTotalPages(0);
+      setTotalElements(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  // Filter và sort client-side sử dụng useMemo để tránh re-render không cần thiết (không gọi API, không loading, không nhảy giao diện)
+  const filteredTeachers = useMemo(() => {
+    if (allTeachers.length === 0) return [];
+    
+    let filtered = [...allTeachers];
+    
+    // Apply status filter nếu có
     if (statusFilter) {
       filtered = filtered.filter(teacher => teacher.status === statusFilter);
     }
 
-    // Sort
+    // Apply sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name_asc':
-          return (a.full_name || '').localeCompare(b.full_name || '');
+          return (a.username || '').localeCompare(b.username || '');
         case 'name_desc':
-          return (b.full_name || '').localeCompare(a.full_name || '');
-        case 'created_desc':
-          return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-        case 'created_asc':
-          return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+          return (b.username || '').localeCompare(a.username || '');
         default:
           return 0;
       }
     });
 
-    setFilteredTeachers(filtered);
-    setCurrentPage(1);
-  };
+    return filtered;
+  }, [allTeachers, statusFilter, sortBy]);
+
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [statusFilter, sortBy]);
+
+  // Tự động load dữ liệu khi vào trang (chỉ 1 lần)
+  useEffect(() => {
+    if (!hasLoaded) {
+      loadTeachers(1, pageSize);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Xử lý search và pagination - chỉ chạy sau khi đã load lần đầu
+  useEffect(() => {
+    // Bỏ qua nếu chưa load lần đầu
+    if (!hasLoaded) {
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      if (searchTerm.trim()) {
+        handleSearch(searchTerm, currentPage, pageSize);
+      } else {
+        loadTeachers(currentPage, pageSize);
+      }
+    }, 500);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, currentPage]);
 
   const handleAdd = () => {
     navigate('/add-teacher');
@@ -112,22 +174,35 @@ const ManageTeacher = () => {
   const handleSave = async (teacherData) => {
     try {
       setLoading(true);
-      // Simulate API call
       if (editingTeacher) {
-        // Update
-        setTeachers(prev => prev.map(t => t.id === editingTeacher.id ? { ...t, ...teacherData } : t));
+        // Update user via API
+        await updateUser({
+          id: editingTeacher.id,
+          email: teacherData.email,
+          username: teacherData.full_name || teacherData.username,
+          phone: teacherData.phone,
+          address: teacherData.address,
+          notes: teacherData.notes
+        });
         showToast('Thành công', 'Cập nhật giáo viên thành công', 'success');
+        setShowModal(false);
+        setEditingTeacher(null);
+        setLoading(false);
+        if (searchTerm.trim()) {
+          await handleSearch(searchTerm, currentPage, pageSize);
+        } else {
+          await loadTeachers(currentPage, pageSize);
+        }
       } else {
-        // Create
-        const newTeacher = { id: Date.now(), ...teacherData };
-        setTeachers(prev => [...prev, newTeacher]);
-        showToast('Thành công', 'Thêm giáo viên thành công', 'success');
+        // Create - navigate to add teacher page
+        showToast('Thông báo', 'Vui lòng sử dụng trang Thêm Giáo viên', 'info');
+        setShowModal(false);
+        setEditingTeacher(null);
+        setLoading(false);
       }
-      setShowModal(false);
-      setEditingTeacher(null);
     } catch (error) {
-      showToast('Lỗi', 'Không thể lưu thông tin giáo viên', 'danger');
-    } finally {
+      console.error('Error saving teacher:', error);
+      showToast('Lỗi', error.response?.data?.message || 'Không thể lưu thông tin giáo viên', 'danger');
       setLoading(false);
     }
   };
@@ -137,13 +212,21 @@ const ManageTeacher = () => {
     
     try {
       setLoading(true);
-      setTeachers(prev => prev.filter(t => t.id !== deleteTeacher.id));
+      // Call API to delete user
+      await deleteUser(deleteTeacher.id);
       showToast('Thành công', 'Xóa giáo viên thành công', 'success');
       setShowDeleteModal(false);
+      const deletedId = deleteTeacher.id;
       setDeleteTeacher(null);
+      setLoading(false);
+      if (searchTerm.trim()) {
+        await handleSearch(searchTerm, currentPage, pageSize);
+      } else {
+        await loadTeachers(currentPage, pageSize);
+      }
     } catch (error) {
-      showToast('Lỗi', 'Không thể xóa giáo viên', 'danger');
-    } finally {
+      console.error('Error deleting teacher:', error);
+      showToast('Lỗi', error.response?.data?.message || 'Không thể xóa giáo viên', 'danger');
       setLoading(false);
     }
   };
@@ -152,222 +235,220 @@ const ManageTeacher = () => {
     setSearchTerm('');
     setStatusFilter('');
     setSortBy('name_asc');
+    setCurrentPage(1);
   };
 
-  const showToast = (title, message, type) => {
-    setToast({ show: true, title, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-  };
-
-  const totalPages = Math.ceil(filteredTeachers.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const pageTeachers = filteredTeachers.slice(startIndex, startIndex + pageSize);
-
-  if (loading) {
-    return <Loading fullscreen={true} message="Đang tải danh sách giáo viên..." />;
-  }
+  const pageTeachers = filteredTeachers;
 
   return (
     <MainLayout>
-      {/* Content Header */}
-      <div className="content-header">
-        <div className="content-title">
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <i className="bi bi-arrow-left"></i>
-          </button>
-          <h1 className="page-title">Danh sách Giáo viên</h1>
-        </div>
-        <Link to="/add-teacher" className="btn btn-primary">
-          <i className="bi bi-plus-circle"></i>
-          Thêm Giáo viên
-        </Link>
-      </div>
-
-      {/* Filter Section */}
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Tìm kiếm</label>
-            <div className="search-input-group">
-              <i className="bi bi-search"></i>
-              <input
-                type="text"
-                className="filter-input"
-                placeholder="Tên, email, mã giáo viên..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Trạng thái</label>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Sắp xếp</label>
-            <select
-              className="filter-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="name_asc">Tên A-Z</option>
-              <option value="name_desc">Tên Z-A</option>
-              <option value="created_desc">Mới nhất</option>
-              <option value="created_asc">Cũ nhất</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={handleReset} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
+      <div className="page-admin-manage-teacher">
+        {/* Content Header */}
+        <div className="content-header">
+          <div className="content-title">
+            <button className="back-button" onClick={() => navigate(-1)}>
+              <i className="bi bi-arrow-left"></i>
             </button>
+            <h1 className="page-title">Danh sách Giáo viên</h1>
           </div>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th width="5%">#</th>
-                <th width="15%">Mã GV</th>
-                <th width="20%">Họ và Tên</th>
-                <th width="20%">Email</th>
-                <th width="15%">Số điện thoại</th>
-                <th width="10%">Trạng thái</th>
-                <th width="15%" className="text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageTeachers.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center">
-                    <div className="empty-state">
-                      <i className="bi bi-inbox"></i>
-                      <p>Không tìm thấy giáo viên nào</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                pageTeachers.map((teacher, index) => (
-                  <tr key={teacher.id} className="fade-in">
-                    <td>{startIndex + index + 1}</td>
-                    <td><span className="teacher-code">{teacher.code || 'N/A'}</span></td>
-                    <td>{teacher.full_name || 'N/A'}</td>
-                    <td>{teacher.email || 'N/A'}</td>
-                    <td>{teacher.phone || 'N/A'}</td>
-                    <td>
-                      <span className={`badge badge-status ${teacher.status === 'active' ? 'active' : 'inactive'}`}>
-                        {teacher.status === 'active' ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <div className="action-buttons">
-                        <button
-                          className="btn btn-sm btn-primary btn-action"
-                          onClick={() => handleEdit(teacher)}
-                          title="Sửa"
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger btn-action"
-                          onClick={() => handleDelete(teacher)}
-                          title="Xóa"
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <Link to="/add-teacher" className="btn btn-primary">
+            <i className="bi bi-plus-circle"></i>
+            Thêm Giáo viên
+          </Link>
         </div>
 
-        {totalPages > 1 && (
-          <nav aria-label="Page navigation" className="mt-4">
-            <ul className="pagination justify-content-center">
-              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 2 && page <= currentPage + 2)
-                ) {
-                  return (
-                    <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                      <button className="page-link" onClick={() => setCurrentPage(page)}>
-                        {page}
+        {loading && (
+          <Loading fullscreen={true} message="Đang tải danh sách giáo viên..." />
+        )}
+
+        {hasLoaded && !loading && (
+          <div className="filter-table-wrapper">
+            {/* Filter Section */}
+            <div className="filter-section">
+              <div className="filter-row">
+                <div className="filter-group">
+                  <label className="filter-label">Tìm kiếm</label>
+                  <div className="search-input-group">
+                    <i className="bi bi-search"></i>
+                    <input
+                      type="text"
+                      className="filter-input"
+                      placeholder="Tìm kiếm theo username, email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="filter-group">
+                  <label className="filter-label">Trạng thái</label>
+                  <select
+                    className="filter-select"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">Tất cả</option>
+                    <option value="active">Hoạt động</option>
+                    <option value="inactive">Không hoạt động</option>
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <label className="filter-label">Sắp xếp</label>
+                  <select
+                    className="filter-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="name_asc">Username A-Z</option>
+                    <option value="name_desc">Username Z-A</option>
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <button className="btn btn-secondary" onClick={handleReset} style={{ width: '100%' }}>
+                    <i className="bi bi-arrow-clockwise"></i>
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Table Section */}
+            <div className="table-container">
+              <div className="table-responsive">
+                <table className="table table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th width="5%">#</th>
+                      <th width="20%">Username</th>
+                      <th width="20%">Email</th>
+                      <th width="15%">Số điện thoại</th>
+                      <th width="10%">Trạng thái</th>
+                      <th width="15%" className="text-center">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageTeachers.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="text-center">
+                          <div className="empty-state">
+                            <i className="bi bi-inbox"></i>
+                            <p>Không tìm thấy giáo viên nào</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      pageTeachers.map((teacher, index) => (
+                        <tr key={teacher.id} className="fade-in">
+                          <td>{startIndex + index + 1}</td>
+                          <td><span className="teacher-code">{teacher.username || 'N/A'}</span></td>
+                          <td>{teacher.email || 'N/A'}</td>
+                          <td>{teacher.phone || 'N/A'}</td>
+                          <td>
+                            <span className={`badge badge-status ${teacher.status === 'active' ? 'active' : 'inactive'}`}>
+                              {teacher.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                            </span>
+                          </td>
+                          <td className="text-center">
+                            <div className="action-buttons">
+                              <button
+                                className="btn btn-sm btn-primary btn-action"
+                                onClick={() => handleEdit(teacher)}
+                                title="Sửa"
+                              >
+                                <i className="bi bi-pencil"></i>
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger btn-action"
+                                onClick={() => handleDelete(teacher)}
+                                title="Xóa"
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalPages > 1 && (
+                <nav aria-label="Page navigation" className="mt-4">
+                  <ul className="pagination justify-content-center">
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <i className="bi bi-chevron-left"></i>
                       </button>
                     </li>
-                  );
-                }
-                return null;
-              })}
-              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
-              </li>
-            </ul>
-          </nav>
+                    {[...Array(totalPages)].map((_, i) => {
+                      const page = i + 1;
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 2 && page <= currentPage + 2)
+                      ) {
+                        return (
+                          <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                            <button className="page-link" onClick={() => setCurrentPage(page)}>
+                              {page}
+                            </button>
+                          </li>
+                        );
+                      }
+                      return null;
+                    })}
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        <i className="bi bi-chevron-right"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showModal && (
+          <TeacherModal
+            teacher={editingTeacher}
+            onSave={handleSave}
+            onClose={() => {
+              setShowModal(false);
+              setEditingTeacher(null);
+            }}
+          />
+        )}
+
+        {showDeleteModal && deleteTeacher && (
+          <DeleteModal
+            teacher={deleteTeacher}
+            onConfirm={confirmDelete}
+            onClose={() => {
+              setShowDeleteModal(false);
+              setDeleteTeacher(null);
+            }}
+          />
+        )}
+
+        {toast.show && (
+          <Toast
+            title={toast.title}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(prev => ({ ...prev, show: false }))}
+          />
         )}
       </div>
-
-      {showModal && (
-        <TeacherModal
-          teacher={editingTeacher}
-          onSave={handleSave}
-          onClose={() => {
-            setShowModal(false);
-            setEditingTeacher(null);
-          }}
-        />
-      )}
-
-      {showDeleteModal && deleteTeacher && (
-        <DeleteModal
-          teacher={deleteTeacher}
-          onConfirm={confirmDelete}
-          onClose={() => {
-            setShowDeleteModal(false);
-            setDeleteTeacher(null);
-          }}
-        />
-      )}
-
-      {toast.show && (
-        <Toast
-          title={toast.title}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, show: false }))}
-        />
-      )}
     </MainLayout>
   );
 };

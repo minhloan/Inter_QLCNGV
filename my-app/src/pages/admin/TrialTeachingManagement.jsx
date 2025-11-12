@@ -129,159 +129,170 @@ const TrialTeachingManagement = () => {
 
   return (
     <MainLayout>
-      <div className="content-header">
-        <div className="content-title">
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <i className="bi bi-arrow-left"></i>
+      <div className="page-admin-trial">
+        <div className="content-header">
+          <div className="content-title">
+            <button className="back-button" onClick={() => navigate(-1)}>
+              <i className="bi bi-arrow-left"></i>
+            </button>
+            <h1 className="page-title">Quản lý Giảng thử</h1>
+          </div>
+          <button className="btn btn-primary" onClick={() => navigate('/trial-teaching-add')}>
+            <i className="bi bi-plus-circle"></i>
+            Thêm Lịch Giảng thử
           </button>
-          <h1 className="page-title">Quản lý Giảng thử</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/trial-teaching-add')}>
-          <i className="bi bi-plus-circle"></i>
-          Thêm Lịch Giảng thử
-        </button>
-      </div>
 
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Tìm kiếm</label>
-            <div className="search-input-group">
-              <i className="bi bi-search"></i>
-              <input
-                type="text"
-                className="filter-input"
-                placeholder="Tên giáo viên, mã giáo viên, môn học..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <div className="filter-table-wrapper">
+          <div className="filter-section">
+            <div className="filter-row">
+              <div className="filter-group">
+                <label className="filter-label">Tìm kiếm</label>
+                <div className="search-input-group">
+                  <i className="bi bi-search"></i>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="Tên giáo viên, mã giáo viên, môn học..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="filter-group">
+                <label className="filter-label">Trạng thái</label>
+                <select
+                  className="filter-select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">Tất cả</option>
+                  <option value="passed">Đạt</option>
+                  <option value="failed">Không đạt</option>
+                  <option value="pending">Chờ đánh giá</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label className="filter-label visually-hidden">Reset</label>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('');
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  <i className="bi bi-arrow-clockwise"></i>
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
-          <div className="filter-group">
-            <label className="filter-label">Trạng thái</label>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="passed">Đạt</option>
-              <option value="failed">Không đạt</option>
-              <option value="pending">Chờ đánh giá</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('');
-            }} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="table-container">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th width="5%">#</th>
-                <th width="12%">Mã GV</th>
-                <th width="18%">Tên Giáo viên</th>
-                <th width="20%">Môn học</th>
-                <th width="12%">Ngày giảng thử</th>
-                <th width="10%">Giờ</th>
-                <th width="8%">Điểm</th>
-                <th width="10%">Trạng thái</th>
-                <th width="5%" className="text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageTrials.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="text-center">
-                    <div className="empty-state">
-                      <i className="bi bi-inbox"></i>
-                      <p>Không tìm thấy giảng thử nào</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                pageTrials.map((trial, index) => (
-                  <tr key={trial.id} className="fade-in">
-                    <td>{startIndex + index + 1}</td>
-                    <td><span className="teacher-code">{trial.teacher_code || 'N/A'}</span></td>
-                    <td>{trial.teacher_name || 'N/A'}</td>
-                    <td>{trial.subject_name || 'N/A'}</td>
-                    <td>{trial.trial_date || 'N/A'}</td>
-                    <td>{trial.trial_time || 'N/A'}</td>
-                    <td>
-                      {trial.score !== null && trial.score !== undefined ? (
-                        <span className={trial.score >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
-                          {trial.score}
-                        </span>
-                      ) : (
-                        'N/A'
-                      )}
-                    </td>
-                    <td>{getStatusBadge(trial.status)}</td>
-                    <td className="text-center">
-                      <div className="action-buttons">
-                        <button
-                          className="btn btn-sm btn-info btn-action"
-                          onClick={() => navigate(`/trial-teaching-detail/${trial.id}`)}
-                          title="Chi tiết"
-                        >
-                          <i className="bi bi-eye"></i>
-                        </button>
-                      </div>
-                    </td>
+          <div className="table-container">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th width="5%">#</th>
+                    <th width="12%">Mã GV</th>
+                    <th width="18%">Tên Giáo viên</th>
+                    <th width="20%">Môn học</th>
+                    <th width="12%">Ngày giảng thử</th>
+                    <th width="10%">Giờ</th>
+                    <th width="8%">Điểm</th>
+                    <th width="10%">Trạng thái</th>
+                    <th width="5%" className="text-center">Thao tác</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {pageTrials.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="text-center">
+                        <div className="empty-state">
+                          <i className="bi bi-inbox"></i>
+                          <p>Không tìm thấy giảng thử nào</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    pageTrials.map((trial, index) => (
+                      <tr key={trial.id} className="fade-in">
+                        <td>{startIndex + index + 1}</td>
+                        <td>
+                          <span className="teacher-code">{trial.teacher_code || 'N/A'}</span>
+                        </td>
+                        <td>{trial.teacher_name || 'N/A'}</td>
+                        <td>{trial.subject_name || 'N/A'}</td>
+                        <td>{trial.trial_date || 'N/A'}</td>
+                        <td>{trial.trial_time || 'N/A'}</td>
+                        <td>
+                          {trial.score !== null && trial.score !== undefined ? (
+                            <span className={trial.score >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                              {trial.score}
+                            </span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
+                        <td>{getStatusBadge(trial.status)}</td>
+                        <td className="text-center">
+                          <div className="action-buttons">
+                            <button
+                              className="btn btn-sm btn-info btn-action"
+                              onClick={() => navigate(`/trial-teaching-detail/${trial.id}`)}
+                              title="Chi tiết"
+                            >
+                              <i className="bi bi-eye"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-        {totalPages > 1 && (
-          <nav aria-label="Page navigation" className="mt-4">
-            <ul className="pagination justify-content-center">
-              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
-                  return (
-                    <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                      <button className="page-link" onClick={() => setCurrentPage(page)}>
-                        {page}
-                      </button>
-                    </li>
-                  );
-                }
-                return null;
-              })}
-              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
-              </li>
-            </ul>
-          </nav>
-        )}
+            {totalPages > 1 && (
+              <nav aria-label="Page navigation" className="mt-4">
+                <ul className="pagination justify-content-center">
+                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <i className="bi bi-chevron-left"></i>
+                    </button>
+                  </li>
+                  {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                      return (
+                        <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                          <button className="page-link" onClick={() => setCurrentPage(page)}>
+                            {page}
+                          </button>
+                        </li>
+                      );
+                    }
+                    return null;
+                  })}
+                  <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <i className="bi bi-chevron-right"></i>
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            )}
+          </div>
+        </div>
       </div>
 
       {toast.show && (

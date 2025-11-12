@@ -1,6 +1,7 @@
 package com.example.teacherservice.service.user;
 
-import com.example.teacherservice.dto.UserInformationDto;
+import com.example.teacherservice.dto.user.InformationDto;
+import com.example.teacherservice.dto.user.UserInformationDto;
 import com.example.teacherservice.service.file.FileService;
 import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.enums.Active;
@@ -13,6 +14,10 @@ import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.user.UserUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +29,32 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Service("userService")
 public class UserServiceImpl implements UserService {
+
+    @Override
+    public Page<User> getAllUsers(Integer pageNo, Integer pageSize) {
+        Pageable pageable = PageRequest.of(pageNo - 1, pageSize);
+        List<User> fullList = userRepository.findAll();
+        return getUserPage(pageable, fullList);
+    }
+    @Override
+    public Page<User> searchUsers(String keyword, Integer pageNo, Integer pageSize) {
+        return fetchPageFromDB(keyword, pageNo, pageSize);
+    }
+
+    protected Page<User> fetchPageFromDB(String keyword, Integer pageNo, Integer pageSize ) {
+        List<User> fullList = userRepository.searchByKeyword(keyword);
+        Pageable pageable = PageRequest.of(pageNo -1, pageSize);
+        return getUserPage(pageable, fullList);
+    }
+
+    private Page<User> getUserPage(Pageable pageable, List<User> user) {
+        int start = Math.min((int) pageable.getOffset(), user.size());
+        int end = Math.min(start + pageable.getPageSize(), user.size());
+        List<User> pageList = user.subList(start, end);
+
+        return new PageImpl<>(pageList, pageable, user.size());
+    }
+
     private final FileService fileService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -58,6 +89,7 @@ public class UserServiceImpl implements UserService {
 
         UserDetails userDetails = UserDetails.builder()
                 .gender(genderEnum)
+                .phoneNumber(registerRequest.getPhoneNumber())
                 .address(registerRequest.getAddress())
                 .build();
 
@@ -71,11 +103,6 @@ public class UserServiceImpl implements UserService {
                 .userDetails(userDetails)
                 .build();
         return userRepository.save(toSave);
-    }
-
-    @Override
-    public List<User> getAllUsers() {
-        return userRepository.findAllByActive(Active.ACTIVE);
     }
 
     @Override
@@ -167,6 +194,22 @@ public class UserServiceImpl implements UserService {
             dto.setAboutMe(userDetails.getAboutMe());
             dto.setBirthDate(String.valueOf(userDetails.getBirthDate()));
             dto.setImageUrl(userDetails.getImageUrl());
+        }
+        
+        return dto;
+    }
+
+    @Override
+    public InformationDto convertUserToInformationDto(User user) {
+        InformationDto dto = new InformationDto();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setActive(user.getActive() != null ? user.getActive().toString() : null);
+        
+        UserDetails userDetails = user.getUserDetails();
+        if (userDetails != null) {
+            dto.setPhoneNumber(userDetails.getPhoneNumber());
         }
         
         return dto;

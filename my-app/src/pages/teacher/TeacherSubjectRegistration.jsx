@@ -177,6 +177,7 @@ const TeacherSubjectRegistration = () => {
 
   return (
     <MainLayout>
+      <div className="page-teacher-subject-registration">
       <div className="content-header">
         <div className="content-title">
           <button className="back-button" onClick={() => navigate(-1)}>
@@ -190,146 +191,150 @@ const TeacherSubjectRegistration = () => {
         </button>
       </div>
 
-      {/* Filter Section */}
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Năm</label>
-            <select
-              className="filter-select"
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-            >
-              {[currentYear - 1, currentYear, currentYear + 1].map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+      <div className="filter-table-wrapper">
+        {/* Filter Section */}
+        <div className="filter-section">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label className="filter-label">Năm</label>
+              <select
+                className="filter-select"
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+              >
+                {[currentYear - 1, currentYear, currentYear + 1].map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-group">
+              <label className="filter-label">Quý</label>
+              <select
+                className="filter-select"
+                value={quarterFilter}
+                onChange={(e) => setQuarterFilter(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="1">Quý 1</option>
+                <option value="2">Quý 2</option>
+                <option value="3">Quý 3</option>
+                <option value="4">Quý 4</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <label className="filter-label">Trạng thái</label>
+              <select
+                className="filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="REGISTERED">Đã đăng ký</option>
+                <option value="COMPLETED">Hoàn thành</option>
+                <option value="NOT_COMPLETED">Chưa hoàn thành</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <button className="btn btn-secondary" onClick={() => {
+                setYearFilter(currentYear);
+                setQuarterFilter('');
+                setStatusFilter('');
+              }} style={{ width: '100%' }}>
+                <i className="bi bi-arrow-clockwise"></i>
+                Reset
+              </button>
+            </div>
           </div>
-          <div className="filter-group">
-            <label className="filter-label">Quý</label>
-            <select
-              className="filter-select"
-              value={quarterFilter}
-              onChange={(e) => setQuarterFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="1">Quý 1</option>
-              <option value="2">Quý 2</option>
-              <option value="3">Quý 3</option>
-              <option value="4">Quý 4</option>
-            </select>
+        </div>
+
+        {/* Registrations Table */}
+        <div className="table-container">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th width="5%">#</th>
+                  <th width="10%">Mã môn</th>
+                  <th width="25%">Tên môn</th>
+                  <th width="12%">Năm</th>
+                  <th width="12%">Quý</th>
+                  <th width="12%">Ngày đăng ký</th>
+                  <th width="12%">Trạng thái</th>
+                  <th width="12%">Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRegistrations.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="text-center">
+                      <div className="empty-state">
+                        <i className="bi bi-inbox"></i>
+                        <p>Không tìm thấy đăng ký nào</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  pageRegistrations.map((reg, index) => (
+                    <tr key={reg.id} className="fade-in">
+                      <td>{startIndex + index + 1}</td>
+                      <td><span className="teacher-code">{reg.subject_code || 'N/A'}</span></td>
+                      <td>{reg.subject_name || 'N/A'}</td>
+                      <td>{reg.year || 'N/A'}</td>
+                      <td>{reg.quarter ? `Quý ${reg.quarter}` : 'N/A'}</td>
+                      <td>{reg.created_at || 'N/A'}</td>
+                      <td>{getStatusBadge(reg.status)}</td>
+                      <td>{reg.reason_for_carry_over || '-'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="filter-group">
-            <label className="filter-label">Trạng thái</label>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="REGISTERED">Đã đăng ký</option>
-              <option value="COMPLETED">Hoàn thành</option>
-              <option value="NOT_COMPLETED">Chưa hoàn thành</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={() => {
-              setYearFilter(currentYear);
-              setQuarterFilter('');
-              setStatusFilter('');
-            }} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
-            </button>
-          </div>
+
+          {totalPages > 1 && (
+            <nav aria-label="Page navigation" className="mt-4">
+              <ul className="pagination justify-content-center">
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <i className="bi bi-chevron-left"></i>
+                  </button>
+                </li>
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                    return (
+                      <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                        <button className="page-link" onClick={() => setCurrentPage(page)}>
+                          {page}
+                        </button>
+                      </li>
+                    );
+                  }
+                  return null;
+                })}
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    <i className="bi bi-chevron-right"></i>
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          )}
         </div>
       </div>
 
       {/* Info Box */}
       <div className="alert alert-info" style={{ marginBottom: '20px' }}>
-        <i className="bi bi-info-circle"></i>
-        <strong>Lưu ý:</strong> Tối thiểu 4 môn/năm và 1 môn/quý. Môn chưa hoàn thành có thể được dời sang năm khác.
-      </div>
-
-      {/* Registrations Table */}
-      <div className="table-container">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th width="5%">#</th>
-                <th width="15%">Mã môn</th>
-                <th width="30%">Tên Môn học</th>
-                <th width="10%">Năm</th>
-                <th width="10%">Quý</th>
-                <th width="15%">Trạng thái</th>
-                <th width="15%">Lý do dời môn</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageRegistrations.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="text-center">
-                    <div className="empty-state">
-                      <i className="bi bi-inbox"></i>
-                      <p>Không tìm thấy đăng ký nào</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                pageRegistrations.map((reg, index) => (
-                  <tr key={reg.id} className="fade-in">
-                    <td>{startIndex + index + 1}</td>
-                    <td><span className="teacher-code">{reg.subject_code || 'N/A'}</span></td>
-                    <td>{reg.subject_name || 'N/A'}</td>
-                    <td>{reg.year || 'N/A'}</td>
-                    <td>Q{reg.quarter || 'N/A'}</td>
-                    <td>{getStatusBadge(reg.status)}</td>
-                    <td>{reg.reason_for_carry_over || '-'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <nav aria-label="Page navigation" className="mt-4">
-            <ul className="pagination justify-content-center">
-              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
-                  return (
-                    <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                      <button className="page-link" onClick={() => setCurrentPage(page)}>
-                        {page}
-                      </button>
-                    </li>
-                  );
-                }
-                return null;
-              })}
-              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
-              </li>
-            </ul>
-          </nav>
-        )}
+        <i className="bi bi-info-circle me-2"></i>
+        Tối thiểu 4 môn/năm và 1 môn/quý. Môn chưa hoàn thành có thể được dời sang năm khác.
       </div>
 
       {/* Register Modal */}
@@ -388,7 +393,7 @@ const TeacherSubjectRegistration = () => {
           </div>
         </div>
       )}
-
+      </div>
       {toast.show && (
         <Toast
           title={toast.title}

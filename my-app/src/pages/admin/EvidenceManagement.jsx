@@ -179,197 +179,201 @@ const EvidenceManagement = () => {
 
   return (
     <MainLayout>
-      <div className="content-header">
-        <div className="content-title">
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <i className="bi bi-arrow-left"></i>
-          </button>
-          <h1 className="page-title">Quản lý Minh chứng & OCR</h1>
+      <div className="page-admin-evidence">
+        <div className="content-header">
+          <div className="content-title">
+            <button className="back-button" onClick={() => navigate(-1)}>
+              <i className="bi bi-arrow-left"></i>
+            </button>
+            <h1 className="page-title">Quản lý Minh chứng & OCR</h1>
+          </div>
         </div>
-      </div>
 
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Tìm kiếm</label>
-            <div className="search-input-group">
-              <i className="bi bi-search"></i>
-              <input
-                type="text"
-                className="filter-input"
-                placeholder="Tên giáo viên, mã giáo viên, tên minh chứng..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <div className="filter-table-wrapper">
+          <div className="filter-section">
+            <div className="filter-row">
+              <div className="filter-group">
+                <label className="filter-label">Tìm kiếm</label>
+                <div className="search-input-group">
+                  <i className="bi bi-search"></i>
+                  <input
+                    type="text"
+                    className="filter-input"
+                    placeholder="Tên giáo viên, mã giáo viên, tên minh chứng..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="filter-group">
+                <label className="filter-label">Loại minh chứng</label>
+                <select
+                  className="filter-select"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                  <option value="">Tất cả</option>
+                  <option value="degree">Bằng cấp</option>
+                  <option value="certificate">Chứng chỉ</option>
+                  <option value="experience">Kinh nghiệm</option>
+                  <option value="other">Khác</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label className="filter-label">Trạng thái</label>
+                <select
+                  className="filter-select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">Tất cả</option>
+                  <option value="approved">Đã duyệt</option>
+                  <option value="rejected">Từ chối</option>
+                  <option value="pending">Chờ duyệt</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <button className="btn btn-secondary" onClick={() => {
+                  setSearchTerm('');
+                  setTypeFilter('');
+                  setStatusFilter('');
+                }} style={{ width: '100%' }}>
+                  <i className="bi bi-arrow-clockwise"></i>
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
-          <div className="filter-group">
-            <label className="filter-label">Loại minh chứng</label>
-            <select
-              className="filter-select"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="degree">Bằng cấp</option>
-              <option value="certificate">Chứng chỉ</option>
-              <option value="experience">Kinh nghiệm</option>
-              <option value="other">Khác</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Trạng thái</label>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="approved">Đã duyệt</option>
-              <option value="rejected">Từ chối</option>
-              <option value="pending">Chờ duyệt</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={() => {
-              setSearchTerm('');
-              setTypeFilter('');
-              setStatusFilter('');
-            }} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="table-container">
-        <div className="table-responsive">
-          <table className="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th width="5%">#</th>
-                <th width="12%">Mã GV</th>
-                <th width="18%">Tên Giáo viên</th>
-                <th width="15%">Loại</th>
-                <th width="20%">Tên Minh chứng</th>
-                <th width="10%">Trạng thái OCR</th>
-                <th width="10%">Trạng thái</th>
-                <th width="10%" className="text-center">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageEvidences.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="text-center">
-                    <div className="empty-state">
-                      <i className="bi bi-inbox"></i>
-                      <p>Không tìm thấy minh chứng nào</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                pageEvidences.map((evidence, index) => (
-                  <tr key={evidence.id} className="fade-in">
-                    <td>{startIndex + index + 1}</td>
-                    <td><span className="teacher-code">{evidence.teacher_code || 'N/A'}</span></td>
-                    <td>{evidence.teacher_name || 'N/A'}</td>
-                    <td>{getTypeLabel(evidence.evidence_type)}</td>
-                    <td>{evidence.evidence_name || 'N/A'}</td>
-                    <td>{getOCRStatusBadge(evidence.ocr_status)}</td>
-                    <td>{getStatusBadge(evidence.status)}</td>
-                    <td className="text-center">
-                      <div className="action-buttons">
-                        {evidence.ocr_status === 'pending' && (
-                          <button
-                            className="btn btn-sm btn-primary btn-action"
-                            onClick={() => handleVerifyOCR(evidence.id)}
-                            title="Xác minh OCR"
-                          >
-                            <i className="bi bi-check-circle"></i>
-                          </button>
-                        )}
-                        {evidence.status === 'pending' && (
-                          <>
-                            <button
-                              className="btn btn-sm btn-success btn-action"
-                              onClick={() => handleStatusChange(evidence.id, 'approved')}
-                              title="Duyệt"
-                            >
-                              <i className="bi bi-check"></i>
-                            </button>
-                            <button
-                              className="btn btn-sm btn-danger btn-action"
-                              onClick={() => handleStatusChange(evidence.id, 'rejected')}
-                              title="Từ chối"
-                            >
-                              <i className="bi bi-x"></i>
-                            </button>
-                          </>
-                        )}
-                        <button
-                          className="btn btn-sm btn-info btn-action"
-                          onClick={() => navigate(`/evidence-detail/${evidence.id}`)}
-                          title="Chi tiết"
-                        >
-                          <i className="bi bi-eye"></i>
-                        </button>
-                      </div>
-                    </td>
+          <div className="table-container">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th width="5%">#</th>
+                    <th width="12%">Mã GV</th>
+                    <th width="18%">Tên Giáo viên</th>
+                    <th width="15%">Loại</th>
+                    <th width="20%">Tên Minh chứng</th>
+                    <th width="10%">Trạng thái OCR</th>
+                    <th width="10%">Trạng thái</th>
+                    <th width="10%" className="text-center">Thao tác</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {pageEvidences.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="text-center">
+                        <div className="empty-state">
+                          <i className="bi bi-inbox"></i>
+                          <p>Không tìm thấy minh chứng nào</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    pageEvidences.map((evidence, index) => (
+                      <tr key={evidence.id} className="fade-in">
+                        <td>{startIndex + index + 1}</td>
+                        <td><span className="teacher-code">{evidence.teacher_code || 'N/A'}</span></td>
+                        <td>{evidence.teacher_name || 'N/A'}</td>
+                        <td>{getTypeLabel(evidence.evidence_type)}</td>
+                        <td>{evidence.evidence_name || 'N/A'}</td>
+                        <td>{getOCRStatusBadge(evidence.ocr_status)}</td>
+                        <td>{getStatusBadge(evidence.status)}</td>
+                        <td className="text-center">
+                          <div className="action-buttons">
+                            {evidence.ocr_status === 'pending' && (
+                              <button
+                                className="btn btn-sm btn-primary btn-action"
+                                onClick={() => handleVerifyOCR(evidence.id)}
+                                title="Xác minh OCR"
+                              >
+                                <i className="bi bi-check-circle"></i>
+                              </button>
+                            )}
+                            {evidence.status === 'pending' && (
+                              <>
+                                <button
+                                  className="btn btn-sm btn-success btn-action"
+                                  onClick={() => handleStatusChange(evidence.id, 'approved')}
+                                  title="Duyệt"
+                                >
+                                  <i className="bi bi-check"></i>
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-danger btn-action"
+                                  onClick={() => handleStatusChange(evidence.id, 'rejected')}
+                                  title="Từ chối"
+                                >
+                                  <i className="bi bi-x"></i>
+                                </button>
+                              </>
+                            )}
+                            <button
+                              className="btn btn-sm btn-info btn-action"
+                              onClick={() => navigate(`/evidence-detail/${evidence.id}`)}
+                              title="Chi tiết"
+                            >
+                              <i className="bi bi-eye"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <nav aria-label="Page navigation" className="mt-4">
+                <ul className="pagination justify-content-center">
+                  <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <i className="bi bi-chevron-left"></i>
+                    </button>
+                  </li>
+                  {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                      return (
+                        <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                          <button className="page-link" onClick={() => setCurrentPage(page)}>
+                            {page}
+                          </button>
+                        </li>
+                      );
+                    }
+                    return null;
+                  })}
+                  <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                    <button
+                      className="page-link"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <i className="bi bi-chevron-right"></i>
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            )}
+          </div>
         </div>
 
-        {totalPages > 1 && (
-          <nav aria-label="Page navigation" className="mt-4">
-            <ul className="pagination justify-content-center">
-              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <i className="bi bi-chevron-left"></i>
-                </button>
-              </li>
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
-                  return (
-                    <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                      <button className="page-link" onClick={() => setCurrentPage(page)}>
-                        {page}
-                      </button>
-                    </li>
-                  );
-                }
-                return null;
-              })}
-              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                <button
-                  className="page-link"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <i className="bi bi-chevron-right"></i>
-                </button>
-              </li>
-            </ul>
-          </nav>
+        {toast.show && (
+          <Toast
+            title={toast.title}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(prev => ({ ...prev, show: false }))}
+          />
         )}
       </div>
-
-      {toast.show && (
-        <Toast
-          title={toast.title}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, show: false }))}
-        />
-      )}
     </MainLayout>
   );
 };

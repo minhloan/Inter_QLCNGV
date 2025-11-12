@@ -144,6 +144,7 @@ const TeacherTrialTeaching = () => {
 
   return (
     <MainLayout>
+      <div className="page-teacher-trial">
       <div className="content-header">
         <div className="content-title">
           <button className="back-button" onClick={() => navigate(-1)}>
@@ -153,32 +154,33 @@ const TeacherTrialTeaching = () => {
         </div>
       </div>
 
-      {/* Filter Section */}
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Trạng thái</label>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="PENDING">Chờ đánh giá</option>
-              <option value="REVIEWED">Đã đánh giá</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={() => setStatusFilter('')} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
-            </button>
+      <div className="filter-table-wrapper">
+        {/* Filter Section */}
+        <div className="filter-section">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label className="filter-label">Trạng thái</label>
+              <select
+                className="filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="PENDING">Chờ đánh giá</option>
+                <option value="REVIEWED">Đã đánh giá</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <button className="btn btn-secondary" onClick={() => setStatusFilter('')} style={{ width: '100%' }}>
+                <i className="bi bi-arrow-clockwise"></i>
+                Reset
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Trials Table */}
-      <div className="table-container">
+        {/* Trials Table */}
+        <div className="table-container">
         <div className="table-responsive">
           <table className="table table-hover align-middle">
             <thead>
@@ -285,6 +287,8 @@ const TeacherTrialTeaching = () => {
             </ul>
           </nav>
         )}
+        </div>
+      </div>
       </div>
 
       {toast.show && (

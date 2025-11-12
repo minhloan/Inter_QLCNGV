@@ -280,51 +280,52 @@ const ReportingExport = () => {
         </div>
       </div>
 
-      {/* Filter Section */}
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Loại báo cáo</label>
-            <select
-              className="filter-select"
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="QUARTER">Báo cáo Quý</option>
-              <option value="YEAR">Báo cáo Năm</option>
-              <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
-              <option value="TRIAL">Báo cáo Giảng thử</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <label className="filter-label">Năm</label>
-            <select
-              className="filter-select"
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              {[currentYear - 1, currentYear, currentYear + 1].map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={() => {
-              setReportType('');
-              setYearFilter('');
-              setQuarterFilter('');
-            }} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
-            </button>
+      <div className="filter-table-wrapper">
+        {/* Filter Section */}
+        <div className="filter-section">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label className="filter-label">Loại báo cáo</label>
+              <select
+                className="filter-select"
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="QUARTER">Báo cáo Quý</option>
+                <option value="YEAR">Báo cáo Năm</option>
+                <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
+                <option value="TRIAL">Báo cáo Giảng thử</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <label className="filter-label">Năm</label>
+              <select
+                className="filter-select"
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                {[currentYear - 1, currentYear, currentYear + 1].map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-group">
+              <button className="btn btn-secondary" onClick={() => {
+                setReportType('');
+                setYearFilter('');
+                setQuarterFilter('');
+              }} style={{ width: '100%' }}>
+                <i className="bi bi-arrow-clockwise"></i>
+                Reset
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Reports Table */}
-      <div className="table-container">
+        {/* Reports Table */}
+        <div className="table-container">
         <div className="table-responsive">
           <table className="table table-hover align-middle">
             <thead>
@@ -432,6 +433,7 @@ const ReportingExport = () => {
             </ul>
           </nav>
         )}
+        </div>
       </div>
 
       {toast.show && (

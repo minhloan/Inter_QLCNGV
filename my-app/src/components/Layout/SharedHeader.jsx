@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import '../../assets/styles/Common.css';
+import logo2 from '../../assets/images/logo2.jpg';
 
 const SharedHeader = () => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -30,79 +31,63 @@ const SharedHeader = () => {
     navigate('/login');
   };
 
-  const handleNotificationClick = () => {
-    console.log('Notification clicked');
-  };
-
-  const handleProfileClick = () => {
-    setShowDropdown(!showDropdown);
-  };
-
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-      <div className="container-fluid">
-        <Link className="navbar-brand" to="/module-selection">
-          <div className="logo-container-nav">
-            <div className="logo-circle-nav">
-              <span>CUSC</span>
-            </div>
-            <span className="logo-name-nav">AptechCanTho</span>
-          </div>
-        </Link>
-        <div className="navbar-nav ms-auto">
-          <div className="nav-item d-flex align-items-center gap-3">
-            <button 
-              className="btn btn-link text-dark p-0" 
-              id="notificationBtn"
-              onClick={handleNotificationClick}
-            >
-              <i className="bi bi-bell fs-5"></i>
-            </button>
-            <button 
-              className="btn btn-link text-dark p-0" 
-              id="profileBtn"
-              onClick={handleProfileClick}
-              ref={dropdownRef}
-              style={{ position: 'relative' }}
-            >
-              <i className="bi bi-person-circle fs-4"></i>
-              {showDropdown && (
-                <div className="user-dropdown" style={{ position: 'absolute', right: 0, top: '100%', marginTop: '10px', zIndex: 1000 }}>
-                  <div className="user-dropdown-header">
-                    <div className="user-avatar-large">
-                      <i className="bi bi-person"></i>
-                    </div>
-                  </div>
-                  <div className="user-dropdown-info">
-                    <div className="user-name">{(user?.username || 'USER').toUpperCase()}</div>
-                    <div className="user-email">{user?.userData?.email || user?.email || ''}</div>
-                  </div>
-                  <div className="user-dropdown-menu">
-                    <Link 
-                      to="/edit-profile" 
-                      className="user-dropdown-item"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      <i className="bi bi-person"></i>
-                      <span>Edit Profile</span>
-                      <i className="bi bi-chevron-right"></i>
-                    </Link>
-                    <div 
-                      className="user-dropdown-item"
-                      onClick={handleSignOut}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <i className="bi bi-box-arrow-right"></i>
-                      <span>Sign Out</span>
-                    </div>
-                  </div>
+    <div className="top-header">
+      <div className="logo-container">
+        <div className="logo-icon" style={{ overflow: 'hidden', borderRadius: '50%', width: '40px', height: '40px' }}>
+          <img 
+            src={logo2} 
+            alt="logo" 
+            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px', backgroundColor: '#fff' }} 
+          />
+        </div>
+        <Link to="/module-selection" className="logo-text">Aptech CanTho</Link>
+      </div>
+      <div className="header-actions">
+        <div className="header-icon">
+          <i className="bi bi-bell"></i>
+        </div>
+        <div className="header-icon user-icon" ref={dropdownRef} style={{ position: 'relative' }}>
+          <i 
+            className="bi bi-person" 
+            onClick={() => setShowDropdown(!showDropdown)}
+            style={{ cursor: 'pointer' }}
+          ></i>
+          {showDropdown && (
+            <div className="user-dropdown">
+              <div className="user-dropdown-header">
+                <div className="user-avatar-large">
+                  <i className="bi bi-person"></i>
                 </div>
-              )}
-            </button>
-          </div>
+              </div>
+              <div className="user-dropdown-info">
+                <div className="user-name">{(user?.username || 'USER').toUpperCase()}</div>
+                <div className="user-email">{user?.userData?.email || user?.email || ''}</div>
+              </div>
+              <div className="user-dropdown-menu">
+                <Link 
+                  to="/edit-profile" 
+                  className="user-dropdown-item"
+                  onClick={() => setShowDropdown(false)}
+                >
+                  <i className="bi bi-person"></i>
+                  <span>Edit Profile</span>
+                  <i className="bi bi-chevron-right"></i>
+                </Link>
+                <div 
+                  className="user-dropdown-item"
+                  onClick={handleSignOut}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <i className="bi bi-box-arrow-right"></i>
+                  <span>Sign Out</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </nav>
+    </div>
   );
 };
 

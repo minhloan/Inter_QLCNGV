@@ -16,14 +16,26 @@ const TeacherModal = ({ teacher, onSave, onClose }) => {
   useEffect(() => {
     if (teacher) {
       setFormData({
-        code: teacher.code || '',
-        user_id: teacher.user_id || '',
-        full_name: teacher.full_name || '',
+        code: teacher.code || teacher.id || '',
+        user_id: teacher.user_id || teacher.id || '',
+        full_name: teacher.full_name || teacher.username || '',
         email: teacher.email || '',
         phone: teacher.phone || '',
         status: teacher.status || 'active',
         address: teacher.address || '',
         notes: teacher.notes || ''
+      });
+    } else {
+      // Reset form when no teacher (add new)
+      setFormData({
+        code: '',
+        user_id: '',
+        full_name: '',
+        email: '',
+        phone: '',
+        status: 'active',
+        address: '',
+        notes: ''
       });
     }
   }, [teacher]);

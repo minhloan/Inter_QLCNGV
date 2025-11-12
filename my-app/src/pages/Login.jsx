@@ -5,6 +5,7 @@ import { login as apiLogin, getPrimaryRole, getUserInfo } from '../api/auth';
 import Loading from '../components/Common/Loading';
 import '../assets/styles/Login.css';
 import '../assets/styles/Common.css';
+import logo2 from '../assets/images/logo2.jpg';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -208,11 +209,22 @@ const Login = () => {
           >
             <i className="bi bi-arrow-left"></i>
           </button>
-          
+
           <div className="login-form-header">
             <div className="form-logo">
               <div className="logo-circle-form">
-                <span>CUSC</span>
+                <img
+                  src={logo2}
+                  alt="logo"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    borderRadius: '50%',
+                    padding: '2px',
+                    backgroundColor: '#fff'
+                  }}
+                />
               </div>
               <span className="logo-name-form">AptechCanTho</span>
             </div>

@@ -1,4 +1,4 @@
-package com.example.teacherservice.dto;
+package com.example.teacherservice.dto.user;
 
 import lombok.Data;
 

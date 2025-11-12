@@ -20,6 +20,7 @@ public class AuditLogServiceImpl implements AuditLogService{
     @Override
     public AuditLog writeAndBroadcast(String actorUserId, String action, String entity, String entityId, String metaJson) {
         User actor = actorUserId != null ? userRepository.findById(actorUserId).orElse(null) : null;
+
         AuditLog log = AuditLog.builder()
                 .actorUser(actor)
                 .action(action)

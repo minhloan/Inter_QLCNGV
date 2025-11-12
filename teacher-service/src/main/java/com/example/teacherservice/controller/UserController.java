@@ -1,8 +1,11 @@
 package com.example.teacherservice.controller;
 
-import com.example.teacherservice.dto.*;
 import com.example.teacherservice.dto.auth.AuthUserDto;
 import com.example.teacherservice.dto.auth.UpdatePassword;
+import com.example.teacherservice.dto.user.InformationDto;
+import com.example.teacherservice.dto.user.UserAdminDto;
+import com.example.teacherservice.dto.user.UserDto;
+import com.example.teacherservice.dto.user.UserInformationDto;
 import com.example.teacherservice.jwt.JwtUtil;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.request.auth.RegisterRequest;
@@ -12,13 +15,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/v1/teacher/user")
@@ -35,16 +37,30 @@ public class UserController {
         return ResponseEntity.ok(userService.convertUserToUserInformationDto(userService.getUserById(userId)));
     }
 
+    @GetMapping("/getAllUsers")
+    ResponseEntity<Page<InformationDto>> getAllUsers(
+            @RequestParam(defaultValue = "1") Integer pageNo,
+            @RequestParam(defaultValue = "6") Integer pageSize){
+        Page<InformationDto> users = userService.getAllUsers(pageNo, pageSize)
+                .map(user -> userService.convertUserToInformationDto(user));
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/search")
+    ResponseEntity<Page<InformationDto>> searchUsers(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") Integer pageNo,
+            @RequestParam(defaultValue = "6") Integer pageSize){
+        Page<InformationDto> users = userService.searchUsers(keyword, pageNo, pageSize)
+                .map(user -> userService.convertUserToInformationDto(user));
+        return ResponseEntity.ok(users);
+    }
+
     @PostMapping("/save")
     public ResponseEntity<UserDto> save(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(modelMapper.map(userService.SaveUser(request), UserDto.class));
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<UserAdminDto>> getAll() {
-        return ResponseEntity.ok(userService.getAllUsers().stream().map(
-                user -> modelMapper.map(user,UserAdminDto.class)).toList());
-    }
     @GetMapping("/getUserForAdminByUserId/{id}")
     public ResponseEntity<UserAdminDto> getUserForAdminByUserId(@PathVariable String id) {
         return ResponseEntity.ok(modelMapper.map(userService.getUserById(id), UserAdminDto.class));

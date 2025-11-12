@@ -155,46 +155,48 @@ const TeacherEvidence = () => {
 
   return (
     <MainLayout>
-      <div className="content-header">
-        <div className="content-title">
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <i className="bi bi-arrow-left"></i>
-          </button>
-          <h1 className="page-title">Minh chứng</h1>
-        </div>
-        <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>
-          <i className="bi bi-upload"></i>
-          Upload Minh chứng
-        </button>
-      </div>
-
-      {/* Filter Section */}
-      <div className="filter-section">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label className="filter-label">Trạng thái</label>
-            <select
-              className="filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="VERIFIED">Đã xác minh</option>
-              <option value="REJECTED">Từ chối</option>
-              <option value="PENDING">Chờ xác minh</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <button className="btn btn-secondary" onClick={() => setStatusFilter('')} style={{ width: '100%' }}>
-              <i className="bi bi-arrow-clockwise"></i>
-              Reset
+      <div className="page-teacher-evidence">
+        <div className="content-header">
+          <div className="content-title">
+            <button className="back-button" onClick={() => navigate(-1)}>
+              <i className="bi bi-arrow-left"></i>
             </button>
+            <h1 className="page-title">Minh chứng</h1>
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowUploadModal(true)}>
+            <i className="bi bi-upload"></i>
+            Upload Minh chứng
+          </button>
+        </div>
+
+      <div className="filter-table-wrapper">
+        {/* Filter Section */}
+        <div className="filter-section">
+          <div className="filter-row">
+            <div className="filter-group">
+              <label className="filter-label">Trạng thái</label>
+              <select
+                className="filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="VERIFIED">Đã xác minh</option>
+                <option value="REJECTED">Từ chối</option>
+                <option value="PENDING">Chờ xác minh</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <button className="btn btn-secondary" onClick={() => setStatusFilter('')} style={{ width: '100%' }}>
+                <i className="bi bi-arrow-clockwise"></i>
+                Reset
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Evidences Table */}
-      <div className="table-container">
+        {/* Evidences Table */}
+        <div className="table-container">
         <div className="table-responsive">
           <table className="table table-hover align-middle">
             <thead>
@@ -290,6 +292,7 @@ const TeacherEvidence = () => {
             </ul>
           </nav>
         )}
+        </div>
       </div>
 
       {/* Upload Modal */}
@@ -338,6 +341,8 @@ const TeacherEvidence = () => {
           </div>
         </div>
       )}
+
+      </div>
 
       {toast.show && (
         <Toast

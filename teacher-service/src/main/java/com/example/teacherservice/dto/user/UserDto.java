@@ -1,11 +1,7 @@
-package com.example.teacherservice.dto;
+package com.example.teacherservice.dto.user;
 
-import com.example.teacherservice.enums.Gender;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
-
-import java.util.Date;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
