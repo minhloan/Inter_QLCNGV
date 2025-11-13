@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationDropdown from '../Common/NotificationDropdown';
 import logo2 from '../../assets/images/logo2.jpg';
 
 const Header = () => {
@@ -48,15 +49,14 @@ const Header = () => {
         <Link to="/" className="logo-text">Aptech CanTho</Link>
       </div>
       <div className="header-actions">
-        <div className="header-icon">
-          <i className="bi bi-bell"></i>
-        </div>
-        <div className="header-icon user-icon" ref={dropdownRef} style={{ position: 'relative' }}>
-          <i 
-            className="bi bi-person" 
-            onClick={() => setShowDropdown(!showDropdown)}
-            style={{ cursor: 'pointer' }}
-          ></i>
+        <NotificationDropdown />
+        <div 
+          className="header-icon user-icon" 
+          ref={dropdownRef} 
+          style={{ position: 'relative' }}
+          onClick={() => setShowDropdown(!showDropdown)}
+        >
+          <i className="bi bi-person"></i>
           {showDropdown && (
             <div className="user-dropdown">
               <div className="user-dropdown-header">

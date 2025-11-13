@@ -9,9 +9,43 @@ const createApiInstance = (baseURL) => {
         },
     });
 
+    // Helper function to check if token is expired or about to expire
+    const isTokenExpiredOrExpiringSoon = (token) => {
+        if (!token) return true;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const exp = payload.exp * 1000; // Convert to milliseconds
+            const now = Date.now();
+            const timeUntilExpiry = exp - now;
+            // Refresh if token expires in less than 10 seconds
+            return timeUntilExpiry < 10000;
+        } catch (e) {
+            return true;
+        }
+    };
+
     api.interceptors.request.use(
-        (config) => {
+        async (config) => {
             const token = Cookies.get("accessToken");
+            
+            // Proactive refresh: Check if token is expired or about to expire
+            if (token && isTokenExpiredOrExpiringSoon(token)) {
+                const refreshToken = Cookies.get("refreshToken");
+                if (refreshToken) {
+                    try {
+                        console.log('[Token Refresh] Proactive refresh: token expiring soon');
+                        const { refreshAccessToken } = await import('./auth.js');
+                        const newAccessToken = await refreshAccessToken();
+                        config.headers.Authorization = `Bearer ${newAccessToken}`;
+                        console.log('[Token Refresh] Successfully refreshed token');
+                        return config;
+                    } catch (refreshError) {
+                        console.error('[Token Refresh] Failed to refresh token:', refreshError);
+                        // Continue with old token, let response interceptor handle 401
+                    }
+                }
+            }
+            
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -55,13 +89,16 @@ const createApiInstance = (baseURL) => {
                     return Promise.reject(error);
                 }
 
+                console.log('[Token Refresh] Received 401, attempting to refresh token');
                 try {
                     const { refreshAccessToken } = await import('./auth.js');
                     const newAccessToken = await refreshAccessToken();
+                    console.log('[Token Refresh] Successfully refreshed token, retrying request');
 
                     originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                     return api(originalRequest);
                 } catch (refreshError) {
+                    console.error('[Token Refresh] Failed to refresh token:', refreshError);
                     // Refresh thất bại -> logout và redirect
                     const { logout } = await import('./auth.js');
                     await logout();

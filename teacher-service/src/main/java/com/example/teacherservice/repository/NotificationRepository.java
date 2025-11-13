@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, String> {
     List<Notification> findByUserAndReadOrderByCreationTimestampDesc(User user, boolean read);
+    List<Notification> findByUserOrderByCreationTimestampDesc(User user);
 }

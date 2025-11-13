@@ -147,16 +147,17 @@ const AddTeacher = () => {
 
   return (
     <MainLayout>
-      <div className="content-header">
-        <div className="content-title">
-          <button className="back-button" onClick={() => navigate('/manage-teacher')}>
-            <i className="bi bi-arrow-left"></i>
-          </button>
-          <h1 className="page-title">Thêm Giáo viên</h1>
+      <div className="page-admin-add-teacher">
+        <div className="content-header">
+          <div className="content-title">
+            <button className="back-button" onClick={() => navigate('/manage-teacher')}>
+              <i className="bi bi-arrow-left"></i>
+            </button>
+            <h1 className="page-title">Thêm Giáo viên</h1>
+          </div>
         </div>
-      </div>
 
-      <div className="form-container">
+        <div className="form-container">
         <form onSubmit={handleSubmit}>
           <div className="row">
             <div className="col-md-6">
@@ -390,16 +391,17 @@ const AddTeacher = () => {
             </button>
           </div>
         </form>
-      </div>
+        </div>
 
-      {toast.show && (
-        <Toast
-          title={toast.title}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, show: false }))}
-        />
-      )}
+        {toast.show && (
+          <Toast
+            title={toast.title}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(prev => ({ ...prev, show: false }))}
+          />
+        )}
+      </div>
     </MainLayout>
   );
 };

@@ -46,7 +46,7 @@ const Landing = () => {
 
         {/* Hero Section */}
         <div className="hero-section">
-          <h1 className="hero-title">Hệ thông quản lý giáo viên</h1>
+          <h1 className="hero-title">Hệ thống quản lý giáo viên</h1>
           <p className="hero-subtitle">David Nguyen & David Nguyen & David Nguyen & David Nguyen & David Nguyen</p>
           <a href="#" className="btn-login" onClick={(e) => { e.preventDefault(); handleLoginClick(); }}>
             LOGIN

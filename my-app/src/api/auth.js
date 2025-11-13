@@ -41,13 +41,19 @@ export const getRefreshToken = () => {
 export const refreshAccessToken = async () => {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
+        console.error('[Token Refresh] No refresh token available');
         throw new Error("No refresh token available");
     }
 
+    console.log('[Token Refresh] Attempting to refresh access token');
     try {
         const response = await api.post("/refresh", { refreshToken });
         const accessToken = response.data.access || response.data.token;
         const newRefreshToken = response.data.refresh || response.data.refreshToken;
+
+        if (!accessToken) {
+            throw new Error("No access token in refresh response");
+        }
 
         // Cập nhật accessToken
         Cookies.set("accessToken", accessToken, {
@@ -67,8 +73,10 @@ export const refreshAccessToken = async () => {
             });
         }
 
+        console.log('[Token Refresh] Successfully refreshed access token');
         return accessToken;
     } catch (error) {
+        console.error('[Token Refresh] Error refreshing token:', error);
         // Nếu refresh thất bại, xóa cả 2 token
         Cookies.remove("accessToken");
         Cookies.remove("refreshToken");

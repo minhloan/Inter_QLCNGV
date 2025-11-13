@@ -35,7 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = request.getHeader("Authorization");
             if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {
-                Claims claims = jwtUtil.getClaims(token.substring(7));
+                String jwtToken = token.substring(7);
+                Claims claims = jwtUtil.getClaims(jwtToken);
 
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority(claims.getIssuer());
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -45,8 +46,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
 
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Token đã hết hạn - trả về 401
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Token expired\",\"message\":\"Token đã hết hạn\"}");
+            return;
+        }  catch (Exception e) {
+            // Các lỗi khác - vẫn cho qua nhưng không set authentication
+            System.out.println("JWT Filter Error: " + e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

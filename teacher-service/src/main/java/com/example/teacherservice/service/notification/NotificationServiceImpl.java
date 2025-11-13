@@ -41,6 +41,14 @@ public class NotificationServiceImpl implements NotificationService{
     }
 
     @Override
+    public List<Notification> getAll(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        return notificationRepository.findByUserOrderByCreationTimestampDesc(user);
+    }
+
+    @Override
     public List<Notification> getUnread(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
@@ -64,6 +72,15 @@ public class NotificationServiceImpl implements NotificationService{
         for (Notification n : list)
             n.setRead(true);
         notificationRepository.saveAll(list);
+    }
+
+    @Override
+    public void delete(String userId, String notificationId) {
+        Notification n = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found with id: " + notificationId));
+        if(!n.getUser().getId().equals(userId))
+            throw new IllegalArgumentException("Notification không thuộc về người dùng.");
+        notificationRepository.delete(n);
     }
 
     public record NotificationPayload(

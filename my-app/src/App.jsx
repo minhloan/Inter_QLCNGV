@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -29,6 +30,7 @@ import TeacherTrialTeaching from './pages/teacher/TeacherTrialTeaching';
 import TeacherEvidence from './pages/teacher/TeacherEvidence';
 import TeacherTeachingAssignment from './pages/teacher/TeacherTeachingAssignment';
 import TeacherPersonalReports from './pages/teacher/TeacherPersonalReports';
+import Notifications from './pages/Notifications';
 
 import './assets/styles/Common.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -222,6 +224,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
@@ -230,7 +240,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <NotificationProvider>
+          <AppRoutes />
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );
