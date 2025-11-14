@@ -19,5 +19,6 @@ public interface UserRepository extends JpaRepository<User, String> {
        or lower(coalesce(u.userDetails.phoneNumber, '')) like lower(concat('%', :keyword, '%'))""")
     List<User> searchByKeyword(@Param("keyword") String keyword);
     boolean existsByEmailIgnoreCase(String email);
+    boolean existsByUsernameIgnoreCase(String username);
 }
 

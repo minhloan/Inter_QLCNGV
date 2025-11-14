@@ -16,4 +16,5 @@ public class UserInformationDto {
     private String aboutMe;
     private String birthDate;
     private String imageUrl;
+    private String academic_rank;
 }

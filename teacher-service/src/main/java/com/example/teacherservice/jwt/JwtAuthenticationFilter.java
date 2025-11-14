@@ -32,6 +32,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+
+        // Bỏ qua JWT filter cho các endpoint public
+        String path = request.getRequestURI();
+        if (path.contains("/auth/login") || 
+            path.contains("/auth/register") || 
+            path.contains("/auth/forgotPassword") ||
+            path.contains("/auth/verifyOtp") ||
+            path.contains("/auth/updatePassword") ||
+            path.contains("/auth/refresh") ||
+            path.contains("/auth/logout")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             String token = request.getHeader("Authorization");
             if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {

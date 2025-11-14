@@ -90,7 +90,13 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
-    
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<?> handleValidationException(ValidationException exception) {
+        Map<String, String> errors = exception.getValidationErrors();
+        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+        
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         Map<String, String> errors = new HashMap<>();

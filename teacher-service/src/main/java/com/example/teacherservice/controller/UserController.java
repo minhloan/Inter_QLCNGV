@@ -63,7 +63,7 @@ public class UserController {
 
     @GetMapping("/getUserForAdminByUserId/{id}")
     public ResponseEntity<UserAdminDto> getUserForAdminByUserId(@PathVariable String id) {
-        return ResponseEntity.ok(modelMapper.map(userService.getUserById(id), UserAdminDto.class));
+        return ResponseEntity.ok(userService.convertUserToUserAdminDto(userService.getUserById(id)));
     }
 
     @GetMapping("/getUserById/{id}")
@@ -91,7 +91,7 @@ public class UserController {
     public ResponseEntity<UserAdminDto> updateUserById(
             @Valid @RequestPart("request") UserUpdateRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file) {
-        return ResponseEntity.ok(modelMapper.map(userService.updateUserById(request, file), UserAdminDto.class));
+        return ResponseEntity.ok(userService.convertUserToUserAdminDto(userService.updateUserById(request, file)));
     }
 
     @DeleteMapping("/deleteUserById/{id}")

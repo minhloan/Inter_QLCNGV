@@ -17,4 +17,6 @@ public class UserAdminDto {
     private String imageUrl;
     private String active;
     private String roleName;
+    private String address;
+    private String academic_rank;
 }

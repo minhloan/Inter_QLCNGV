@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtService {
     private final CustomUserDetailsService customUserDetailsService;
-    public static final String SECRET = "56928731907473259834758923975834001978431540789351748901579408315709843175089192839123821057984879453897";
+    public static final String SECRET = "WJi385Pfze28ESXzw0L1JjqZOj4HbZj3u0qr4MbS48Q";
 
     public String generateToken(String username) {
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);

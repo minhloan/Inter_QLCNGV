@@ -23,35 +23,47 @@ export const searchUsers = async (keyword, pageNo = 1, pageSize = 10) => {
   return response.data;
 };
 
-export const updateUser = async (userData, file = null) => {
+export const getUserByIdForAdmin = async (userId) => {
+  const response = await api.get(`/getUserForAdminByUserId/${userId}`);
+  return response.data;
+};
+
+export const updateUserById = async (userData) => {
   const formData = new FormData();
-  
-  // Tạo request object
+
   const request = {
     id: userData.id,
     email: userData.email,
     username: userData.username,
     password: userData.password || null,
+    status: userData.status || null,
     userDetails: {
-      phoneNumber: userData.phone,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      phoneNumber: userData.phoneNumber || null,
+      gender: userData.gender || null,
+      aboutMe: userData.aboutMe || userData.notes || null,
+      birthDate: userData.birthDate || null,
       address: userData.address || null,
-      aboutMe: userData.notes || null
+      academic_rank: userData.academicRank || null
     }
   };
-  
-  // Thêm request vào formData
-  formData.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
-  
-  // Thêm file nếu có
-  if (file) {
-    formData.append('file', file);
+
+  formData.append(
+    "request",
+    new Blob([JSON.stringify(request)], { type: "application/json" })
+  );
+
+  if (userData.file) {
+    formData.append("file", userData.file);
   }
-  
+
   const response = await api.put("/update", formData, {
     headers: {
-      'Content-Type': 'multipart/form-data'
+      "Content-Type": "multipart/form-data"
     }
   });
+
   return response.data;
 };
 

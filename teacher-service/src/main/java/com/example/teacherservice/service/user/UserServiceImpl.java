@@ -1,9 +1,11 @@
 package com.example.teacherservice.service.user;
 
 import com.example.teacherservice.dto.user.InformationDto;
+import com.example.teacherservice.dto.user.UserAdminDto;
 import com.example.teacherservice.dto.user.UserInformationDto;
 import com.example.teacherservice.service.file.FileService;
 import com.example.teacherservice.exception.NotFoundException;
+import com.example.teacherservice.exception.ValidationException;
 import com.example.teacherservice.enums.Active;
 import com.example.teacherservice.enums.Gender;
 import com.example.teacherservice.enums.Role;
@@ -22,8 +24,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @RequiredArgsConstructor
@@ -123,8 +127,21 @@ public class UserServiceImpl implements UserService {
     @Override
     public User updateUserById(UserUpdateRequest request, MultipartFile file) {
         User toUpdate = findUserById(request.getId());
+        validateUniqueFields(toUpdate, request);
         request.setUserDetails(updateUserDetails(toUpdate.getUserDetails(), request.getUserDetails(), file));
         modelMapper.map(request, toUpdate);
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            toUpdate.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            try {
+                toUpdate.setActive(Active.valueOf(request.getStatus().toUpperCase()));
+            } catch (IllegalArgumentException ex) {
+                // keep existing status if provided value is invalid
+            }
+        }
         return userRepository.save(toUpdate);
     }
 
@@ -170,6 +187,28 @@ public class UserServiceImpl implements UserService {
         return toUpdate;
     }
 
+    private void validateUniqueFields(User currentUser, UserUpdateRequest request) {
+        Map<String, String> errors = new HashMap<>();
+
+        if (request.getUsername() != null && !request.getUsername().isBlank()
+                && !request.getUsername().equalsIgnoreCase(currentUser.getUsername())
+                && userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
+            errors.put("username", "Tên đăng nhập đã tồn tại");
+        }
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()
+                && !request.getEmail().equalsIgnoreCase(currentUser.getEmail())
+                && userRepository.existsByEmailIgnoreCase(request.getEmail())) {
+            errors.put("email", "Email đã tồn tại");
+        }
+
+        if (!errors.isEmpty()) {
+            throw ValidationException.builder()
+                    .validationErrors(errors)
+                    .build();
+        }
+    }
+
     @Override
     public void updatePasswordByEmail(String email, String rawPassword) {
         User user = findUserByEmail(email);
@@ -194,6 +233,7 @@ public class UserServiceImpl implements UserService {
             dto.setAboutMe(userDetails.getAboutMe());
             dto.setBirthDate(String.valueOf(userDetails.getBirthDate()));
             dto.setImageUrl(userDetails.getImageUrl());
+            dto.setAcademic_rank(userDetails.getAcademic_rank());
         }
         
         return dto;
@@ -210,6 +250,36 @@ public class UserServiceImpl implements UserService {
         UserDetails userDetails = user.getUserDetails();
         if (userDetails != null) {
             dto.setPhoneNumber(userDetails.getPhoneNumber());
+        }
+        
+        return dto;
+    }
+
+    @Override
+    public UserAdminDto convertUserToUserAdminDto(User user) {
+        UserAdminDto dto = new UserAdminDto();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setActive(user.getActive() != null ? user.getActive().toString() : null);
+        dto.setRoleName(user.getPrimaryRole() != null ? user.getPrimaryRole().toString() : null);
+        
+        UserDetails userDetails = user.getUserDetails();
+        if (userDetails != null) {
+            dto.setFirstName(userDetails.getFirstName());
+            dto.setLastName(userDetails.getLastName());
+            dto.setPhoneNumber(userDetails.getPhoneNumber());
+            dto.setGender(userDetails.getGender() != null ? userDetails.getGender().toString() : null);
+            dto.setAboutMe(userDetails.getAboutMe());
+            if (userDetails.getBirthDate() != null) {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                dto.setBirthDate(sdf.format(userDetails.getBirthDate()));
+            } else {
+                dto.setBirthDate(null);
+            }
+            dto.setImageUrl(userDetails.getImageUrl());
+            dto.setAddress(userDetails.getAddress());
+            dto.setAcademic_rank(userDetails.getAcademic_rank());
         }
         
         return dto;

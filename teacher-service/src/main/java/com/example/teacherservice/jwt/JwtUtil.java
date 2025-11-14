@@ -11,16 +11,16 @@ import java.security.Key;
 
 @Component
 public class JwtUtil {
-    public static final String SECRET = "56928731907473259834758923975834001978431540789351748901579408315709843175089192839123821057984879453897";
+    public static final String SECRET = "WJi385Pfze28ESXzw0L1JjqZOj4HbZj3u0qr4MbS48Q";
 
-    private Key getSigningKey() {
+    private Key getSignKey() {
         byte[] keyBytes = Decoders.BASE64.decode(SECRET);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public Claims getClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(getSignKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

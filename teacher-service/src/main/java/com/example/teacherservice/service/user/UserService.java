@@ -1,6 +1,7 @@
 package com.example.teacherservice.service.user;
 
 import com.example.teacherservice.dto.user.InformationDto;
+import com.example.teacherservice.dto.user.UserAdminDto;
 import com.example.teacherservice.dto.user.UserInformationDto;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.model.UserDetails;
@@ -25,4 +26,5 @@ public interface UserService {
     Page<User> searchUsers(String keyword, Integer pageNo, Integer pageSize);
     UserInformationDto convertUserToUserInformationDto(User user);
     InformationDto convertUserToInformationDto(User user);
+    UserAdminDto convertUserToUserAdminDto(User user);
 }

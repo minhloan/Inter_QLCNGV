@@ -1,25 +1,23 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
-import TeacherModal from '../components/Teacher/TeacherModal';
 import DeleteModal from '../components/Teacher/DeleteModal';
 import Toast from '../components/Common/Toast';
 import Loading from '../components/Common/Loading';
-import { getAllUsers, searchUsers, updateUser, deleteUser } from '../api/user';
+import { getAllUsers, searchUsers, deleteUser } from '../api/user';
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
   const [allTeachers, setAllTeachers] = useState([]); // Lưu tất cả dữ liệu từ server để filter client-side
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(6); // Số items hiển thị mỗi trang (client-side pagination)
+  const [serverPageSize] = useState(1000); // Load tất cả data từ server một lần
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
-  const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [editingTeacher, setEditingTeacher] = useState(null);
   const [deleteTeacher, setDeleteTeacher] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
@@ -122,15 +120,17 @@ const ManageTeacher = () => {
     }
   }, [statusFilter, sortBy]);
 
-  // Tự động load dữ liệu khi vào trang (chỉ 1 lần)
+  // Tự động load dữ liệu khi vào trang (chỉ 1 lần) - load tất cả data với pageSize lớn
   useEffect(() => {
     if (!hasLoaded) {
-      loadTeachers(1, pageSize);
+      loadTeachers(1, serverPageSize);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Xử lý search và pagination - chỉ chạy sau khi đã load lần đầu
+  // Xử lý search - chỉ chạy sau khi đã load lần đầu
+  // Khi searchTerm thay đổi, gọi API để load data mới
+  // Khi currentPage thay đổi, KHÔNG gọi API (client-side pagination)
   useEffect(() => {
     // Bỏ qua nếu chưa load lần đầu
     if (!hasLoaded) {
@@ -143,10 +143,12 @@ const ManageTeacher = () => {
 
     searchTimeoutRef.current = setTimeout(() => {
       if (searchTerm.trim()) {
-        handleSearch(searchTerm, currentPage, pageSize);
+        handleSearch(searchTerm, 1, serverPageSize); // Load tất cả kết quả search
       } else {
-        loadTeachers(currentPage, pageSize);
+        loadTeachers(1, serverPageSize); // Load tất cả data
       }
+      // Reset về trang 1 khi search thay đổi
+      setCurrentPage(1);
     }, 500);
 
     return () => {
@@ -155,56 +157,19 @@ const ManageTeacher = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, currentPage]);
+  }, [searchTerm]);
 
   const handleAdd = () => {
     navigate('/add-teacher');
   };
 
   const handleEdit = (teacher) => {
-    setEditingTeacher(teacher);
-    setShowModal(true);
+    navigate(`/add-teacher?mode=edit&id=${teacher.id}`);
   };
 
   const handleDelete = (teacher) => {
     setDeleteTeacher(teacher);
     setShowDeleteModal(true);
-  };
-
-  const handleSave = async (teacherData) => {
-    try {
-      setLoading(true);
-      if (editingTeacher) {
-        // Update user via API
-        await updateUser({
-          id: editingTeacher.id,
-          email: teacherData.email,
-          username: teacherData.full_name || teacherData.username,
-          phone: teacherData.phone,
-          address: teacherData.address,
-          notes: teacherData.notes
-        });
-        showToast('Thành công', 'Cập nhật giáo viên thành công', 'success');
-        setShowModal(false);
-        setEditingTeacher(null);
-        setLoading(false);
-        if (searchTerm.trim()) {
-          await handleSearch(searchTerm, currentPage, pageSize);
-        } else {
-          await loadTeachers(currentPage, pageSize);
-        }
-      } else {
-        // Create - navigate to add teacher page
-        showToast('Thông báo', 'Vui lòng sử dụng trang Thêm Giáo viên', 'info');
-        setShowModal(false);
-        setEditingTeacher(null);
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error('Error saving teacher:', error);
-      showToast('Lỗi', error.response?.data?.message || 'Không thể lưu thông tin giáo viên', 'danger');
-      setLoading(false);
-    }
   };
 
   const confirmDelete = async () => {
@@ -220,9 +185,9 @@ const ManageTeacher = () => {
       setDeleteTeacher(null);
       setLoading(false);
       if (searchTerm.trim()) {
-        await handleSearch(searchTerm, currentPage, pageSize);
+        await handleSearch(searchTerm, 1, serverPageSize);
       } else {
-        await loadTeachers(currentPage, pageSize);
+        await loadTeachers(1, serverPageSize);
       }
     } catch (error) {
       console.error('Error deleting teacher:', error);
@@ -238,8 +203,12 @@ const ManageTeacher = () => {
     setCurrentPage(1);
   };
 
+  // Tính toán pagination dựa trên filtered data (client-side pagination)
+  const totalFilteredElements = filteredTeachers.length;
+  const totalFilteredPages = Math.ceil(totalFilteredElements / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const pageTeachers = filteredTeachers;
+  const endIndex = startIndex + pageSize;
+  const pageTeachers = filteredTeachers.slice(startIndex, endIndex);
 
   return (
     <MainLayout>
@@ -339,8 +308,8 @@ const ManageTeacher = () => {
                     ) : (
                       pageTeachers.map((teacher, index) => (
                         <tr key={teacher.id} className="fade-in">
-                          <td>{startIndex + index + 1}</td>
-                          <td><span className="teacher-code">{teacher.username || 'N/A'}</span></td>
+                          <td><span className="teacher-code">{startIndex + index + 1}</span></td>
+                          <td>{teacher.username || 'N/A'}</td>
                           <td>{teacher.email || 'N/A'}</td>
                           <td>{teacher.phone || 'N/A'}</td>
                           <td>
@@ -373,7 +342,7 @@ const ManageTeacher = () => {
                 </table>
               </div>
 
-              {totalPages > 1 && (
+              {totalFilteredPages > 1 && (
                 <nav aria-label="Page navigation" className="mt-4">
                   <ul className="pagination justify-content-center">
                     <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
@@ -385,11 +354,11 @@ const ManageTeacher = () => {
                         <i className="bi bi-chevron-left"></i>
                       </button>
                     </li>
-                    {[...Array(totalPages)].map((_, i) => {
+                    {[...Array(totalFilteredPages)].map((_, i) => {
                       const page = i + 1;
                       if (
                         page === 1 ||
-                        page === totalPages ||
+                        page === totalFilteredPages ||
                         (page >= currentPage - 2 && page <= currentPage + 2)
                       ) {
                         return (
@@ -402,11 +371,11 @@ const ManageTeacher = () => {
                       }
                       return null;
                     })}
-                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                    <li className={`page-item ${currentPage === totalFilteredPages ? 'disabled' : ''}`}>
                       <button
                         className="page-link"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(totalFilteredPages, prev + 1))}
+                        disabled={currentPage === totalFilteredPages}
                       >
                         <i className="bi bi-chevron-right"></i>
                       </button>
@@ -416,17 +385,6 @@ const ManageTeacher = () => {
               )}
             </div>
           </div>
-        )}
-
-        {showModal && (
-          <TeacherModal
-            teacher={editingTeacher}
-            onSave={handleSave}
-            onClose={() => {
-              setShowModal(false);
-              setEditingTeacher(null);
-            }}
-          />
         )}
 
         {showDeleteModal && deleteTeacher && (

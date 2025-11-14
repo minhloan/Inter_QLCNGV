@@ -13,7 +13,7 @@ export const login = async (data) => {
     Cookies.set("accessToken", accessToken, {
         expires: 1, // 1 ngày (token thực tế chỉ có 1 giờ)
         path: '/',
-        sameSite: 'strict',
+        sameSite: 'lax', // lax thay vì strict để hoạt động tốt hơn với cross-origin requests
         secure: window.location.protocol === 'https:'
     });
 
@@ -22,7 +22,7 @@ export const login = async (data) => {
         Cookies.set("refreshToken", refreshToken, {
             expires: 7, // 7 ngày
             path: '/',
-            sameSite: 'strict',
+            sameSite: 'lax', // lax thay vì strict để hoạt động tốt hơn với cross-origin requests
             secure: window.location.protocol === 'https:'
         });
     }
@@ -38,63 +38,82 @@ export const getRefreshToken = () => {
     return Cookies.get("refreshToken") || null;
 };
 
+let isRefreshing = false;
+let refreshPromise = null;
+
 export const refreshAccessToken = async () => {
+    if (isRefreshing && refreshPromise) {
+        return refreshPromise;
+    }
+
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-        console.error('[Token Refresh] No refresh token available');
         throw new Error("No refresh token available");
     }
 
-    console.log('[Token Refresh] Attempting to refresh access token');
-    try {
-        const response = await api.post("/refresh", { refreshToken });
-        const accessToken = response.data.access || response.data.token;
-        const newRefreshToken = response.data.refresh || response.data.refreshToken;
+    isRefreshing = true;
+    refreshPromise = (async () => {
+        try {
 
-        if (!accessToken) {
-            throw new Error("No access token in refresh response");
-        }
+            // Gọi API refresh - cookie sẽ được gửi tự động
+            const response = await api.post("/refresh", {}, {
+                withCredentials: true // Quan trọng: gửi cookie
+            });
+            
+            const accessToken = response.data.access || response.data.token;
+            const newRefreshToken = response.data.refresh || response.data.refreshToken;
 
-        // Cập nhật accessToken
-        Cookies.set("accessToken", accessToken, {
-            expires: 1,
-            path: '/',
-            sameSite: 'strict',
-            secure: window.location.protocol === 'https:'
-        });
+            if (!accessToken) {
+                throw new Error("No access token in refresh response");
+            }
 
-        // Cập nhật refreshToken nếu có (trong trường hợp rotate token)
-        if (newRefreshToken && newRefreshToken !== refreshToken) {
-            Cookies.set("refreshToken", newRefreshToken, {
-                expires: 7,
+            // Cập nhật accessToken từ cookie
+            Cookies.set("accessToken", accessToken, {
+                expires: 1,
                 path: '/',
-                sameSite: 'strict',
+                sameSite: 'lax',
                 secure: window.location.protocol === 'https:'
             });
-        }
 
-        console.log('[Token Refresh] Successfully refreshed access token');
-        return accessToken;
-    } catch (error) {
-        console.error('[Token Refresh] Error refreshing token:', error);
-        // Nếu refresh thất bại, xóa cả 2 token
-        Cookies.remove("accessToken");
-        Cookies.remove("refreshToken");
-        throw error;
-    }
+            if (newRefreshToken && newRefreshToken !== refreshToken) {
+                Cookies.set("refreshToken", newRefreshToken, {
+                    expires: 7,
+                    path: '/',
+                    sameSite: 'lax',
+                    secure: window.location.protocol === 'https:'
+                });
+            }
+
+            console.log('[Token Refresh] Successfully refreshed access token');
+            console.log('[Token Refresh] New Access Token:', accessToken);
+            console.log('[Token Refresh] New Refresh Token:', newRefreshToken);
+            return accessToken;
+        } catch (error) {
+            // Nếu refresh thất bại, xóa cả 2 token
+            Cookies.remove("accessToken");
+            Cookies.remove("refreshToken");
+            throw error;
+        } finally {
+            isRefreshing = false;
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
 };
 
 export const logout = async () => {
-    const refreshToken = getRefreshToken();
-
-    if (refreshToken) {
-        // Làm mới access token để tránh 401 nếu token đã hết hạn
-        try { await refreshAccessToken(); } catch (_) {}
-        try { await api.post("/logout", { refreshToken }); } catch (_) {}
+    try {
+        await api.post("/logout", {}, {
+            withCredentials: true
+        });
+    } catch (error) {
+        console.error('[Logout] Error:', error);
+    } finally {
+        // Xóa cookies ở frontend
+        Cookies.remove("accessToken");
+        Cookies.remove("refreshToken");
     }
-
-    Cookies.remove("accessToken");
-    Cookies.remove("refreshToken");
 };
 
 export const getUserRole = () => {
