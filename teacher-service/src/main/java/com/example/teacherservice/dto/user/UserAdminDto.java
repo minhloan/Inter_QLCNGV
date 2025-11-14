@@ -1,6 +1,7 @@
 package com.example.teacherservice.dto.user;
 
 import lombok.Data;
+import java.util.List;
 
 
 @Data
@@ -17,6 +18,11 @@ public class UserAdminDto {
     private String imageUrl;
     private String active;
     private String roleName;
-    private String address;
-    private String academic_rank;
+    private String country;
+    private String province;
+    private String district;
+    private String ward;
+    private String house_number;
+    private String qualification;
+    private List<String> skills;
 }

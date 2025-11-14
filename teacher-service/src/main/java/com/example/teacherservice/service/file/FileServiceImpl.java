@@ -33,11 +33,12 @@ public class FileServiceImpl implements FileService {
                     .build();
         }
 
-        fileRepository.save(File.builder()
+        File fileEntity = File.builder()
                 .type(file.getContentType())
-                .filePath(filePath).build()
-        );
-        return uuid;
+                .filePath(filePath)
+                .build();
+        fileRepository.save(fileEntity);
+        return fileEntity.getId();
     }
 
     @Override

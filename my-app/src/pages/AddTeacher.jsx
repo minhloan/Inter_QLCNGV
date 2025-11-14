@@ -4,6 +4,7 @@ import MainLayout from '../components/Layout/MainLayout';
 import Toast from '../components/Common/Toast';
 import Loading from '../components/Common/Loading';
 import { saveUser, getUserByIdForAdmin, updateUserById } from '../api/user';
+import { getFile } from '../api/file';
 
 // Danh sách mã quốc gia
 const countryCodes = [
@@ -45,19 +46,26 @@ const AddTeacher = () => {
     countryCode: '+84',
     phoneNumber:'',
     gender:'',
-    address: '',
+    country: '',
+    province: '',
+    district: '',
+    ward: '',
+    house_number: '',
     notes: '',
     firstName: '',
     lastName: '',
     aboutMe: '',
     birthDate: '',
-    academicRank: ''
+    qualification: '',
+    skills: []
   });
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [newSkill, setNewSkill] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -146,8 +154,7 @@ const AddTeacher = () => {
       setLoadingMessage(isEditMode ? 'Đang cập nhật thông tin giáo viên...' : 'Đang lưu thông tin giáo viên...');
       setLoading(true);
 
-      // Kết hợp mã quốc gia với số điện thoại
-      const fullPhoneNumber = formData.phoneNumber.trim() 
+      const fullPhoneNumber = formData.phoneNumber.trim()
         ? `${formData.countryCode}${formData.phoneNumber.trim()}` 
         : null;
 
@@ -160,13 +167,18 @@ const AddTeacher = () => {
           status: formData.status,
           phoneNumber: fullPhoneNumber,
           gender: formData.gender || null,
-          address: formData.address.trim() || null,
+          country: formData.country.trim() || null,
+          province: formData.province.trim() || null,
+          district: formData.district.trim() || null,
+          ward: formData.ward.trim() || null,
+          house_number: formData.house_number.trim() || null,
           notes: formData.notes.trim() || null,
           firstName: formData.firstName.trim() || null,
           lastName: formData.lastName.trim() || null,
           aboutMe: formData.aboutMe.trim() || null,
           birthDate: formData.birthDate || null,
-          academicRank: formData.academicRank.trim() || null,
+          qualification: formData.qualification || null,
+          skills: formData.skills.length > 0 ? formData.skills : null,
           file: profileImage
         });
         showToast('Thành công', 'Cập nhật giáo viên thành công!', 'success');
@@ -177,8 +189,7 @@ const AddTeacher = () => {
           password: formData.password,
           phoneNumber: fullPhoneNumber,
           status: formData.status,
-          gender: formData.gender || null,
-          address: formData.address.trim() || null
+          gender: formData.gender || null
         };
 
         await saveUser(userData);
@@ -269,14 +280,38 @@ const AddTeacher = () => {
           countryCode: parsedPhone.code,
           phoneNumber: parsedPhone.number,
           gender: user.gender || '',
-          address: user.address || '',
+          country: user.country || '',
+          province: user.province || '',
+          district: user.district || '',
+          ward: user.ward || '',
+          house_number: user.house_number || '',
           notes: user.aboutMe || '',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
           aboutMe: user.aboutMe || '',
           birthDate: formattedBirthDate,
-          academicRank: user.academic_rank || ''
+          qualification: user.qualification || '',
+          skills: user.skills || []
         }));
+
+        // Load profile image if available
+        if (user.imageUrl) {
+          if (user.imageUrl.startsWith('http')) {
+            setProfileImagePreview(user.imageUrl);
+          } else {
+            try {
+              const blobUrl = await getFile(user.imageUrl);
+              setProfileImagePreview(blobUrl);
+            } catch (error) {
+              if (error.response?.status !== 404) {
+                console.error('Error loading profile image:', error);
+              }
+              setProfileImagePreview(null);
+            }
+          }
+        } else {
+          setProfileImagePreview(null);
+        }
       } catch (error) {
         const message = error.response?.data?.message || 'Không thể tải thông tin giáo viên';
         showToast('Lỗi', message, 'danger');
@@ -289,9 +324,46 @@ const AddTeacher = () => {
     fetchUserDetails();
   }, [editingId, isEditMode, showToast]);
 
+  // Cleanup blob URLs when component unmounts or profileImagePreview changes
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImagePreview);
+      }
+    };
+  }, [profileImagePreview]);
+
   const handleFileChange = (e) => {
     const file = e.target.files?.[0] || null;
     setProfileImage(file);
+    
+    // Create preview
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setProfileImagePreview(null);
+    }
+  };
+
+  const handleAddSkill = (e) => {
+    if (e.key === 'Enter' && newSkill.trim() && formData.skills.length < 3) {
+      setFormData(prev => ({
+        ...prev,
+        skills: [...prev.skills, newSkill.trim()]
+      }));
+      setNewSkill('');
+    }
+  };
+
+  const handleRemoveSkill = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      skills: prev.skills.filter((_, i) => i !== index)
+    }));
   };
 
   if (loading) {
@@ -310,13 +382,14 @@ const AddTeacher = () => {
           </div>
         </div>
 
-        <div className="form-container">
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="row">
+        <div className="form-container" style={isEditMode ? { display: 'flex', gap: '30px', maxWidth: '1400px', margin: '0 auto' } : {}}>
+          <div className={isEditMode ? 'edit-profile-main' : ''} style={isEditMode ? { flex: 1 } : {}}>
+            <form onSubmit={handleSubmit} noValidate>
+              <div className="row">
             <div className="col-md-6">
               <div className="form-group">
                 <label className="form-label">
-                  Tên đăng nhập
+                  Họ và Tên
                   <span className="required">*</span>
                 </label>
                 <input
@@ -357,7 +430,7 @@ const AddTeacher = () => {
             <div className="col-md-6">
               <div className="form-group">
                 <label className="form-label">
-                  {isEditMode ? 'Mật khẩu mới (tùy chọn)' : 'Mật khẩu'}
+                  {isEditMode ? 'Mật khẩu mới' : 'Mật khẩu'}
                   {!isEditMode && <span className="required">*</span>}
                 </label>
                 <input
@@ -372,7 +445,7 @@ const AddTeacher = () => {
                 />
                 {errors.password && <div className="invalid-feedback">{errors.password}</div>}
                 <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666' }}>
-                  Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái và số {isEditMode && '(để trống nếu giữ nguyên)'}
+                  Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái và số {isEditMode}
                 </small>
               </div>
             </div>
@@ -548,14 +621,111 @@ const AddTeacher = () => {
                 </div>
                 <div className="col-md-6">
                   <div className="form-group">
-                    <label className="form-label">Học hàm / học vị</label>
+                    <label className="form-label">Trình độ học vấn</label>
+                    <select
+                      className="form-select"
+                      name="qualification"
+                      value={formData.qualification}
+                      onChange={handleChange}
+                    >
+                      <option value="">Chọn trình độ</option>
+                      <option value="bachelor">Cử nhân</option>
+                      <option value="master">Thạc sĩ</option>
+                      <option value="phd">Tiến sĩ</option>
+                      <option value="assistant_professor">Phó giáo sư</option>
+                      <option value="professor">Giáo sư</option>
+                      <option value="specialist">Chuyên viên</option>
+                      <option value="other">Khác</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Kỹ năng</label>
                     <input
                       type="text"
                       className="form-control"
-                      name="academicRank"
-                      value={formData.academicRank}
+                      placeholder="Nhập kỹ năng và nhấn Enter (tối đa 3 kỹ năng)"
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      onKeyPress={handleAddSkill}
+                      disabled={formData.skills.length >= 3}
+                    />
+                    {formData.skills.length > 0 && (
+                      <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {formData.skills.map((skill, index) => (
+                          <span
+                            key={index}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '4px 10px',
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              borderRadius: '16px',
+                              fontSize: '13px',
+                              gap: '6px'
+                            }}
+                          >
+                            {skill}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSkill(index)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#1976d2',
+                                cursor: 'pointer',
+                                padding: '0',
+                                marginLeft: '4px',
+                                fontSize: '14px',
+                                lineHeight: '1'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666', marginTop: '4px', display: 'block' }}>
+                      {formData.skills.length}/3 kỹ năng
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {isEditMode && (
+            <>
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Quốc gia</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="country"
+                      value={formData.country}
                       onChange={handleChange}
-                      placeholder="Ví dụ: Thạc sĩ, Tiến sĩ..."
+                      placeholder="Nhập quốc gia"
+                    />
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Tỉnh/Thành phố</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="province"
+                      value={formData.province}
+                      onChange={handleChange}
+                      placeholder="Nhập tỉnh/thành phố"
                     />
                   </div>
                 </div>
@@ -564,34 +734,49 @@ const AddTeacher = () => {
               <div className="row">
                 <div className="col-md-6">
                   <div className="form-group">
-                    <label className="form-label">Ảnh đại diện</label>
+                    <label className="form-label">Quận/Huyện</label>
                     <input
-                      type="file"
+                      type="text"
                       className="form-control"
-                      accept="image/*"
-                      onChange={handleFileChange}
+                      name="district"
+                      value={formData.district}
+                      onChange={handleChange}
+                      placeholder="Nhập quận/huyện"
                     />
-                    <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666' }}>
-                      Tải ảnh mới nếu muốn cập nhật
-                    </small>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Phường/Xã</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="ward"
+                      value={formData.ward}
+                      onChange={handleChange}
+                      placeholder="Nhập phường/xã"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="form-group">
+                    <label className="form-label">Số nhà</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="house_number"
+                      value={formData.house_number}
+                      onChange={handleChange}
+                      placeholder="Nhập số nhà"
+                    />
                   </div>
                 </div>
               </div>
             </>
           )}
-
-          <div className="form-group">
-            <label className="form-label">Địa chỉ</label>
-            <textarea
-              className="form-control"
-              id="address"
-              name="address"
-              rows="3"
-              placeholder="Nhập địa chỉ..."
-              value={formData.address}
-              onChange={handleChange}
-            ></textarea>
-          </div>
 
           <div className="form-group">
             <label className="form-label">Ghi chú</label>
@@ -622,6 +807,45 @@ const AddTeacher = () => {
             </button>
           </div>
         </form>
+          </div>
+
+          {isEditMode && (
+            <div className="edit-profile-sidebar">
+              <div className="image-upload-section">
+                <h3 className="section-title">ẢNH ĐẠI DIỆN</h3>
+                <div className="image-placeholder profile-picture-placeholder">
+                  {profileImagePreview ? (
+                    <img 
+                      src={profileImagePreview} 
+                      alt="Profile" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                      onError={(e) => {
+                        console.error('Failed to load image:', profileImagePreview);
+                        e.target.style.display = 'none';
+                        setProfileImagePreview(null);
+                      }}
+                    />
+                  ) : (
+                    <i className="bi bi-person"></i>
+                  )}
+                </div>
+                <label htmlFor="profile-image-upload" className="btn-upload" style={{ cursor: 'pointer' }}>
+                  <i className="bi bi-cloud-upload"></i>
+                  CẬP NHẬT ẢNH
+                </label>
+                <input
+                  id="profile-image-upload"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+                <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666', textAlign: 'center', display: 'block', marginTop: '8px' }}>
+                  Tải ảnh mới nếu muốn cập nhật
+                </small>
+              </div>
+            </div>
+          )}
         </div>
 
         {toast.show && (

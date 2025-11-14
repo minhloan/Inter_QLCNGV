@@ -8,7 +8,6 @@ const TeacherModal = ({ teacher, onSave, onClose }) => {
     email: '',
     phone: '',
     status: 'active',
-    address: '',
     notes: ''
   });
   const [errors, setErrors] = useState({});
@@ -22,7 +21,6 @@ const TeacherModal = ({ teacher, onSave, onClose }) => {
         email: teacher.email || '',
         phone: teacher.phone || '',
         status: teacher.status || 'active',
-        address: teacher.address || '',
         notes: teacher.notes || ''
       });
     } else {
@@ -34,7 +32,6 @@ const TeacherModal = ({ teacher, onSave, onClose }) => {
         email: '',
         phone: '',
         status: 'active',
-        address: '',
         notes: ''
       });
     }
@@ -184,17 +181,6 @@ const TeacherModal = ({ teacher, onSave, onClose }) => {
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
-              </div>
-              <div className="col-12">
-                <label htmlFor="address" className="form-label">Địa chỉ</label>
-                <textarea
-                  className="form-control"
-                  id="address"
-                  name="address"
-                  rows="2"
-                  value={formData.address}
-                  onChange={handleChange}
-                ></textarea>
               </div>
               <div className="col-12">
                 <label htmlFor="notes" className="form-label">Ghi chú</label>

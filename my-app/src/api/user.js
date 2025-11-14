@@ -28,6 +28,11 @@ export const getUserByIdForAdmin = async (userId) => {
   return response.data;
 };
 
+export const getCurrentUserInfo = async () => {
+  const response = await api.get("/information");
+  return response.data;
+};
+
 export const updateUserById = async (userData) => {
   const formData = new FormData();
 
@@ -44,8 +49,13 @@ export const updateUserById = async (userData) => {
       gender: userData.gender || null,
       aboutMe: userData.aboutMe || userData.notes || null,
       birthDate: userData.birthDate || null,
-      address: userData.address || null,
-      academic_rank: userData.academicRank || null
+      country: userData.country || null,
+      province: userData.province || null,
+      district: userData.district || null,
+      ward: userData.ward || null,
+      house_number: userData.house_number || null,
+      qualification: userData.qualification || null,
+      skills: userData.skills || null
     }
   };
 

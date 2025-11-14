@@ -262,7 +262,6 @@ Hệ thống quản lý giáo viên sử dụng kiến trúc microservices với
   - `gender`: Gender enum
   - `aboutMe`: String
   - `birthDate`: Date
-  - `academic_rank`: String
   - `imageUrl`: String
 
 ### 4.3. Enums

@@ -24,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -94,7 +95,6 @@ public class UserServiceImpl implements UserService {
         UserDetails userDetails = UserDetails.builder()
                 .gender(genderEnum)
                 .phoneNumber(registerRequest.getPhoneNumber())
-                .address(registerRequest.getAddress())
                 .build();
 
         User toSave = User.builder()
@@ -233,7 +233,13 @@ public class UserServiceImpl implements UserService {
             dto.setAboutMe(userDetails.getAboutMe());
             dto.setBirthDate(String.valueOf(userDetails.getBirthDate()));
             dto.setImageUrl(userDetails.getImageUrl());
-            dto.setAcademic_rank(userDetails.getAcademic_rank());
+            dto.setQualification(userDetails.getQualification());
+            dto.setSkills(userDetails.getSkills() != null ? new ArrayList<>(userDetails.getSkills()) : new ArrayList<>());
+            dto.setCountry(userDetails.getCountry());
+            dto.setProvince(userDetails.getProvince());
+            dto.setDistrict(userDetails.getDistrict());
+            dto.setWard(userDetails.getWard());
+            dto.setHouse_number(userDetails.getHouse_number());
         }
         
         return dto;
@@ -278,8 +284,13 @@ public class UserServiceImpl implements UserService {
                 dto.setBirthDate(null);
             }
             dto.setImageUrl(userDetails.getImageUrl());
-            dto.setAddress(userDetails.getAddress());
-            dto.setAcademic_rank(userDetails.getAcademic_rank());
+            dto.setCountry(userDetails.getCountry());
+            dto.setProvince(userDetails.getProvince());
+            dto.setDistrict(userDetails.getDistrict());
+            dto.setWard(userDetails.getWard());
+            dto.setHouse_number(userDetails.getHouse_number());
+            dto.setQualification(userDetails.getQualification());
+            dto.setSkills(userDetails.getSkills());
         }
         
         return dto;

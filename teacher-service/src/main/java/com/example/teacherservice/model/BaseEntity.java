@@ -21,6 +21,11 @@ public abstract class BaseEntity implements Serializable {
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     private String id;
+    
+    // Protected setter to allow subclasses to set ID manually when needed
+    protected void setId(String id) {
+        this.id = id;
+    }
 
     @CreationTimestamp
     private LocalDateTime creationTimestamp;
