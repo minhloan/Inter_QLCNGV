@@ -2,20 +2,32 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import '../assets/styles/Landing.css';
 
+
+
+import img1 from '../assets/images/1.png';
+import img2 from '../assets/images/2.png';
+import img3 from '../assets/images/3.png';
+import img4 from '../assets/images/4.png';
+import img5 from '../assets/images/5.png';
+import img6 from '../assets/images/7.png';
+import img7 from '../assets/images/6.png';
+import img8 from '../assets/images/8.png';
+import img9 from '../assets/images/9.png';
+import img10 from '../assets/images/10.png';
+import img11 from '../assets/images/11.png';
+import img12 from '../assets/images/12.png';
+
+const gridImages = [
+  img1, img2, img3, img4, img5, img6,
+  img7, img8, img9, img10, img11, img12
+];
 const Landing = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.body.style.background = '#0a0a0a';
-    document.body.style.color = 'white';
-    document.body.style.overflowX = 'hidden';
-    document.body.style.position = 'relative';
-
+    document.body.classList.add('landing-page-body');
     return () => {
-      document.body.style.background = '';
-      document.body.style.color = '';
-      document.body.style.overflowX = '';
-      document.body.style.position = '';
+      document.body.classList.remove('landing-page-body');
     };
   }, []);
 
@@ -24,48 +36,44 @@ const Landing = () => {
   };
 
   return (
-    <>
-      {/* Background Grid */}
+    <div className="landing-page">
       <div className="background-grid">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="grid-item"></div>
+        {gridImages.map((imgSrc, i) => (
+          <div key={i} className="grid-item">
+            <img src={imgSrc} alt={`grid-item-${i}`} />
+          </div>
         ))}
       </div>
 
-      {/* Dark Overlay */}
       <div className="dark-overlay"></div>
 
-      {/* Main Content */}
       <div className="main-content">
-        {/* Header */}
         <header className="header">
           <div className="logo-container">
-            <span className="logo-name">Aptech CanTho</span>
+            <div className="logo-icon">CUSC</div>
+            <span className="logo-name">APTECH CANTHO</span>
           </div>
         </header>
 
-        {/* Hero Section */}
         <div className="hero-section">
           <h1 className="hero-title">Hệ thống quản lý giáo viên</h1>
-          <p className="hero-subtitle">David Nguyen & David Nguyen & David Nguyen & David Nguyen & David Nguyen</p>
+          <p className="hero-subtitle">Designed by David Nguyen & Designed by David Nguyen</p>
           <a href="#" className="btn-login" onClick={(e) => { e.preventDefault(); handleLoginClick(); }}>
             LOGIN
           </a>
         </div>
 
-        {/* Footer */}
         <footer className="footer">
           <div className="footer-left">
-            <span>Quản lý bởi CUSC</span>
+            <span>QUẢN LÝ BỞI CUSC</span>
           </div>
           <div className="footer-right">
             <a href="#" className="footer-link">ĐIỀU KHOẢN & ĐIỀU KIỆN</a>
           </div>
         </footer>
       </div>
-    </>
+    </div>
   );
 };
 
 export default Landing;
-

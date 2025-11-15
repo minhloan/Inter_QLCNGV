@@ -11,9 +11,9 @@ export const login = async (data) => {
 
     // Lưu accessToken trong cookie
     Cookies.set("accessToken", accessToken, {
-        expires: 1, // 1 ngày (token thực tế chỉ có 1 giờ)
+        expires: 1, // 1 ngày
         path: '/',
-        sameSite: 'lax', // lax thay vì strict để hoạt động tốt hơn với cross-origin requests
+        sameSite: 'lax',
         secure: window.location.protocol === 'https:'
     });
 
@@ -22,7 +22,7 @@ export const login = async (data) => {
         Cookies.set("refreshToken", refreshToken, {
             expires: 7, // 7 ngày
             path: '/',
-            sameSite: 'lax', // lax thay vì strict để hoạt động tốt hơn với cross-origin requests
+            sameSite: 'lax',
             secure: window.location.protocol === 'https:'
         });
     }

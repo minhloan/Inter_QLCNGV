@@ -265,7 +265,6 @@ const EditProfile = () => {
       await updateUserById(updateData);
       showToast('Thành công', 'Cập nhật thông tin thành công', 'success');
       
-      // Reload user data to get updated imageUrl
       const data = await getCurrentUserInfo();
       console.log('User data after update:', data);
       console.log('imageUrl from API:', data.imageUrl);
@@ -345,7 +344,7 @@ const EditProfile = () => {
       <div className="edit-profile-container">
         <div className="edit-profile-content">
           <div className="edit-profile-main">
-            <h2 className="student-id-title">Teacher Id: {formData.studentId}</h2>
+            {/*<h2 className="student-id-title">Teacher Id: {formData.studentId}</h2>*/}
 
             {/* Basic Information */}
             <div className="form-section">
@@ -386,7 +385,7 @@ const EditProfile = () => {
                 <div className="form-group">
                   <label className="form-label">DOB (DD/MM/YYYY)</label>
                   <input
-                    type="text"
+                    type="date"
                     name="dob"
                     className="form-control"
                     value={formData.dob}

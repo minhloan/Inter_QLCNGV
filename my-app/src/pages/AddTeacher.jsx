@@ -321,7 +321,7 @@ const AddTeacher = () => {
       }
     };
 
-    fetchUserDetails();
+    fetchUserDetails().then(r => r);
   }, [editingId, isEditMode, showToast]);
 
   // Cleanup blob URLs when component unmounts or profileImagePreview changes

@@ -7,10 +7,9 @@ const api = createApiInstance(API_URL);
 export const getFile = async (fileId) => {
   try {
     const response = await api.get(`/get/${fileId}`, {
-      responseType: 'blob' // Important: get as blob
+      responseType: 'blob'
     });
     
-    // Create blob URL from response
     const blob = new Blob([response.data]);
     const blobUrl = URL.createObjectURL(blob);
     return blobUrl;

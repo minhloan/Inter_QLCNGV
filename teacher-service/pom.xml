@@ -24,6 +24,8 @@
         <modelmapper.version>3.2.0</modelmapper.version>
         <jjwt.version>0.11.5</jjwt.version>
         <commons-io.version>2.16.1</commons-io.version>
+        <poi.version>5.2.5</poi.version>
+        <itext.version>8.0.2</itext.version>
     </properties>
 
     <dependencies>
@@ -109,6 +111,32 @@
             <artifactId>commons-io</artifactId>
             <version>${commons-io.version}</version>
         </dependency>
+        
+        <!-- Apache POI for Excel and Word -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        
+        <!-- iText for PDF -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itext7-core</artifactId>
+            <version>${itext.version}</version>
+            <type>pom</type>
+        </dependency>
+        
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

@@ -40,7 +40,7 @@ public class UserController {
     @GetMapping("/getAllUsers")
     ResponseEntity<Page<InformationDto>> getAllUsers(
             @RequestParam(defaultValue = "1") Integer pageNo,
-            @RequestParam(defaultValue = "6") Integer pageSize){
+            @RequestParam(defaultValue = "10") Integer pageSize){
         Page<InformationDto> users = userService.getAllUsers(pageNo, pageSize)
                 .map(user -> userService.convertUserToInformationDto(user));
         return ResponseEntity.ok(users);
@@ -50,7 +50,7 @@ public class UserController {
     ResponseEntity<Page<InformationDto>> searchUsers(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "1") Integer pageNo,
-            @RequestParam(defaultValue = "6") Integer pageSize){
+            @RequestParam(defaultValue = "10") Integer pageSize){
         Page<InformationDto> users = userService.searchUsers(keyword, pageNo, pageSize)
                 .map(user -> userService.convertUserToInformationDto(user));
         return ResponseEntity.ok(users);

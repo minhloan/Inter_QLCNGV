@@ -8,9 +8,11 @@ import { getAllUsers, searchUsers, deleteUser } from '../api/user';
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
+  
+  // List states
   const [allTeachers, setAllTeachers] = useState([]); // Lưu tất cả dữ liệu từ server để filter client-side
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(6); // Số items hiển thị mỗi trang (client-side pagination)
+  const [pageSize] = useState(10); // Số items hiển thị mỗi trang (client-side pagination)
   const [serverPageSize] = useState(1000); // Load tất cả data từ server một lần
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -88,7 +90,7 @@ const ManageTeacher = () => {
     }
   }, [showToast]);
 
-  // Filter và sort client-side sử dụng useMemo để tránh re-render không cần thiết (không gọi API, không loading, không nhảy giao diện)
+  // Filter và sort client-side sử dụng useMemo để tránh re-render không cần thiết
   const filteredTeachers = useMemo(() => {
     if (allTeachers.length === 0) return [];
     
@@ -130,7 +132,7 @@ const ManageTeacher = () => {
 
   // Xử lý search - chỉ chạy sau khi đã load lần đầu
   // Khi searchTerm thay đổi, gọi API để load data mới
-  // Khi currentPage thay đổi, KHÔNG gọi API (client-side pagination)
+  // Khi currentPage thay đổi, KHÔNG gọi API
   useEffect(() => {
     // Bỏ qua nếu chưa load lần đầu
     if (!hasLoaded) {
@@ -156,7 +158,6 @@ const ManageTeacher = () => {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
   const handleAdd = () => {
@@ -203,7 +204,6 @@ const ManageTeacher = () => {
     setCurrentPage(1);
   };
 
-  // Tính toán pagination dựa trên filtered data (client-side pagination)
   const totalFilteredElements = filteredTeachers.length;
   const totalFilteredPages = Math.ceil(totalFilteredElements / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -219,7 +219,7 @@ const ManageTeacher = () => {
             <button className="back-button" onClick={() => navigate(-1)}>
               <i className="bi bi-arrow-left"></i>
             </button>
-            <h1 className="page-title">Danh sách Giáo viên</h1>
+            <h1 className="page-title">Quản lý Giáo viên</h1>
           </div>
           <Link to="/add-teacher" className="btn btn-primary">
             <i className="bi bi-plus-circle"></i>
@@ -227,11 +227,13 @@ const ManageTeacher = () => {
           </Link>
         </div>
 
-        {loading && (
-          <Loading fullscreen={true} message="Đang tải danh sách giáo viên..." />
-        )}
+        {/* List Content */}
+        <>
+          {loading && (
+            <Loading fullscreen={true} message="Đang tải danh sách giáo viên..." />
+          )}
 
-        {hasLoaded && !loading && (
+          {hasLoaded && !loading && (
           <div className="filter-table-wrapper">
             {/* Filter Section */}
             <div className="filter-section">
@@ -385,7 +387,8 @@ const ManageTeacher = () => {
               )}
             </div>
           </div>
-        )}
+          )}
+        </>
 
         {showDeleteModal && deleteTeacher && (
           <DeleteModal

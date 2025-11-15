@@ -24,7 +24,8 @@ const Sidebar = () => {
     { path: '/trial-teaching-management', icon: 'bi-mortarboard', label: 'Giảng thử' },
     { path: '/evidence-management', icon: 'bi-file-check', label: 'Minh chứng & OCR' },
     { path: '/teaching-assignment-management', icon: 'bi-calendar-check', label: 'Phân công Giảng dạy' },
-    { path: '/reporting-export', icon: 'bi-graph-up', label: 'Báo cáo & Xuất dữ liệu' }
+    { path: '/reporting-export', icon: 'bi-graph-up', label: 'Báo cáo & Xuất dữ liệu' },
+    { path: '/audit-log-management', icon: 'bi-journal-text', label: 'Nhật ký Hoạt động' }
   ];
 
   // Menu items for TEACHER

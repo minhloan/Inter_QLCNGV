@@ -42,9 +42,9 @@ const createApiInstance = (baseURL) => {
             
             // Debug: Log token status
             if (!token) {
-                console.warn('[API Request] No accessToken found in cookies for:', config.url);
-                console.warn('[API Request] All cookies:', allCookies);
-                console.warn('[API Request] Full URL:', config.baseURL + config.url);
+                // console.warn('[API Request] No accessToken found in cookies for:', config.url);
+                // console.warn('[API Request] All cookies:', allCookies);
+                // console.warn('[API Request] Full URL:', config.baseURL + config.url);
             }
             
             // Proactive refresh: Check if token is expired or about to expire

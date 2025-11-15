@@ -1,6 +1,6 @@
 package com.example.teacherservice.controller;
 
-import com.example.teacherservice.model.AuditLog;
+import com.example.teacherservice.dto.log.AuditLogDto;
 import com.example.teacherservice.service.auditlog.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,8 +15,10 @@ public class AuditLogController {
     private final AuditLogService auditLogService;
 
     @GetMapping
-    public ResponseEntity<Page<AuditLog>> list(@RequestParam(defaultValue = "0") int page,
-                                               @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(auditLogService.list(PageRequest.of(page, size)));
+    public ResponseEntity<Page<AuditLogDto>> list(@RequestParam(defaultValue = "0") int page,
+                                                  @RequestParam(defaultValue = "20") int size,
+                                                  @RequestParam(required = false) String keyword) {
+        Page<AuditLogDto> result = auditLogService.search(keyword, PageRequest.of(page, size));
+        return ResponseEntity.ok(result);
     }
 }

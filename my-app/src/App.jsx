@@ -21,6 +21,7 @@ import TrialTeachingManagement from './pages/admin/TrialTeachingManagement';
 import EvidenceManagement from './pages/admin/EvidenceManagement';
 import TeachingAssignmentManagement from './pages/admin/TeachingAssignmentManagement';
 import ReportingExport from './pages/admin/ReportingExport';
+import AuditLogManagement from './pages/admin/AuditLogManagement';
 
 // Teacher pages
 import EditProfile from './pages/EditProfile';
@@ -163,6 +164,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute requiredRole="Manage-Leader">
             <ReportingExport />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit-log-management"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AuditLogManagement />
           </ProtectedRoute>
         }
       />

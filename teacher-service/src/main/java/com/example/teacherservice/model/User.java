@@ -25,7 +25,7 @@ public class User extends BaseEntity {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    private Role primaryRole = Role.TEACHER; // Role chính
+    private Role primaryRole = Role.TEACHER; 
 
     @Column(name = "teacher_code", length = 20, unique = true)
     private String teacherCode;

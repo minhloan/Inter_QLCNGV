@@ -7,6 +7,8 @@ import {
 } from '../api/notification';
 import { formatTime } from '../data/notifications';
 
+import { useAuth } from './AuthContext.jsx';
+
 const NotificationContext = createContext(null);
 
 const getErrorMessage = (err, fallback) =>
@@ -22,6 +24,7 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { isAuthenticated } = useAuth();
 
   const sortNotifications = useCallback(
     (items) =>
@@ -103,16 +106,23 @@ export const NotificationProvider = ({ children }) => {
   );
 
   useEffect(() => {
-    refreshNotifications();
-  }, [refreshNotifications]);
+    if (isAuthenticated) {
+      refreshNotifications();
+    } else {
+      setWithEnrichment([]);
+      setError(null);
+    }
+  }, [refreshNotifications, isAuthenticated, setWithEnrichment]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setWithEnrichment((prev) => prev);
-    }, 60000);
+    if (isAuthenticated) {
+      const interval = setInterval(() => {
+        setWithEnrichment((prev) => prev);
+      }, 60000);
 
-    return () => clearInterval(interval);
-  }, [setWithEnrichment]);
+      return () => clearInterval(interval);
+    }
+  }, [setWithEnrichment, isAuthenticated]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,
