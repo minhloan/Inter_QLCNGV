@@ -3,7 +3,7 @@ package com.example.teacherservice.service.adminteachersubjectregistration;
 import com.example.teacherservice.dto.adminteachersubjectregistration.AdminSubjectRegistrationDto;
 import com.example.teacherservice.enums.RegistrationStatus;
 import com.example.teacherservice.model.SubjectRegistration;
-import com.example.teacherservice.repository.teachersubjectregistration.SubjectRegistrationRepository;
+import com.example.teacherservice.repository.SubjectRegistrationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,4 +1,4 @@
-package com.example.teacherservice.repository.teachersubjectregistration;
+package com.example.teacherservice.repository;
 
 import com.example.teacherservice.enums.Quarter;
 import com.example.teacherservice.model.SubjectRegistration;

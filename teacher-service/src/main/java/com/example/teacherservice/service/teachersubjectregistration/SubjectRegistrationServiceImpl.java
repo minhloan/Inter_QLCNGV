@@ -5,11 +5,10 @@ import com.example.teacherservice.enums.RegistrationStatus;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectRegistration;
 import com.example.teacherservice.model.User;
+import com.example.teacherservice.repository.SubjectRegistrationRepository;
 import com.example.teacherservice.repository.SubjectRepository;
 import com.example.teacherservice.repository.UserRepository;
-import com.example.teacherservice.repository.teachersubjectregistration.SubjectRegistrationRepository;
 import com.example.teacherservice.request.teachersubjectregistration.SubjectRegistrationFilterRequest;
-import com.example.teacherservice.service.subject.SubjectServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +28,6 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
     private final SubjectRegistrationRepository subjectRegistrationRepository;
     private final UserRepository userRepository;
     private final SubjectRepository SubjectRepository;
-    private final SubjectServiceImpl subjectService;
 
 
     @Override
@@ -79,7 +77,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 .status(e.getStatus())
                 .carriedFromId(e.getCarriedFrom() != null ? e.getCarriedFrom().getId() : null)
 
-                // ⭐ Lấy creationTimestamp từ BaseEntity làm ngày đăng ký
+                // Lấy creationTimestamp từ BaseEntity làm ngày đăng ký
                 .registrationDate(
                         e.getCreationTimestamp() != null
                                 ? e.getCreationTimestamp().toString()  // hoặc format lại nếu muốn
