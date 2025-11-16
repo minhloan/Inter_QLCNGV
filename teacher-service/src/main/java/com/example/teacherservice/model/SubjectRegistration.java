@@ -1,16 +1,17 @@
 package com.example.teacherservice.model;
 
+import com.example.teacherservice.enums.Quarter;
 import com.example.teacherservice.enums.RegistrationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(name = "subject_registrations", indexes = {
-    @Index(name = "UQ_SubjectRegistration", columnList = "teacher_id,subject_id,year,quarter", unique = true),
-    @Index(name = "idx_teacher_year_quarter", columnList = "teacher_id,year,quarter"),
-    @Index(name = "idx_subject_year_quarter", columnList = "subject_id,year,quarter"),
-    @Index(name = "idx_year_quarter", columnList = "year,quarter"),
-    @Index(name = "idx_status", columnList = "status")
+        @Index(name = "UQ_SubjectRegistration", columnList = "teacher_id,subject_id,year,quarter", unique = true),
+        @Index(name = "idx_teacher_year_quarter", columnList = "teacher_id,year,quarter"),
+        @Index(name = "idx_subject_year_quarter", columnList = "subject_id,year,quarter"),
+        @Index(name = "idx_year_quarter", columnList = "year,quarter"),
+        @Index(name = "idx_status", columnList = "status")
 })
 @Getter
 @Setter
@@ -18,11 +19,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SubjectRegistration extends BaseEntity {
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "subject_id", nullable = false)
     private Subject subject;
 
@@ -30,7 +31,8 @@ public class SubjectRegistration extends BaseEntity {
     private Integer year;
 
     @Column(name = "quarter", nullable = false)
-    private Integer quarter;
+    @Enumerated(EnumType.STRING)
+    private Quarter quarter;
 
     @Column(name = "reason_for_carry_over", columnDefinition = "TEXT")
     private String reasonForCarryOver;

@@ -1,17 +1,24 @@
-package com.example.teacherservice.repository;
+package com.example.teacherservice.repository.teachersubjectregistration;
 
+import com.example.teacherservice.enums.Quarter;
 import com.example.teacherservice.model.SubjectRegistration;
-import com.example.teacherservice.model.User;
-import com.example.teacherservice.model.Subject;
+import com.example.teacherservice.enums.RegistrationStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
+@Repository
 public interface SubjectRegistrationRepository extends JpaRepository<SubjectRegistration, String> {
-    Optional<SubjectRegistration> findByTeacherAndSubjectAndYearAndQuarter(
-            User teacher, Subject subject, Integer year, Integer quarter);
-    List<SubjectRegistration> findByTeacher(User teacher);
-    List<SubjectRegistration> findBySubject(Subject subject);
-}
+    @EntityGraph(attributePaths = {"subject", "teacher"})
+    List<SubjectRegistration> findByTeacher_Id(String teacherId);
 
+    boolean existsByTeacher_IdAndSubject_IdAndYearAndQuarter(
+            String teacherId, String subjectId, Integer year, Quarter quarter);
+    // Lọc theo năm và quý
+    List<SubjectRegistration> findByYearAndQuarter(Integer year, Quarter quarter);
+
+    // Lọc theo trạng thái
+    List<SubjectRegistration> findByStatus(RegistrationStatus status);
+}
