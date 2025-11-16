@@ -24,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -178,7 +179,7 @@ public class UserServiceImpl implements UserService {
             String profilePicture = fileService.uploadImageToFileSystem(file);
             if (profilePicture != null) {
                 // nếu muốn xóa ảnh cũ, cần kiểm tra null trước
-                // fileService.deleteImageFromFileSystem(toUpdate.getImageUrl());
+                fileService.deleteImageFromFileSystem(toUpdate.getImageUrl());
                 toUpdate.setImageUrl(profilePicture);
             }
         }
@@ -189,12 +190,6 @@ public class UserServiceImpl implements UserService {
 
     private void validateUniqueFields(User currentUser, UserUpdateRequest request) {
         Map<String, String> errors = new HashMap<>();
-
-        if (request.getUsername() != null && !request.getUsername().isBlank()
-                && !request.getUsername().equalsIgnoreCase(currentUser.getUsername())
-                && userRepository.existsByUsernameIgnoreCase(request.getUsername())) {
-            errors.put("username", "Tên đăng nhập đã tồn tại");
-        }
 
         if (request.getEmail() != null && !request.getEmail().isBlank()
                 && !request.getEmail().equalsIgnoreCase(currentUser.getEmail())
@@ -278,7 +273,7 @@ public class UserServiceImpl implements UserService {
             dto.setGender(userDetails.getGender() != null ? userDetails.getGender().toString() : null);
             dto.setAboutMe(userDetails.getAboutMe());
             if (userDetails.getBirthDate() != null) {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
                 dto.setBirthDate(sdf.format(userDetails.getBirthDate()));
             } else {
                 dto.setBirthDate(null);
