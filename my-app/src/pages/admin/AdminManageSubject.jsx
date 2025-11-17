@@ -211,6 +211,7 @@ const AdminManageSubject = () => {
 
     return (
         <MainLayout>
+            <div className="page-admin-subject">
             <div className="content-header">
                 <div className="content-title">
                     <button className="back-button" onClick={() => navigate(-1)}>
@@ -224,6 +225,7 @@ const AdminManageSubject = () => {
                     <i className="bi bi-plus-circle"></i>
                     Thêm Môn Học
                 </button>
+            </div>
             </div>
 
             {loading && <Loading fullscreen={true} message="Đang tải danh sách môn học..." />}

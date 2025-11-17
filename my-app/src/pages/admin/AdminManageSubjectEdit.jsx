@@ -398,18 +398,10 @@ const AdminManageSubjectEdit = () => {
               </div>
 
               {/* Nút chọn ảnh & xoá ảnh giống Add */}
-              <div
-                style={{
-                  marginTop: '10px',
-                  display: 'flex',
-                  gap: '8px',
-                  width: '100%',
-                }}
-              >
+              <div className="image-upload-actions">
                 <label
                   htmlFor="subject-image-upload-edit"
                   className="btn btn-primary"
-                  style={{ flex: 1, cursor: 'pointer' }}
                 >
                   <i className="bi bi-cloud-upload"></i> Chọn ảnh
                 </label>
@@ -418,7 +410,6 @@ const AdminManageSubjectEdit = () => {
                   <button
                     type="button"
                     className="btn btn-danger"
-                    style={{ flex: 1 }}
                     onClick={handleClearImage}
                   >
                     <i className="bi bi-x-circle"></i> Xóa ảnh

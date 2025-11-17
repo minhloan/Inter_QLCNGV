@@ -56,6 +56,10 @@ const AuditLogManagement = () => {
         }
   };
 
+  const handleRefresh = () => {
+        loadAuditLogs();
+  };
+
   const showToast = (title, message, type) => {
     setToast({ show: true, title, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -148,6 +152,17 @@ const AuditLogManagement = () => {
               <i className="bi bi-arrow-left"></i>
             </button>
             <h1 className="page-title">Nhật ký Hoạt động</h1>
+          </div>
+          <div className="d-flex gap-2 flex-wrap">
+            <button
+              type="button"
+              className="btn btn-outline-primary"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <i className="bi bi-arrow-repeat"></i>
+              Làm mới
+            </button>
           </div>
         </div>
 

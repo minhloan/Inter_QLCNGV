@@ -464,10 +464,32 @@ body {
 @media (max-width: 992px) {
     .login-page-container {
         flex-direction: column;
+        min-height: auto;
+    }
+
+    .login-left-column,
+    .login-right-column {
+        flex: none;
+        width: 100%;
+    }
+
+    .login-right-column {
+        order: 1;
+        padding: 24px 20px 32px;
     }
 
     .login-left-column {
-        padding: 30px 20px;
+        order: 2;
+        padding: 20px;
+    }
+
+    .login-form-container {
+        max-width: 100%;
+    }
+
+    .login-form-header {
+        margin-top: 20px;
+        margin-bottom: 24px;
     }
 
     .help-title {
@@ -476,10 +498,6 @@ body {
 
     .video-title {
         font-size: 36px;
-    }
-
-    .login-right-column {
-        padding: 30px 20px;
     }
 }
 
@@ -490,6 +508,14 @@ body {
 
     .video-title {
         font-size: 28px;
+    }
+
+    .login-right-column {
+        padding: 20px 16px 28px;
+    }
+
+    .login-left-column {
+        padding: 16px;
     }
 
     .form-welcome {

@@ -116,16 +116,15 @@ const TrialTeachingDetail = () => {
 
     return (
         <MainLayout>
-            <div className="container-fluid">
-                {/* Header giống style ManageSubjectAdd */}
-                <div className="content-header d-flex justify-content-between align-items-center mb-3">
-                    <div className="d-flex align-items-center gap-2">
+            <div className="page-admin-trial">
+                <div className="content-header">
+                    <div className="content-title">
                         <button className="back-button" onClick={() => navigate('/trial-teaching-management')}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h4 className="page-title mb-0">Chi tiết buổi giảng thử</h4>
+                        <h1 className="page-title">Chi tiết buổi giảng thử</h1>
                     </div>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex gap-2 flex-wrap">
                         {trial.status === 'PENDING' && evaluation && (
                             <button className="btn btn-success" onClick={() => handleStatusUpdate('REVIEWED')}>
                                 <i className="bi bi-check-circle"></i> Đánh dấu đã đánh giá
@@ -138,41 +137,45 @@ const TrialTeachingDetail = () => {
                     <div className="card-body">
                         {/* Trial Information & Evaluation */}
                         <div className="row mb-4">
-                            <div className="col-md-6">
+                            <div className="col-md-6 detail-section">
                                 <h5>Thông tin buổi giảng thử</h5>
-                                <table className="table table-borderless">
-                                    <tbody>
-                                    <tr><td><strong>Giảng viên:</strong></td><td>{trial.teacherName} ({trial.teacherCode})</td></tr>
-                                    <tr><td><strong>Môn học:</strong></td><td>{trial.subjectName}</td></tr>
-                                    <tr><td><strong>Ngày giảng:</strong></td><td>{trial.teachingDate}</td></tr>
-                                    <tr><td><strong>Địa điểm:</strong></td><td>{trial.location || 'N/A'}</td></tr>
-                                    <tr><td><strong>Trạng thái:</strong></td><td>{getStatusBadge(trial.status)}</td></tr>
-                                    {trial.note && <tr><td><strong>Ghi chú:</strong></td><td>{trial.note}</td></tr>}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="col-md-6">
-                                <h5>Kết quả đánh giá</h5>
-                                {evaluation ? (
-                                    <table className="table table-borderless">
+                                <div className="table-responsive">
+                                    <table className="table table-borderless detail-table mb-0">
                                         <tbody>
-                                        <tr><td><strong>Điểm số:</strong></td><td>{evaluation.score}/100</td></tr>
-                                        <tr><td><strong>Kết luận:</strong></td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
-                                        {evaluation.comments && <tr><td><strong>Nhận xét:</strong></td><td>{evaluation.comments}</td></tr>}
-                                        {evaluation.fileReportId && (
-                                            <tr>
-                                                <td><strong>Biên bản:</strong></td>
-                                                <td>
-                                                    <button className="btn btn-sm btn-outline-primary" onClick={handleDownloadReport}>
-                                                        <i className="bi bi-download"></i> Tải xuống
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        )}
+                                        <tr><td>Giảng viên:</td><td className="text-break">{trial.teacherName} ({trial.teacherCode})</td></tr>
+                                        <tr><td>Môn học:</td><td className="text-break">{trial.subjectName}</td></tr>
+                                        <tr><td>Ngày giảng:</td><td className="text-break">{trial.teachingDate}</td></tr>
+                                        <tr><td>Địa điểm:</td><td className="text-break">{trial.location || 'N/A'}</td></tr>
+                                        <tr><td>Trạng thái:</td><td>{getStatusBadge(trial.status)}</td></tr>
+                                        {trial.note && <tr><td>Ghi chú:</td><td className="text-break">{trial.note}</td></tr>}
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                            <div className="col-md-6 detail-section">
+                                <h5>Kết quả đánh giá</h5>
+                                {evaluation ? (
+                                    <div className="table-responsive">
+                                        <table className="table table-borderless detail-table mb-0">
+                                            <tbody>
+                                            <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
+                                            <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
+                                            {evaluation.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
+                                            {evaluation.fileReportId && (
+                                                <tr>
+                                                    <td>Biên bản:</td>
+                                                    <td>
+                                                        <button className="btn btn-sm btn-outline-primary" onClick={handleDownloadReport}>
+                                                            <i className="bi bi-download"></i> Tải xuống
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 ) : (
-                                    <p className="text-muted">Chưa có đánh giá</p>
+                                    <p className="text-muted mb-0">Chưa có đánh giá</p>
                                 )}
                             </div>
                         </div>

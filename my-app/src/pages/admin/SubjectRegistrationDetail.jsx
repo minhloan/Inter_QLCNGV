@@ -105,105 +105,91 @@ const SubjectRegistrationDetail = () => {
 
     return (
         <MainLayout>
-            <div className="container detail-container">
-
-                {/* Nút Back trên cùng */}
-                <button
-                    className="back-circle-btn"
-                    onClick={() => navigate(-1)}
-                >
-                    <i className="bi bi-arrow-left"></i>
-                </button>
-
-                <div className="card shadow-sm">
-
-                    <div className="card-header d-flex justify-content-between align-items-center">
-                        <h4 className="card-title mb-0">Chi tiết Đăng ký Môn học</h4>
-                    </div>
-
-                    <div className="card-body">
-
-                        {/* THÔNG TIN GIÁO VIÊN - MÔN HỌC */}
-                        <div className="row mb-4">
-                            <div className="col-md-6">
-                                <h5>Thông tin Giáo viên</h5>
-                                <table className="table table-borderless">
-                                    <tbody>
-                                    <tr>
-                                        <td className="fw-bold">Mã giáo viên:</td>
-                                        <td>{data.teacherCode}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="fw-bold">Tên giáo viên:</td>
-                                        <td>{data.teacherName}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="col-md-6">
-                                <h5>Thông tin Môn học</h5>
-                                <table className="table table-borderless">
-                                    <tbody>
-                                    <tr>
-                                        <td className="fw-bold">Tên môn:</td>
-                                        <td>{data.subjectName}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="fw-bold">Mã môn:</td>
-                                        <td>{data.subjectCode}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <hr />
-
-                        {/* QUÝ - NGÀY ĐĂNG KÝ - TRẠNG THÁI */}
-                        <div className="row mb-4">
-
-                            <div className="col-md-4 mb-2">
-                                <strong>Quý:</strong><br />
-                                {data.quarter}
-                            </div>
-
-                            <div className="col-md-4 mb-2">
-                                <strong>Ngày đăng ký:</strong><br />
-                                {data.registrationDate}
-                            </div>
-
-                            <div className="col-md-4 mb-2">
-                                <strong>Trạng thái:</strong><br />
-                                <span className={`badge bg-${statusInfo.class}`}>
-                                    {statusInfo.label}
-                                </span>
-                            </div>
-
-                        </div>
-
-                        {/* GHI CHÚ */}
-                        <div className="row">
-                            <div className="col-12">
-                                <h5>Ghi chú / Lý do</h5>
-                                <p>{data.notes}</p>
-                            </div>
-                        </div>
-
+            <div className="page-admin-subject-registration">
+                <div className="content-header">
+                    <div className="content-title">
+                        <button className="back-button" onClick={() => navigate(-1)}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h1 className="page-title">Chi tiết đăng ký môn học</h1>
                     </div>
                 </div>
 
-            </div>
+                <div className="card">
+                    <div className="card-body">
+                        <div className="row mb-4">
+                            <div className="col-md-6 mb-4 mb-md-0 detail-section">
+                                <h5>Thông tin giáo viên</h5>
+                                <div className="table-responsive">
+                                    <table className="table table-borderless detail-table mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <td>Mã giáo viên:</td>
+                                                <td className="text-break">{data.teacherCode}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Tên giáo viên:</td>
+                                                <td className="text-break">{data.teacherName}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
 
-            {/* TOAST */}
-            {toast.show && (
-                <Toast
-                    title={toast.title}
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-                />
-            )}
+                            <div className="col-md-6 detail-section">
+                                <h5>Thông tin môn học</h5>
+                                <div className="table-responsive">
+                                    <table className="table table-borderless detail-table mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <td>Tên môn:</td>
+                                                <td className="text-break">{data.subjectName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Mã môn:</td>
+                                                <td className="text-break">{data.subjectCode}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="detail-meta-row mb-4">
+                            <div className="detail-meta-item">
+                                <strong>Quý</strong>
+                                <p className="text-break">{data.quarter}</p>
+                            </div>
+                            <div className="detail-meta-item">
+                                <strong>Ngày đăng ký</strong>
+                                <p className="text-break">{data.registrationDate}</p>
+                            </div>
+                            <div className="detail-meta-item">
+                                <strong>Trạng thái</strong>
+                                <div className="mt-1">
+                                    <span className={`badge badge-${statusInfo.class}`}>
+                                        {statusInfo.label}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="detail-section">
+                            <h5>Ghi chú / Lý do</h5>
+                            <p className="mb-0 text-break">{data.notes}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {toast.show && (
+                    <Toast
+                        title={toast.title}
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+                    />
+                )}
+            </div>
         </MainLayout>
     );
 };

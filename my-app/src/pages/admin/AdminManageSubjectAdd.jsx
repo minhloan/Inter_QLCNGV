@@ -279,7 +279,7 @@ const AdminManageSubjectAdd = () => {
                     </div>
                 </div>
 
-                <div className="form-container" style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div className="form-container">
                     <form onSubmit={handleSubmit} noValidate>
                         <div className="row">
                             <div className="col-md-6">
@@ -431,11 +431,10 @@ const AdminManageSubjectAdd = () => {
                                                 <i className="bi bi-image" style={{ fontSize: '40px', color: '#bbb' }}></i>
                                             )}
                                         </div>
-                                        <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                                        <div className="image-upload-actions">
                                             <label
                                                 htmlFor="subject-image-upload"
                                                 className="btn btn-outline-primary"
-                                                style={{ cursor: 'pointer', flex: 1 }}
                                             >
                                                 <i className="bi bi-cloud-upload"></i> Chọn ảnh
                                             </label>
@@ -443,7 +442,6 @@ const AdminManageSubjectAdd = () => {
                                                 <button
                                                     type="button"
                                                     className="btn btn-outline-danger"
-                                                    style={{ flex: 1 }}
                                                     onClick={handleRemoveImage}
                                                 >
                                                     <i className="bi bi-trash"></i> Xóa ảnh
