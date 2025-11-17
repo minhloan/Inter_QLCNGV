@@ -9,8 +9,6 @@ import VerifyOtp from './pages/VerifyOtp';
 import UpdatePassword from './pages/UpdatePassword';
 import ManageTeacher from './pages/ManageTeacher';
 import AddTeacher from './pages/AddTeacher';
-import ManageSubjects from './pages/ManageSubjects';
-import ManageSubjectAdd from './pages/ManageSubjectAdd';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ModuleSelection from './pages/ModuleSelection';
 
@@ -39,6 +37,9 @@ import AdminManageSubjectAdd from "./pages/admin/AdminManageSubjectAdd.jsx";
 import TrialTeachingDetail from "./pages/admin/TrialTeachingDetail.jsx";
 import TrialTeachingAdd from "./pages/admin/TrialTeachingAdd.jsx";
 import SubjectRegistrationDetail from "./pages/admin/SubjectRegistrationDetail.jsx";
+import AdminManageSubject from "./pages/admin/AdminManageSubject.jsx";
+import AdminManageSubjectDetail from "./pages/admin/AdminManageSubjectDetail.jsx";
+import AdminManageSubjectEdit from "./pages/admin/AdminManageSubjectEdit.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -99,7 +100,7 @@ function AppRoutes() {
         path="/manage-subjects"
         element={
           <ProtectedRoute requiredRole="Manage-Leader">
-            <ManageSubjects />
+            <AdminManageSubject />
           </ProtectedRoute>
         }
       />
@@ -111,6 +112,24 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+        <Route
+            path="/manage-subject-detail/:id"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminManageSubjectDetail />
+                </ProtectedRoute>
+            }
+        />
+
+        <Route
+            path="/manage-subject-edit/:id"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminManageSubjectEdit />
+                </ProtectedRoute>
+            }
+        />
+
       <Route
         path="/teacher-dashboard"
         element={

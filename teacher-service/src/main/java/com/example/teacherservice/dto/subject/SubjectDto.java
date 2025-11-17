@@ -12,4 +12,5 @@ public class SubjectDto {
     private SubjectSystem system;
     private String description;
     private Boolean isActive;
+    private String imageFileId;
 }

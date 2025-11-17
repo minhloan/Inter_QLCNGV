@@ -25,7 +25,7 @@ public class TeachingAssignmentDetailResponse {
     private String classCode;
 
     private Integer year;
-    private String quarterLabel;      // ví dụ "2024-1"
+    private String quarterLabel;   // ví dụ: "2024-1"
 
     private String scheduleText;
     private AssignmentStatus status;

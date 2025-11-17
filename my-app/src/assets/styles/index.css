@@ -157,3 +157,18 @@ body {
 body {
     overflow-x: hidden !important;
 }
+.detail-container {
+    margin-top: 8px !important;
+}
+
+/* Nếu MainLayout có padding quá lớn → giảm lại */
+.main-content {
+    padding-top: 10px !important;
+}
+
+/* Bao bọc card không bị đẩy xuống */
+.page-wrapper,
+.content-wrapper {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}

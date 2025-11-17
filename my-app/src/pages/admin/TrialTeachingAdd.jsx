@@ -5,7 +5,7 @@ import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { createTrial } from '../../api/trial';
 import { getAllUsers } from '../../api/user';
-import {getAllSubjectsByTrial} from '../../api/subject';
+import {getAllSubjectsByTrial, searchSubjectsByTrial} from '../../api/subject';
 
 const TrialTeachingAdd = () => {
     const navigate = useNavigate();
@@ -21,7 +21,7 @@ const TrialTeachingAdd = () => {
     const [teachers, setTeachers] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [filteredSubjects, setFilteredSubjects] = useState([]);
-    const [subjectSearch, setSubjectSearch] = useState('');
+    const [searchSubjectsByTrial, setSubjectSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -31,15 +31,15 @@ const TrialTeachingAdd = () => {
 
     useEffect(() => {
         // Filter subjects based on search term
-        if (subjectSearch.trim() === '') {
+        if (searchSubjectsByTrial.trim() === '') {
             setFilteredSubjects(subjects);
         } else {
             const filtered = subjects.filter(subject =>
-                subject.subjectName.toLowerCase().includes(subjectSearch.toLowerCase())
+                subject.subjectName.toLowerCase().includes(searchSubjectsByTrial.toLowerCase())
             );
             setFilteredSubjects(filtered);
         }
-    }, [subjects, subjectSearch]);
+    }, [subjects, searchSubjectsByTrial]);
 
     const loadData = async () => {
         try {
@@ -148,7 +148,7 @@ const TrialTeachingAdd = () => {
                                                     type="text"
                                                     className="form-control mb-2"
                                                     placeholder="Tìm kiếm môn học..."
-                                                    value={subjectSearch}
+                                                    value={searchSubjectsByTrial}
                                                     onChange={(e) => setSubjectSearch(e.target.value)}
                                                 />
                                                 <select

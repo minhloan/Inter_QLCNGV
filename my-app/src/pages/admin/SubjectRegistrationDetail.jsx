@@ -105,7 +105,7 @@ const SubjectRegistrationDetail = () => {
 
     return (
         <MainLayout>
-            <div className="container mt-3">
+            <div className="container detail-container">
 
                 {/* Nút Back trên cùng */}
                 <button
