@@ -19,9 +19,7 @@ const TrialTeachingDetail = () => {
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
     useEffect(() => {
-        if (id) {
-            loadTrialData();
-        }
+        if (id) loadTrialData();
     }, [id]);
 
     const loadTrialData = async () => {
@@ -30,13 +28,8 @@ const TrialTeachingDetail = () => {
             const trialData = await getTrialById(id);
             setTrial(trialData);
 
-            // Load evaluation and attendees if available
-            if (trialData.evaluation) {
-                setEvaluation(trialData.evaluation);
-            }
-            if (trialData.attendees) {
-                setAttendees(trialData.attendees);
-            }
+            if (trialData.evaluation) setEvaluation(trialData.evaluation);
+            if (trialData.attendees) setAttendees(trialData.attendees);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu giảng thử', 'danger');
         } finally {
@@ -98,13 +91,7 @@ const TrialTeachingDetail = () => {
         return <span className={`badge badge-${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
     };
 
-    if (loading && !trial) {
-        return (
-            <MainLayout>
-                <Loading />
-            </MainLayout>
-        );
-    }
+    if (loading && !trial) return <MainLayout><Loading /></MainLayout>;
 
     if (!trial) {
         return (
@@ -115,10 +102,7 @@ const TrialTeachingDetail = () => {
                             <div className="card">
                                 <div className="card-body text-center">
                                     <h4>Không tìm thấy dữ liệu giảng thử</h4>
-                                    <button
-                                        className="btn btn-primary mt-3"
-                                        onClick={() => navigate('/trial-teaching-management')}
-                                    >
+                                    <button className="btn btn-primary mt-3" onClick={() => navigate('/trial-teaching-management')}>
                                         Quay lại danh sách
                                     </button>
                                 </div>
@@ -133,197 +117,130 @@ const TrialTeachingDetail = () => {
     return (
         <MainLayout>
             <div className="container-fluid">
-                <div className="row">
-                    <div className="col-12">
-                        <div className="card">
-                            <div className="card-header d-flex justify-content-between align-items-center">
-                                <h4 className="card-title mb-0">Chi tiết buổi giảng thử</h4>
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => navigate('/trial-teaching-management')}
-                                >
-                                    <i className="bi bi-arrow-left"></i> Quay lại
-                                </button>
+                {/* Header giống style ManageSubjectAdd */}
+                <div className="content-header d-flex justify-content-between align-items-center mb-3">
+                    <div className="d-flex align-items-center gap-2">
+                        <button className="back-button" onClick={() => navigate('/trial-teaching-management')}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h4 className="page-title mb-0">Chi tiết buổi giảng thử</h4>
+                    </div>
+                    <div className="d-flex gap-2">
+                        {trial.status === 'PENDING' && evaluation && (
+                            <button className="btn btn-success" onClick={() => handleStatusUpdate('REVIEWED')}>
+                                <i className="bi bi-check-circle"></i> Đánh dấu đã đánh giá
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="card">
+                    <div className="card-body">
+                        {/* Trial Information & Evaluation */}
+                        <div className="row mb-4">
+                            <div className="col-md-6">
+                                <h5>Thông tin buổi giảng thử</h5>
+                                <table className="table table-borderless">
+                                    <tbody>
+                                    <tr><td><strong>Giảng viên:</strong></td><td>{trial.teacherName} ({trial.teacherCode})</td></tr>
+                                    <tr><td><strong>Môn học:</strong></td><td>{trial.subjectName}</td></tr>
+                                    <tr><td><strong>Ngày giảng:</strong></td><td>{trial.teachingDate}</td></tr>
+                                    <tr><td><strong>Địa điểm:</strong></td><td>{trial.location || 'N/A'}</td></tr>
+                                    <tr><td><strong>Trạng thái:</strong></td><td>{getStatusBadge(trial.status)}</td></tr>
+                                    {trial.note && <tr><td><strong>Ghi chú:</strong></td><td>{trial.note}</td></tr>}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div className="card-body">
-                                {/* Trial Information */}
-                                <div className="row mb-4">
-                                    <div className="col-md-6">
-                                        <h5>Thông tin buổi giảng thử</h5>
-                                        <table className="table table-borderless">
-                                            <tbody>
+                            <div className="col-md-6">
+                                <h5>Kết quả đánh giá</h5>
+                                {evaluation ? (
+                                    <table className="table table-borderless">
+                                        <tbody>
+                                        <tr><td><strong>Điểm số:</strong></td><td>{evaluation.score}/100</td></tr>
+                                        <tr><td><strong>Kết luận:</strong></td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
+                                        {evaluation.comments && <tr><td><strong>Nhận xét:</strong></td><td>{evaluation.comments}</td></tr>}
+                                        {evaluation.fileReportId && (
                                             <tr>
-                                                <td><strong>Giảng viên:</strong></td>
-                                                <td>{trial.teacherName} ({trial.teacherCode})</td>
+                                                <td><strong>Biên bản:</strong></td>
+                                                <td>
+                                                    <button className="btn btn-sm btn-outline-primary" onClick={handleDownloadReport}>
+                                                        <i className="bi bi-download"></i> Tải xuống
+                                                    </button>
+                                                </td>
                                             </tr>
-                                            <tr>
-                                                <td><strong>Môn học:</strong></td>
-                                                <td>{trial.subjectName}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Ngày giảng:</strong></td>
-                                                <td>{trial.teachingDate}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Địa điểm:</strong></td>
-                                                <td>{trial.location || 'N/A'}</td>
-                                            </tr>
-                                            <tr>
-                                                <td><strong>Trạng thái:</strong></td>
-                                                <td>{getStatusBadge(trial.status)}</td>
-                                            </tr>
-                                            {trial.note && (
-                                                <tr>
-                                                    <td><strong>Ghi chú:</strong></td>
-                                                    <td>{trial.note}</td>
-                                                </tr>
-                                            )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <h5>Kết quả đánh giá</h5>
-                                        {evaluation ? (
-                                            <table className="table table-borderless">
-                                                <tbody>
-                                                <tr>
-                                                    <td><strong>Điểm số:</strong></td>
-                                                    <td>{evaluation.score}/100</td>
-                                                </tr>
-                                                <tr>
-                                                    <td><strong>Kết luận:</strong></td>
-                                                    <td>{getConclusionBadge(evaluation.conclusion)}</td>
-                                                </tr>
-                                                {evaluation.comments && (
-                                                    <tr>
-                                                        <td><strong>Nhận xét:</strong></td>
-                                                        <td>{evaluation.comments}</td>
-                                                    </tr>
-                                                )}
-                                                {evaluation.fileReportId && (
-                                                    <tr>
-                                                        <td><strong>Biên bản:</strong></td>
-                                                        <td>
-                                                            <button
-                                                                className="btn btn-sm btn-outline-primary"
-                                                                onClick={handleDownloadReport}
-                                                            >
-                                                                <i className="bi bi-download"></i> Tải xuống
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                </tbody>
-                                            </table>
-                                        ) : (
-                                            <p className="text-muted">Chưa có đánh giá</p>
                                         )}
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="row mb-4">
-                                    <div className="col-12">
-                                        <div className="d-flex gap-2 flex-wrap">
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() => setShowEvaluationModal(true)}
-                                            >
-                                                <i className="bi bi-star"></i> Đánh giá giảng thử
-                                            </button>
-                                            <button
-                                                className="btn btn-info"
-                                                onClick={() => setShowAttendeeModal(true)}
-                                            >
-                                                <i className="bi bi-people"></i> Quản lý người tham dự
-                                            </button>
-                                            {trial.status === 'PENDING' && evaluation && (
-                                                <button
-                                                    className="btn btn-success"
-                                                    onClick={() => handleStatusUpdate('REVIEWED')}
-                                                >
-                                                    <i className="bi bi-check-circle"></i> Đánh dấu đã đánh giá
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Attendees Section */}
-                                {attendees.length > 0 && (
-                                    <div className="row">
-                                        <div className="col-12">
-                                            <h5>Người tham dự</h5>
-                                            <div className="table-responsive">
-                                                <table className="table table-striped">
-                                                    <thead>
-                                                    <tr>
-                                                        <th>Tên</th>
-                                                        <th>Vai trò</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    {attendees.map(attendee => (
-                                                        <tr key={attendee.id}>
-                                                            <td>{attendee.attendeeName}</td>
-                                                            <td>
-                                                                    <span className="badge badge-secondary">
-                                                                        {attendee.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' :
-                                                                            attendee.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}
-                                                                    </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <p className="text-muted">Chưa có đánh giá</p>
                                 )}
                             </div>
                         </div>
+
+                        {/* Action Buttons */}
+                        <div className="d-flex gap-2 flex-wrap mb-4">
+                            <button className="btn btn-primary" onClick={() => setShowEvaluationModal(true)}>
+                                <i className="bi bi-star"></i> Đánh giá giảng thử
+                            </button>
+                            <button className="btn btn-info" onClick={() => setShowAttendeeModal(true)}>
+                                <i className="bi bi-people"></i> Quản lý người tham dự
+                            </button>
+                        </div>
+
+                        {/* Attendees Section */}
+                        {attendees.length > 0 && (
+                            <div>
+                                <h5>Người tham dự</h5>
+                                <div className="table-responsive">
+                                    <table className="table table-striped">
+                                        <thead>
+                                        <tr><th>Tên</th><th>Vai trò</th></tr>
+                                        </thead>
+                                        <tbody>
+                                        {attendees.map(a => (
+                                            <tr key={a.id}>
+                                                <td>{a.attendeeName}</td>
+                                                <td>
+                                                        <span className="badge badge-secondary">
+                                                            {a.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' :
+                                                                a.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}
+                                                        </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
+
+                {/* Modals */}
+                {showEvaluationModal && (
+                    <TrialEvaluationModal
+                        trialId={id}
+                        trial={trial}
+                        evaluation={evaluation}
+                        onClose={() => setShowEvaluationModal(false)}
+                        onSuccess={() => { setShowEvaluationModal(false); loadTrialData(); }}
+                        onToast={showToast}
+                    />
+                )}
+
+                {showAttendeeModal && (
+                    <TrialAttendeeModal
+                        trialId={id}
+                        attendees={attendees}
+                        onClose={() => setShowAttendeeModal(false)}
+                        onSuccess={() => { setShowAttendeeModal(false); loadTrialData(); }}
+                        onToast={showToast}
+                    />
+                )}
+
+                {toast.show && <Toast title={toast.title} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, show: false }))} />}
+                {loading && <Loading />}
             </div>
-
-            {/* Modals */}
-            {showEvaluationModal && (
-                <TrialEvaluationModal
-                    trialId={id}
-                    trial={trial}
-                    evaluation={evaluation}
-                    onClose={() => setShowEvaluationModal(false)}
-                    onSuccess={() => {
-                        setShowEvaluationModal(false);
-                        loadTrialData();
-                    }}
-                    onToast={showToast}
-                />
-            )}
-
-            {showAttendeeModal && (
-                <TrialAttendeeModal
-                    trialId={id}
-                    attendees={attendees}
-                    onClose={() => setShowAttendeeModal(false)}
-                    onSuccess={() => {
-                        setShowAttendeeModal(false);
-                        loadTrialData();
-                    }}
-                    onToast={showToast}
-                />
-            )}
-
-            {toast.show && (
-                <Toast
-                    title={toast.title}
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(prev => ({ ...prev, show: false }))}
-                />
-            )}
-
-            {loading && <Loading />}
         </MainLayout>
     );
 };

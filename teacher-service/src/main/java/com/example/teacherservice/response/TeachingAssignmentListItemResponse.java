@@ -3,6 +3,7 @@ package com.example.teacherservice.response;
 import com.example.teacherservice.enums.AssignmentStatus;
 import lombok.*;
 
+
 @Getter
 @Setter
 @Builder
@@ -20,6 +21,7 @@ public class TeachingAssignmentListItemResponse {
 
     private String classCode;
 
+    // ví dụ: "2024-1"
     private String semester;
 
     // "Thứ 2, 4, 6 - 09:00-11:00"

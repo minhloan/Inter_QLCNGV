@@ -40,6 +40,7 @@ import SubjectRegistrationDetail from "./pages/admin/SubjectRegistrationDetail.j
 import AdminManageSubject from "./pages/admin/AdminManageSubject.jsx";
 import AdminManageSubjectDetail from "./pages/admin/AdminManageSubjectDetail.jsx";
 import AdminManageSubjectEdit from "./pages/admin/AdminManageSubjectEdit.jsx";
+import TeachingAssignmentAdd from "./pages/admin/TeachingAssignmentManagementAdd.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -180,14 +181,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/*<Route*/}
-      {/*      path="/teaching-assignment-management-add"*/}
-      {/*      element={*/}
-      {/*          <ProtectedRoute requiredRole="Manage-Leader">*/}
-      {/*              <TeachingAssignmentAdd />*/}
-      {/*          </ProtectedRoute>*/}
-      {/*      }*/}
-      {/*/>*/}
+      <Route
+            path="/teaching-assignment-management-add"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <TeachingAssignmentAdd />
+                </ProtectedRoute>
+            }
+      />
 
         <Route
             path="/trial-teaching-detail/:id"

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { createTrial } from '../../api/trial';
 import { getAllUsers } from '../../api/user';
-import {getAllSubjectsByTrial, searchSubjectsByTrial} from '../../api/subject';
+import { getAllSubjectsByTrial } from '../../api/subject';
+import { getUserInfo } from '../../api/auth';
 
 const TrialTeachingAdd = () => {
     const navigate = useNavigate();
@@ -21,7 +22,8 @@ const TrialTeachingAdd = () => {
     const [teachers, setTeachers] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [filteredSubjects, setFilteredSubjects] = useState([]);
-    const [searchSubjectsByTrial, setSubjectSearch] = useState('');
+    const [subjectSearch, setSubjectSearch] = useState('');
+    const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -30,59 +32,61 @@ const TrialTeachingAdd = () => {
     }, []);
 
     useEffect(() => {
-        // Filter subjects based on search term
-        if (searchSubjectsByTrial.trim() === '') {
+        if (subjectSearch.trim() === '') {
             setFilteredSubjects(subjects);
         } else {
-            const filtered = subjects.filter(subject =>
-                subject.subjectName.toLowerCase().includes(searchSubjectsByTrial.toLowerCase())
-            );
-            setFilteredSubjects(filtered);
+            setFilteredSubjects(subjects.filter(sub =>
+                sub.subjectName.toLowerCase().includes(subjectSearch.toLowerCase())
+            ));
         }
-    }, [subjects, searchSubjectsByTrial]);
+    }, [subjectSearch, subjects]);
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const [teachersData, subjectsData] = await Promise.all([
-                getAllUsers(1, 1000), // Get all users with large page size
-                getAllSubjectsByTrial()
-            ]);
-            console.log('Teachers data:', teachersData);
-            console.log('Subjects data:', subjectsData);
-            setTeachers(teachersData?.content || []);
+            const user = getUserInfo();
+            setCurrentUser(user);
+
+            const teachersData = await getAllUsers(1, 1000);
+            setTeachers((teachersData?.content || []).filter(u => u.role === 'TEACHER'));
+
+            const subjectsData = await getAllSubjectsByTrial();
             setSubjects(subjectsData || []);
+            setFilteredSubjects(subjectsData || []);
+
+            if (user?.role === 'TEACHER') {
+                setFormData(prev => ({ ...prev, teacherId: user.id }));
+            }
         } catch (error) {
-            console.error('Error loading data:', error);
+            console.error(error);
             showToast('Lỗi', 'Không thể tải dữ liệu', 'danger');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleInputChange = (e) => {
+    const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const validate = () => {
+        if (!formData.teacherId) return 'teacherId';
+        if (!formData.subjectId) return 'subjectId';
+        if (!formData.teachingDate) return 'teachingDate';
+        const selectedDate = new Date(formData.teachingDate);
+        const today = new Date(); today.setHours(0,0,0,0);
+        if (selectedDate < today) return 'teachingDate';
+        return null;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!formData.teacherId || !formData.subjectId || !formData.teachingDate) {
+        const firstError = validate();
+        if (firstError) {
+            const errorEl = document.querySelector(`[name="${firstError}"]`);
+            if (errorEl) { errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); errorEl.focus(); }
             showToast('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
-            return;
-        }
-
-        // Validate teaching date is not in the past
-        const selectedDate = new Date(formData.teachingDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (selectedDate < today) {
-            showToast('Lỗi', 'Ngày giảng thử không được là ngày trong quá khứ', 'warning');
             return;
         }
 
@@ -90,187 +94,122 @@ const TrialTeachingAdd = () => {
             setLoading(true);
             await createTrial(formData);
             showToast('Thành công', 'Tạo buổi giảng thử thành công', 'success');
-            setTimeout(() => navigate('/trial-teaching-management'), 2000);
+            setTimeout(() => navigate('/trial-teaching-management'), 1500);
         } catch (error) {
+            console.error(error);
             showToast('Lỗi', 'Không thể tạo buổi giảng thử', 'danger');
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
-    const showToast = (title, message, type) => {
+    const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-    };
+    }, []);
 
     return (
         <MainLayout>
-            <div className="container-fluid">
-                <div className="row">
-                    <div className="col-12">
-                        <div className="card">
-                            <div className="card-header">
-                                <h4 className="card-title mb-0">Tạo buổi giảng thử</h4>
-                            </div>
-                            <div className="card-body">
-                                <form onSubmit={handleSubmit}>
-                                    <div className="row">
-                                        <div className="col-md-6">
-                                            <div className="form-group mb-3">
-                                                <label className="form-label">
-                                                    Giảng viên <span className="text-danger">*</span>
-                                                </label>
-                                                <select
-                                                    className="form-select"
-                                                    name="teacherId"
-                                                    value={formData.teacherId}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                >
-                                                    <option value="">Chọn giảng viên</option>
-                                                    {teachers
-                                                        .filter(teacher => teacher.role === 'TEACHER')
-                                                        .sort((a, b) => a.username.localeCompare(b.username))
-                                                        .map(teacher => (
-                                                            <option key={teacher.id} value={teacher.id}>
-                                                                {teacher.username} ({teacher.teacherCode})
-                                                            </option>
-                                                        ))}
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div className="col-md-6">
-                                            <div className="form-group mb-3">
-                                                <label className="form-label">
-                                                    Môn học <span className="text-danger">*</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control mb-2"
-                                                    placeholder="Tìm kiếm môn học..."
-                                                    value={searchSubjectsByTrial}
-                                                    onChange={(e) => setSubjectSearch(e.target.value)}
-                                                />
-                                                <select
-                                                    className="form-select"
-                                                    name="subjectId"
-                                                    value={formData.subjectId}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                >
-                                                    <option value="">Chọn môn học</option>
-                                                    {filteredSubjects.map(subject => (
-                                                        <option key={subject.id} value={subject.id}>
-                                                            {subject.subjectName}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="row">
-                                        <div className="col-md-4">
-                                            <div className="form-group mb-3">
-                                                <label className="form-label">
-                                                    Ngày giảng <span className="text-danger">*</span>
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    className="form-control"
-                                                    name="teachingDate"
-                                                    value={formData.teachingDate}
-                                                    onChange={handleInputChange}
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="col-md-4">
-                                            <div className="form-group mb-3">
-                                                <label className="form-label">Giờ giảng</label>
-                                                <input
-                                                    type="time"
-                                                    className="form-control"
-                                                    name="teachingTime"
-                                                    value={formData.teachingTime}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Chọn giờ giảng thử"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="col-md-4">
-                                            <div className="form-group mb-3">
-                                                <label className="form-label">Địa điểm</label>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    name="location"
-                                                    value={formData.location}
-                                                    onChange={handleInputChange}
-                                                    placeholder="Nhập địa điểm giảng thử"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group mb-3">
-                                        <label className="form-label">Ghi chú</label>
-                                        <textarea
-                                            className="form-control"
-                                            name="note"
-                                            value={formData.note}
-                                            onChange={handleInputChange}
-                                            rows="3"
-                                            placeholder="Nhập ghi chú về buổi giảng thử"
-                                        />
-                                    </div>
-
-                                    <div className="form-group mb-4">
-                                        <label className="form-label">Liên kết với kỳ thi Aptech (tùy chọn)</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            name="aptechExamId"
-                                            value={formData.aptechExamId}
-                                            onChange={handleInputChange}
-                                            placeholder="Nhập ID kỳ thi Aptech nếu có"
-                                        />
-                                    </div>
-
-                                    <div className="d-flex gap-2">
-                                        <button
-                                            type="submit"
-                                            className="btn btn-primary"
-                                            disabled={loading}
-                                        >
-                                            {loading ? 'Đang tạo...' : 'Tạo buổi giảng thử'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn btn-secondary"
-                                            onClick={() => navigate('/trial-teaching-management')}
-                                            disabled={loading}
-                                        >
-                                            Hủy
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
+            <div className="page-admin-add-teacher">
+                {/* Header giống ManageSubjectAdd */}
+                <div className="content-header">
+                    <div className="content-title">
+                        <button className="back-button" onClick={() => navigate('/trial-teaching-management')}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h1 className="page-title">Tạo Buổi Giảng Thử</h1>
                     </div>
                 </div>
+
+                <div className="form-container" style={{ maxWidth: '900px', margin: '0 auto' }}>
+                    <form onSubmit={handleSubmit}>
+                        <div className="row">
+                            <div className="col-md-6">
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Giảng viên <span className="text-danger">*</span></label>
+                                    <select
+                                        className="form-select"
+                                        name="teacherId"
+                                        value={formData.teacherId}
+                                        onChange={handleChange}
+                                        disabled={currentUser?.role === 'TEACHER'}
+                                    >
+                                        <option value="">Chọn giảng viên</option>
+                                        {teachers.sort((a,b)=>a.username.localeCompare(b.username)).map(t => (
+                                            <option key={t.id} value={t.id}>{t.username} ({t.teacherCode})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="col-md-6">
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Môn học <span className="text-danger">*</span></label>
+                                    <input
+                                        type="text"
+                                        className="form-control mb-2"
+                                        placeholder="Tìm kiếm môn học..."
+                                        value={subjectSearch}
+                                        onChange={e=>setSubjectSearch(e.target.value)}
+                                    />
+                                    <select
+                                        className="form-select"
+                                        name="subjectId"
+                                        value={formData.subjectId}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Chọn môn học</option>
+                                        {filteredSubjects.map(s => (
+                                            <option key={s.id} value={s.id}>{s.subjectName}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col-md-4">
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Ngày giảng <span className="text-danger">*</span></label>
+                                    <input type="date" className="form-control" name="teachingDate" value={formData.teachingDate} onChange={handleChange} />
+                                </div>
+                            </div>
+                            <div className="col-md-4">
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Giờ giảng</label>
+                                    <input type="time" className="form-control" name="teachingTime" value={formData.teachingTime} onChange={handleChange} />
+                                </div>
+                            </div>
+                            <div className="col-md-4">
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Địa điểm</label>
+                                    <input type="text" className="form-control" name="location" value={formData.location} onChange={handleChange} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-group mb-3">
+                            <label className="form-label">Ghi chú</label>
+                            <textarea className="form-control" name="note" value={formData.note} onChange={handleChange} rows="3" />
+                        </div>
+
+                        <div className="form-group mb-4">
+                            <label className="form-label">Liên kết kỳ thi Aptech (tùy chọn)</label>
+                            <input type="text" className="form-control" name="aptechExamId" value={formData.aptechExamId} onChange={handleChange} />
+                        </div>
+
+                        <div className="form-actions">
+                            <button type="button" className="btn btn-secondary" onClick={()=>navigate('/trial-teaching-management')}>
+                                <i className="bi bi-x-circle"></i> Hủy
+                            </button>
+                            <button type="submit" className="btn btn-primary">
+                                <i className="bi bi-check-circle"></i> Tạo buổi giảng thử
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {toast.show && <Toast title={toast.title} message={toast.message} type={toast.type} onClose={()=>setToast(prev=>({...prev, show:false}))} />}
+                {loading && <Loading fullscreen={true} message="Đang xử lý..." />}
             </div>
-
-            {toast.show && (
-                <Toast
-                    title={toast.title}
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(prev => ({ ...prev, show: false }))}
-                />
-            )}
-
-            {loading && <Loading />}
         </MainLayout>
     );
 };

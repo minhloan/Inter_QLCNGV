@@ -71,4 +71,6 @@ public class ScheduleClass extends BaseEntity {
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+
 }

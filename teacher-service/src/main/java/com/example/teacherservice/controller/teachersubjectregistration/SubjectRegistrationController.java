@@ -38,7 +38,6 @@ public class SubjectRegistrationController {
     }
 
 
-
     @PostMapping("/filter")
     public List<SubjectRegistrationsDto> filter(@RequestBody SubjectRegistrationFilterRequest request) {
         return subjectRegistrationService.getFilteredRegistrations(request);

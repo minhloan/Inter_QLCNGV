@@ -5,15 +5,30 @@ import Toast from "../../components/Common/Toast";
 import Loading from "../../components/Common/Loading";
 
 // API
-import { getAllTeachers } from "../../api/teachers";
-import { listAllSubjects as getAllSubjects } from "../../api/subjects";
+import { getAllUsers } from "../../api/user";
+import { listAllSubjects as getAllSubjects } from "../../api/subject";
 import { createTeachingAssignment } from "../../api/teaching-assignments";
+
+const dayOfWeekOptions = [
+    { value: "", label: "Không chọn" },
+    { value: 2, label: "Thứ 2" },
+    { value: 3, label: "Thứ 3" },
+    { value: 4, label: "Thứ 4" },
+    { value: 5, label: "Thứ 5" },
+    { value: 6, label: "Thứ 6" },
+    { value: 7, label: "Thứ 7" },
+];
 
 const TeachingAssignmentAdd = () => {
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(false);
-    const [toast, setToast] = useState({ show: false, title: "", message: "", type: "" });
+    const [toast, setToast] = useState({
+        show: false,
+        title: "",
+        message: "",
+        type: "",
+    });
 
     const [teachers, setTeachers] = useState([]);
     const [subjects, setSubjects] = useState([]);
@@ -21,85 +36,166 @@ const TeachingAssignmentAdd = () => {
     const [form, setForm] = useState({
         teacherId: "",
         subjectId: "",
+        classCode: "",
         year: "",
-        quarter: "",
-        assigned_by: "",
+        quarter: "", // 1..4
+        location: "",
         notes: "",
-        status: "ASSIGNED",
     });
 
-    const [teacherSearch, setTeacherSearch] = useState("");
-    const [subjectSearch, setSubjectSearch] = useState("");
+    // 3 buổi học tối đa
+    const [slots, setSlots] = useState([
+        { dayOfWeek: "", startTime: "", endTime: "" },
+        { dayOfWeek: "", startTime: "", endTime: "" },
+        { dayOfWeek: "", startTime: "", endTime: "" },
+    ]);
 
     useEffect(() => {
         loadTeachers();
         loadSubjects();
-
-        // Set assigned_by từ user login
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (user) {
-            setForm((prev) => ({ ...prev, assigned_by: user.id }));
-        }
     }, []);
 
+    // ========== LOAD DATA ==========
     const loadTeachers = async () => {
         try {
-            const res = await getAllTeachers();
-            setTeachers(res || []);
-        } catch {
+            setLoading(true);
+            // /getAllUsers trả về Page<InformationDto>
+            const res = await getAllUsers(1, 200);
+            const list = Array.isArray(res) ? res : res?.content || [];
+            setTeachers(list);
+        } catch (err) {
+            console.error(err);
             showToast("Lỗi", "Không thể tải danh sách giáo viên", "danger");
+        } finally {
+            setLoading(false);
         }
     };
 
     const loadSubjects = async () => {
         try {
+            setLoading(true);
             const res = await getAllSubjects();
-            setSubjects(res || []);
-        } catch {
+            const list = Array.isArray(res) ? res : [];
+            setSubjects(list);
+        } catch (err) {
+            console.error(err);
             showToast("Lỗi", "Không thể tải danh sách môn học", "danger");
+        } finally {
+            setLoading(false);
         }
     };
 
+    // ========== COMMON ==========
     const showToast = (title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
     };
 
-    const filteredTeachers = teachers.filter((t) =>
-        (t.name || "").toLowerCase().includes(teacherSearch.toLowerCase())
-    );
+    const handleChangeForm = (e) => {
+        const { name, value } = e.target;
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
 
-    const filteredSubjects = subjects.filter((s) =>
-        (s.name || "").toLowerCase().includes(subjectSearch.toLowerCase())
-    );
+    const handleChangeSlot = (index, field, value) => {
+        setSlots((prev) => {
+            const copy = [...prev];
+            copy[index] = { ...copy[index], [field]: value };
+            return copy;
+        });
+    };
 
+    // ========== VALIDATE & SUBMIT ==========
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!form.teacherId || !form.subjectId || !form.year || !form.quarter) {
-            showToast("Thông báo", "Vui lòng điền đầy đủ các trường bắt buộc", "danger");
+        if (
+            !form.teacherId ||
+            !form.subjectId ||
+            !form.classCode.trim() ||
+            !form.year ||
+            !form.quarter
+        ) {
+            showToast(
+                "Thông báo",
+                "Vui lòng điền đầy đủ các trường bắt buộc",
+                "danger"
+            );
             return;
         }
 
-        setLoading(true);
+        // Build slots payload: chỉ lấy những slot đủ dayOfWeek + startTime + endTime
+        const slotsPayload = slots
+            .filter(
+                (s) => s.dayOfWeek && s.startTime && s.endTime
+            )
+            .map((s) => ({
+                dayOfWeek: Number(s.dayOfWeek),
+                startTime: s.startTime, // "HH:mm"
+                endTime: s.endTime,
+            }));
+
+        if (slotsPayload.length === 0) {
+            showToast(
+                "Thông báo",
+                "Vui lòng chọn ít nhất 1 buổi học (thứ + giờ bắt đầu/kết thúc)",
+                "danger"
+            );
+            return;
+        }
+
+        const yearNumber = Number(form.year);
+        const quarterNumber = Number(form.quarter);
+
+        if (
+            Number.isNaN(yearNumber) ||
+            Number.isNaN(quarterNumber) ||
+            quarterNumber < 1 ||
+            quarterNumber > 4
+        ) {
+            showToast("Lỗi", "Năm hoặc quý không hợp lệ", "danger");
+            return;
+        }
+
+        const payload = {
+            teacherId: form.teacherId,
+            subjectId: form.subjectId,
+            classCode: form.classCode.trim(),
+            year: yearNumber,
+            quarter: quarterNumber, // 1..4 → BE convertQuarter(...)
+            location: form.location || "",
+            notes: form.notes || "",
+            slots: slotsPayload,
+        };
+
         try {
-            const payload = {
-                ...form,
-                assigned_at: new Date().toISOString(), // Thời gian phân công
-            };
+            setLoading(true);
+            const res = await createTeachingAssignment(payload);
 
-            await createTeachingAssignment(payload);
-
-            showToast("Thành công", "Phân công giảng dạy đã được tạo!", "success");
-            setTimeout(() => navigate("/teaching-assignment-management"), 800);
+            // res = TeachingAssignmentDetailResponse
+            if (res.status === "FAILED") {
+                showToast(
+                    "Phân công thất bại",
+                    res.failureReason ||
+                    "Giáo viên chưa đủ điều kiện để được phân công giảng dạy.",
+                    "danger"
+                );
+            } else {
+                showToast(
+                    "Thành công",
+                    "Phân công giảng dạy đã được tạo thành công!",
+                    "success"
+                );
+                setTimeout(() => navigate("/teaching-assignment-management"), 800);
+            }
         } catch (err) {
             console.error(err);
-            showToast("Lỗi", "Tạo phân công thất bại", "danger");
+            showToast("Lỗi", "Tạo phân công giảng dạy thất bại", "danger");
         } finally {
             setLoading(false);
         }
     };
-// Small helper styles used inline to match screenshot
+
+    // ========== STYLE ==========
     const cardStyle = {
         borderRadius: 14,
         boxShadow: "0 6px 20px rgba(20,20,20,0.05)",
@@ -129,7 +225,9 @@ const TeachingAssignmentAdd = () => {
                     <i className="bi bi-arrow-left" style={{ fontSize: 18 }} />
                 </button>
 
-                <h1 style={{ fontSize: 40, margin: 0, fontWeight: 700 }}>Tạo phân công giảng dạy</h1>
+                <h1 style={{ fontSize: 40, margin: 0, fontWeight: 700 }}>
+                    Tạo phân công giảng dạy
+                </h1>
             </div>
 
             <div style={{ display: "flex", justifyContent: "center" }}>
@@ -137,125 +235,109 @@ const TeachingAssignmentAdd = () => {
                     <div style={{ ...cardStyle, padding: 28 }}>
                         <form onSubmit={handleSubmit}>
                             <div className="row gx-4">
-                                {/* Row 1 */}
+                                {/* Giáo viên */}
                                 <div className="col-md-6 mb-3">
                                     <label style={{ fontSize: 14, fontWeight: 600 }}>
                                         Giáo viên <span style={{ color: "#e74c3c" }}>*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Tìm giáo viên..."
-                                        value={teacherSearch}
-                                        onChange={(e) => setTeacherSearch(e.target.value)}
-                                        style={{ ...inputRadius }}
-                                    />
-
-                                    {teacherSearch && (
-                                        <ul
-                                            className="list-group position-absolute shadow-sm"
-                                            style={{
-                                                zIndex: 30,
-                                                maxHeight: 220,
-                                                overflowY: "auto",
-                                                width: "47%",
-                                                marginTop: 6,
-                                                borderRadius: 8,
-                                            }}
-                                        >
-                                            {filteredTeachers.length > 0 ? (
-                                                filteredTeachers.map((t) => (
-                                                    <li
-                                                        key={t.id}
-                                                        className="list-group-item list-group-item-action"
-                                                        style={{ cursor: "pointer" }}
-                                                        onClick={() => {
-                                                            setTeacherSearch(`${t.name} — ${t.code || ""}`);
-                                                            setForm((prev) => ({ ...prev, teacherId: t.id }));
-                                                        }}
-                                                    >
-                                                        {t.name} {t.code ? `— ${t.code}` : ""}
-                                                    </li>
-                                                ))
-                                            ) : (
-                                                <li className="list-group-item text-muted">Không tìm thấy</li>
-                                            )}
-                                        </ul>
-                                    )}
+                                    <select
+                                        name="teacherId"
+                                        className="form-select"
+                                        value={form.teacherId}
+                                        onChange={handleChangeForm}
+                                        style={{ ...inputRadius, paddingTop: 10 }}
+                                    >
+                                        <option value="">Chọn giáo viên</option>
+                                        {teachers.map((t) => {
+                                            const displayName =
+                                                t.username ||
+                                                t.fullName ||
+                                                t.name ||
+                                                t.email ||
+                                                "Không tên";
+                                            const teacherCode =
+                                                t.teacherCode || t.code || t.id?.slice(0, 8) || "";
+                                            return (
+                                                <option key={t.id} value={t.id}>
+                                                    {displayName}
+                                                    {teacherCode ? ` — ${teacherCode}` : ""}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
                                 </div>
 
+                                {/* Môn học */}
                                 <div className="col-md-6 mb-3">
                                     <label style={{ fontSize: 14, fontWeight: 600 }}>
                                         Môn học <span style={{ color: "#e74c3c" }}>*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Tìm môn học..."
-                                        value={subjectSearch}
-                                        onChange={(e) => setSubjectSearch(e.target.value)}
-                                        style={{ ...inputRadius }}
-                                    />
-
-                                    {subjectSearch && (
-                                        <ul
-                                            className="list-group position-absolute shadow-sm"
-                                            style={{
-                                                zIndex: 30,
-                                                maxHeight: 220,
-                                                overflowY: "auto",
-                                                width: "47%",
-                                                marginTop: 6,
-                                                borderRadius: 8,
-                                                right: 0,
-                                            }}
-                                        >
-                                            {filteredSubjects.length > 0 ? (
-                                                filteredSubjects.map((s) => (
-                                                    <li
-                                                        key={s.id}
-                                                        className="list-group-item list-group-item-action"
-                                                        onClick={() => {
-                                                            setSubjectSearch(s.name);
-                                                            setForm((prev) => ({ ...prev, subjectId: s.id }));
-                                                        }}
-                                                        style={{ cursor: "pointer" }}
-                                                    >
-                                                        {s.name}
-                                                    </li>
-                                                ))
-                                            ) : (
-                                                <li className="list-group-item text-muted">Không tìm thấy</li>
-                                            )}
-                                        </ul>
-                                    )}
+                                    <select
+                                        name="subjectId"
+                                        className="form-select"
+                                        value={form.subjectId}
+                                        onChange={handleChangeForm}
+                                        style={{ ...inputRadius, paddingTop: 10 }}
+                                    >
+                                        <option value="">Chọn môn học</option>
+                                        {subjects.map((s) => {
+                                            const subjectName = s.subjectName || s.name || "Không tên";
+                                            const subjectCode =
+                                                s.subjectCode || s.code || s.id?.slice(0, 8) || "";
+                                            return (
+                                                <option key={s.id} value={s.id}>
+                                                    {subjectCode ? `${subjectCode} - ` : ""}
+                                                    {subjectName}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
                                 </div>
 
-                                {/* Row 2 */}
+                                {/* Mã lớp */}
                                 <div className="col-md-6 mb-3">
+                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                        Mã lớp <span style={{ color: "#e74c3c" }}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="classCode"
+                                        className="form-control"
+                                        placeholder="Ví dụ: DISM-2025-01"
+                                        value={form.classCode}
+                                        onChange={handleChangeForm}
+                                        style={{ ...inputRadius }}
+                                    />
+                                </div>
+
+                                {/* Năm */}
+                                <div className="col-md-3 mb-3">
                                     <label style={{ fontSize: 14, fontWeight: 600 }}>
                                         Năm <span style={{ color: "#e74c3c" }}>*</span>
                                     </label>
                                     <input
                                         type="number"
+                                        name="year"
                                         className="form-control"
                                         placeholder="Ví dụ: 2025"
                                         min="2020"
-                                        max="2030"
+                                        max="2035"
                                         value={form.year}
-                                        onChange={(e) => setForm((prev) => ({ ...prev, year: e.target.value }))}
+                                        onChange={handleChangeForm}
                                         style={{ ...inputRadius }}
                                     />
                                 </div>
 
-                                <div className="col-md-6 mb-3">
+                                {/* Quý */}
+                                <div className="col-md-3 mb-3">
                                     <label style={{ fontSize: 14, fontWeight: 600 }}>
                                         Quý <span style={{ color: "#e74c3c" }}>*</span>
                                     </label>
                                     <select
+                                        name="quarter"
                                         className="form-select"
                                         value={form.quarter}
-                                        onChange={(e) => setForm((prev) => ({ ...prev, quarter: e.target.value }))}
+                                        onChange={handleChangeForm}
                                         style={{ ...inputRadius, paddingTop: 10 }}
                                     >
                                         <option value="">Chọn quý</option>
@@ -267,40 +349,114 @@ const TeachingAssignmentAdd = () => {
                                     </select>
                                 </div>
 
-                                {/* Notes full-width */}
-                                <div className="col-12 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>Ghi chú</label>
-                                    <textarea
+                                {/* Phòng học */}
+                                <div className="col-md-6 mb-3">
+                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                        Phòng học
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="location"
                                         className="form-control"
-                                        rows={6}
+                                        placeholder="Ví dụ: P101, Lab 2..."
+                                        value={form.location}
+                                        onChange={handleChangeForm}
+                                        style={{ ...inputRadius }}
+                                    />
+                                </div>
+
+                                {/* Ghi chú */}
+                                <div className="col-12 mb-4">
+                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                        Ghi chú
+                                    </label>
+                                    <textarea
+                                        name="notes"
+                                        className="form-control"
+                                        rows={5}
                                         value={form.notes}
-                                        onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                                        onChange={handleChangeForm}
                                         style={textareaRadius}
                                         placeholder="Nhập ghi chú..."
                                     />
                                 </div>
 
-                                {/* Status full-width */}
-                                <div className="col-12 mb-4">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Trạng thái <span style={{ color: "#e74c3c" }}>*</span>
-                                    </label>
-                                    <select
-                                        className="form-select"
-                                        value={form.status}
-                                        onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}
-                                        style={{ ...inputRadius, paddingTop: 10 }}
-                                    >
-                                        <option value="ASSIGNED">Đã lên lịch</option>
-                                        <option value="COMPLETED">Đã hoàn thành</option>
-                                        <option value="NOT_COMPLETED">Chưa hoàn thành</option>
-                                        <option value="FAILED">Không đạt yêu cầu</option>
-                                    </select>
+                                {/* BUỔI HỌC */}
+                                <div className="col-12 mb-2">
+                                    <h5 style={{ fontWeight: 700, marginBottom: 12 }}>
+                                        Buổi học (tối đa 3)
+                                    </h5>
                                 </div>
+
+                                {slots.map((slot, index) => (
+                                    <div className="col-12 mb-3" key={index}>
+                                        <div className="row gx-3 align-items-end">
+                                            <div className="col-md-4 mb-2">
+                                                <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                                    Buổi {index + 1} - Thứ
+                                                </label>
+                                                <select
+                                                    className="form-select"
+                                                    value={slot.dayOfWeek}
+                                                    onChange={(e) =>
+                                                        handleChangeSlot(index, "dayOfWeek", e.target.value)
+                                                    }
+                                                    style={{ ...inputRadius, paddingTop: 10 }}
+                                                >
+                                                    {dayOfWeekOptions.map((opt) => (
+                                                        <option key={opt.value || "none"} value={opt.value}>
+                                                            {opt.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-md-3 mb-2">
+                                                <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                                    Giờ bắt đầu
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    className="form-control"
+                                                    value={slot.startTime}
+                                                    onChange={(e) =>
+                                                        handleChangeSlot(index, "startTime", e.target.value)
+                                                    }
+                                                    style={{ ...inputRadius }}
+                                                />
+                                            </div>
+                                            <div className="col-md-3 mb-2">
+                                                <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                                    Giờ kết thúc
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    className="form-control"
+                                                    value={slot.endTime}
+                                                    onChange={(e) =>
+                                                        handleChangeSlot(index, "endTime", e.target.value)
+                                                    }
+                                                    style={{ ...inputRadius }}
+                                                />
+                                            </div>
+                                            <div className="col-md-2 mb-2">
+                                                <small className="text-muted">
+                                                    Chỉ tính nếu chọn đủ Thứ + giờ
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
 
-                            {/* Buttons aligned bottom-right like screenshot */}
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 6 }}>
+                            {/* BUTTONS */}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "flex-end",
+                                    gap: 12,
+                                    marginTop: 6,
+                                }}
+                            >
                                 <button
                                     type="button"
                                     className="btn btn-light"
@@ -336,7 +492,20 @@ const TeachingAssignmentAdd = () => {
             </div>
 
             {loading && <Loading />}
-            {toast.show && <Toast {...toast} />}
+
+            {toast.show && (
+                <Toast
+                    title={toast.title}
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() =>
+                        setToast((prev) => ({
+                            ...prev,
+                            show: false,
+                        }))
+                    }
+                />
+            )}
         </MainLayout>
     );
 };
