@@ -45,20 +45,7 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
             try {
                 Claims claims = jwtUtil.getClaims(token);
                 String userId = claims.get("userId", String.class);
-                String issuer = claims.getIssuer(); // dùng làm authority tối thiểu
-
-                if (userId == null || userId.isBlank()) {
-                    throw new RuntimeException("Invalid token: no userId");
-                }
-
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                                userId,
-                                null,
-                                issuer != null
-                                        ? Collections.singletonList(new SimpleGrantedAuthority(issuer))
-                                        : Collections.emptyList()
-                        );
+                final var auth = getToken(claims, userId);
 
                 accessor.setUser(auth);
             } catch (Exception e) {
@@ -67,5 +54,23 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
         }
 
         return message;
+    }
+
+    private static UsernamePasswordAuthenticationToken getToken(Claims claims, String userId) {
+        String issuer = claims.getIssuer(); // dùng làm authority tối thiểu
+
+        if (userId == null || userId.isBlank()) {
+            throw new RuntimeException("Invalid token: no userId");
+        }
+
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        issuer != null
+                                ? Collections.singletonList(new SimpleGrantedAuthority(issuer))
+                                : Collections.emptyList()
+                );
+        return auth;
     }
 }

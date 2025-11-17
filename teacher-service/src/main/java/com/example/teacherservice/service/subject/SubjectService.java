@@ -5,5 +5,6 @@ import java.util.List;
 
 public interface SubjectService {
     List<SubjectDto> getAll();
-
+    List<SubjectDto> getAllSubjectsByTrial();
+    List<SubjectDto> searchSubjects(String keyword);
 }

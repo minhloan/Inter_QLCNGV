@@ -20,3 +20,140 @@ body {
 #root {
   min-height: 100vh;
 }
+.back-circle-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+    font-size: 18px;
+    color: #333;
+
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover nhẹ cho đẹp */
+.back-circle-btn:hover {
+    background: #f5f5f5;
+    transform: scale(1.05);
+}
+
+/* Icon đẹp hơn */
+.back-circle-btn i {
+    font-size: 20px;
+}
+
+
+/* ================================================
+   FIX LỖI TRẮNG LAYOUT + TRÀN LỀ + LỆCH CARD
+   ================================================ */
+
+/* Ngăn content tràn ngang gây lộ nền trắng */
+.main-content,
+.content-wrapper,
+.page-wrapper {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+}
+
+/* Nếu layout có border-radius gây lộ background → loại bỏ */
+.main-content {
+    border-radius: 0 !important;
+}
+
+/* Đảm bảo container không rộng hơn phần hiển thị */
+.container,
+.container-fluid {
+    max-width: 100% !important;
+}
+
+/* Loại bỏ padding 2 bên khiến giao diện bị lệch */
+.container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Card đôi lúc tràn ra khi table dài → chặn */
+.card {
+    overflow: hidden !important;
+}
+
+/* Đảm bảo body không gây tràn ra ngoài layout */
+body {
+    overflow-x: hidden !important;
+}.back-circle-btn {
+     width: 42px;
+     height: 42px;
+     border-radius: 50%;
+     background: white;
+     border: 1px solid #ddd;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     cursor: pointer;
+
+     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+     font-size: 18px;
+     color: #333;
+
+     transition: all 0.2s ease-in-out;
+ }
+
+/* Hover nhẹ cho đẹp */
+.back-circle-btn:hover {
+    background: #f5f5f5;
+    transform: scale(1.05);
+}
+
+/* Icon đẹp hơn */
+.back-circle-btn i {
+    font-size: 20px;
+}
+
+
+/* ================================================
+   FIX LỖI TRẮNG LAYOUT + TRÀN LỀ + LỆCH CARD
+   ================================================ */
+
+/* Ngăn content tràn ngang gây lộ nền trắng */
+.main-content,
+.content-wrapper,
+.page-wrapper {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+}
+
+/* Nếu layout có border-radius gây lộ background → loại bỏ */
+.main-content {
+    border-radius: 0 !important;
+}
+
+/* Đảm bảo container không rộng hơn phần hiển thị */
+.container,
+.container-fluid {
+    max-width: 100% !important;
+}
+
+/* Loại bỏ padding 2 bên khiến giao diện bị lệch */
+.container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Card đôi lúc tràn ra khi table dài → chặn */
+.card {
+    overflow: hidden !important;
+}
+
+/* Đảm bảo body không gây tràn ra ngoài layout */
+body {
+    overflow-x: hidden !important;
+}

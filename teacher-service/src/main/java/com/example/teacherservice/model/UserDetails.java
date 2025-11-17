@@ -35,5 +35,6 @@ public class UserDetails {
     private String imageUrl;
     private String qualification;
     @ElementCollection
+    @Builder.Default
     private List<String> skills = new ArrayList<>();
 }

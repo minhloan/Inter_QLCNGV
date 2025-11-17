@@ -247,6 +247,8 @@ public class UserServiceImpl implements UserService {
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setActive(user.getActive() != null ? user.getActive().toString() : null);
+        dto.setRole(user.getPrimaryRole() != null ? user.getPrimaryRole().toString() : null);
+        dto.setTeacherCode(user.getTeacherCode());
         
         UserDetails userDetails = user.getUserDetails();
         if (userDetails != null) {

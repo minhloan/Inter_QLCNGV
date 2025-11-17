@@ -12,6 +12,7 @@ public class AdminSubjectRegistrationDto {
 
     private String subjectId;
     private String subjectName;
+    private String subjectCode;
     private Quarter quarter;
 
     private String registrationDate;

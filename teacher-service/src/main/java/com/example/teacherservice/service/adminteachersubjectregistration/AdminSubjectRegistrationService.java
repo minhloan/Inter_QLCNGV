@@ -10,4 +10,5 @@ public interface AdminSubjectRegistrationService {
     List<AdminSubjectRegistrationDto> getAll();
 
     AdminSubjectRegistrationDto updateStatus(String id, RegistrationStatus status);
+    AdminSubjectRegistrationDto getById(String id);
 }

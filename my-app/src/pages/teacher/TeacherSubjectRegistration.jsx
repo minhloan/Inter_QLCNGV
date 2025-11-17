@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,10 +5,18 @@ import MainLayout from "../../components/Layout/MainLayout";
 import Toast from "../../components/Common/Toast";
 import Loading from "../../components/Common/Loading";
 
-import {listAllSubjectRegistrations, filterSubjectRegistrations, registerSubject} from "../../api/subjectRegistrationApi.js";
+import {
+    listAllSubjectRegistrations,
+    registerSubject,
+} from "../../api/subjectRegistrationApi.js";
 import { listAllSubjects } from "../../api/subject.js";
 
-
+const STATUS_OPTIONS = [
+    { value: "", label: "Tất cả" },
+    { value: "REGISTERED", label: "Đã đăng ký" },
+    { value: "COMPLETED", label: "Hoàn thành" },
+    { value: "NOT_COMPLETED", label: "Chưa hoàn thành" },
+];
 
 const TeacherSubjectRegistration = () => {
     const navigate = useNavigate();
@@ -21,21 +27,29 @@ const TeacherSubjectRegistration = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
 
-    const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
-    const [quarterFilter, setQuarterFilter] = useState("");
-    const [statusFilter, setStatusFilter] = useState("");
+    // ===== BỘ LỌC TRÊN TABLE =====
+    const [yearFilter, setYearFilter] = useState("");      // "" = tất cả năm
+    const [quarterFilter, setQuarterFilter] = useState(""); // "" = tất cả quý
+    const [statusFilter, setStatusFilter] = useState("");   // "" = tất cả trạng thái
+
+    // ===== STATE TRONG MODAL ĐĂNG KÝ =====
+    const currentYear = new Date().getFullYear();
+    const [registerYear, setRegisterYear] = useState(currentYear);
+    const [registerQuarter, setRegisterQuarter] = useState("");
 
     const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState("");
     const [loading, setLoading] = useState(false);
-    const [filtersReset, setFiltersReset] = useState(false);
+
+    // true = đang hiển thị tất cả, không áp dụng lọc
+    const [filtersReset, setFiltersReset] = useState(true);
+
     const [toast, setToast] = useState({
         show: false,
         title: "",
         message: "",
         type: "info",
     });
-
 
     useEffect(() => {
         loadRegistrations();
@@ -44,57 +58,68 @@ const TeacherSubjectRegistration = () => {
 
     useEffect(() => {
         applyFilters();
-    }, [registrations, yearFilter, quarterFilter, statusFilter]);
+    }, [registrations, yearFilter, quarterFilter, statusFilter, filtersReset]);
 
+    // ===================== LOAD DATA =====================
     const loadRegistrations = async () => {
         try {
             setLoading(true);
-            const rows = await listAllSubjectRegistrations();  // Gọi API để lấy danh sách đăng ký môn học
-            const normalized = (rows || []).map((item) => ({
-                id: item.id,
-                subject_code: item.subjectCode ?? "N/A",
-                subject_name: item.subjectName ?? "N/A",
-                year: item.year ?? null,
-                quarter: item.quarter ?? "",
-                status: (item.status || "").toUpperCase(),
-                reason_for_carry_over: item.reasonForCarryOver ?? "-",
-                registration_date:
+            const rows = await listAllSubjectRegistrations();
+
+            const normalized = (rows || []).map((item) => {
+                // ---- format ngày yyyy-MM-dd ----
+                const rawDate =
                     item.creationTimestamp ||
                     item.createdAt ||
                     item.registrationDate ||
-                    null,
-            }));
+                    null;
+
+                let formattedDate = null;
+                if (rawDate) {
+                    if (typeof rawDate === "string") {
+                        formattedDate = rawDate.split("T")[0];
+                    } else {
+                        const d = new Date(rawDate);
+                        if (!isNaN(d.getTime())) {
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth() + 1).padStart(2, "0");
+                            const dd = String(d.getDate()).padStart(2, "0");
+                            formattedDate = `${y}-${m}-${dd}`;
+                        }
+                    }
+                }
+
+                // ---- chuẩn hoá QUY1 -> "1", QUY2 -> "2" ----
+                const rawQuarter = item.quarter ?? "";
+                let quarterNumber = "";
+                if (
+                    typeof rawQuarter === "string" &&
+                    rawQuarter.toUpperCase().startsWith("QUY")
+                ) {
+                    quarterNumber = rawQuarter.toUpperCase().replace("QUY", "");
+                }
+
+                // ---- chuẩn hoá status ----
+                const status = (item.status || "").toString().trim().toUpperCase();
+
+                return {
+                    id: item.id,
+                    subject_code: item.subjectCode ?? "N/A",
+                    subject_name: item.subjectName ?? "N/A",
+                    year: item.year ?? null,
+                    quarter: quarterNumber, // "1" | "2" | "3" | "4"
+                    status,                 // REGISTERED | COMPLETED | NOT_COMPLETED
+                    reason_for_carry_over: item.reasonForCarryOver ?? "-",
+                    registration_date: formattedDate,
+                };
+            });
+
             setRegistrations(normalized);
             setFilteredRegistrations(normalized);
             setCurrentPage(1);
         } catch (error) {
             console.error(error);
             showToast("Lỗi", "Không thể tải danh sách đăng ký", "danger");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-    const handleRegister = async (subjectId, year, quarter) => {
-        try {
-            setLoading(true);
-
-            const payload = {
-                subjectId: subjectId,
-                year: parseInt(year),
-                quarter: quarter,
-                status: "REGISTERED"
-            };
-
-
-            await registerSubject(payload);  // Gọi API đăng ký môn học
-            showToast("Thành công", "Đăng ký môn học thành công 🎉", "success");
-            setShowRegisterModal(false);
-            await loadRegistrations();
-        } catch (error) {
-            console.error("❌ Lỗi khi đăng ký:", error.response?.data || error.message);
-            showToast("Lỗi", error.response?.data || "Không thể đăng ký môn học.", "danger");
         } finally {
             setLoading(false);
         }
@@ -111,39 +136,71 @@ const TeacherSubjectRegistration = () => {
         }
     };
 
+    // ===================== FILTER =====================
     const applyFilters = () => {
+        // Nếu đang reset: luôn show toàn bộ
         if (filtersReset) {
-            // Nếu reset, hiển thị toàn bộ dữ liệu
             setFilteredRegistrations(registrations);
+            setCurrentPage(1);
             return;
         }
 
         let filtered = [...registrations];
 
-        if (yearFilter)
+        // Năm
+        if (yearFilter) {
             filtered = filtered.filter(
                 (reg) => Number(reg.year) === Number(yearFilter)
             );
-        if (quarterFilter)
+        }
+
+        // Quý
+        if (quarterFilter) {
             filtered = filtered.filter(
                 (reg) => String(reg.quarter) === String(quarterFilter)
             );
-        if (statusFilter)
+        }
+
+        // Trạng thái
+        if (statusFilter) {
             filtered = filtered.filter(
                 (reg) => (reg.status || "").toUpperCase() === statusFilter
             );
+        }
 
         setFilteredRegistrations(filtered);
         setCurrentPage(1);
     };
 
+    // ===================== REGISTER =====================
+    const handleRegister = async (subjectId, year, quarter) => {
+        try {
+            setLoading(true);
 
-    // ✅ Đăng ký môn học mới
+            const payload = {
+                subjectId,
+                year: parseInt(year, 10),
+                quarter: parseInt(quarter, 10),
+                status: "REGISTERED",
+            };
 
+            await registerSubject(payload);
+            showToast("Thành công", "Đăng ký môn học thành công 🎉", "success");
+            setShowRegisterModal(false);
+            await loadRegistrations();
+        } catch (error) {
+            console.error("❌ Lỗi khi đăng ký:", error.response?.data || error.message);
+            showToast(
+                "Lỗi",
+                error.response?.data || "Không thể đăng ký môn học.",
+                "danger"
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
 
-
-
-
+    // ===================== UI HELPERS =====================
     const showToast = (title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
@@ -155,7 +212,11 @@ const TeacherSubjectRegistration = () => {
             COMPLETED: { label: "Hoàn thành", class: "success" },
             NOT_COMPLETED: { label: "Chưa hoàn thành", class: "warning" },
         };
-        const s = statusMap[status] || { label: status, class: "secondary" };
+        const s =
+            statusMap[(status || "").toUpperCase()] || {
+                label: status,
+                class: "secondary",
+            };
         return <span className={`badge badge-status ${s.class}`}>{s.label}</span>;
     };
 
@@ -165,14 +226,16 @@ const TeacherSubjectRegistration = () => {
         startIndex,
         startIndex + pageSize
     );
-    const currentYear = new Date().getFullYear();
 
-    if (loading)
+    if (loading) {
         return <Loading fullscreen={true} message="Đang tải dữ liệu..." />;
+    }
 
+    // ===================== RENDER =====================
     return (
         <MainLayout>
             <div className="page-teacher-subject-registration">
+                {/* HEADER */}
                 <div className="content-header">
                     <div className="content-title">
                         <button className="back-button" onClick={() => navigate(-1)}>
@@ -180,34 +243,56 @@ const TeacherSubjectRegistration = () => {
                         </button>
                         <h1 className="page-title">Đăng ký Môn học</h1>
                     </div>
-                    <button className="btn btn-primary" onClick={() => setShowRegisterModal(true)}>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => {
+                            // mỗi lần mở modal, reset giá trị mặc định cho đăng ký
+                            setRegisterYear(currentYear);
+                            setRegisterQuarter("");
+                            setShowRegisterModal(true);
+                        }}
+                    >
                         <i className="bi bi-plus-circle"></i>
                         Đăng ký Môn mới
                     </button>
                 </div>
 
                 <div className="filter-table-wrapper">
-                    {/* Filter Section */}
+                    {/* FILTER */}
                     <div className="filter-section">
                         <div className="filter-row">
+                            {/* Năm */}
                             <div className="filter-group">
                                 <label className="filter-label">Năm</label>
                                 <select
                                     className="filter-select"
                                     value={yearFilter}
-                                    onChange={(e) => setYearFilter(e.target.value)}
+                                    onChange={(e) => {
+                                        setFiltersReset(false);
+                                        setYearFilter(e.target.value); // "" = tất cả
+                                    }}
                                 >
-                                    {[currentYear - 1, currentYear, currentYear + 1].map(year => (
-                                        <option key={year} value={year}>{year}</option>
-                                    ))}
+                                    <option value="">Tất cả</option>
+                                    {[currentYear - 1, currentYear, currentYear + 1].map(
+                                        (year) => (
+                                            <option key={year} value={year}>
+                                                {year}
+                                            </option>
+                                        )
+                                    )}
                                 </select>
                             </div>
+
+                            {/* Quý */}
                             <div className="filter-group">
                                 <label className="filter-label">Quý</label>
                                 <select
                                     className="filter-select"
                                     value={quarterFilter}
-                                    onChange={(e) => setQuarterFilter(e.target.value)}
+                                    onChange={(e) => {
+                                        setFiltersReset(false);
+                                        setQuarterFilter(e.target.value); // "" = tất cả
+                                    }}
                                 >
                                     <option value="">Tất cả</option>
                                     <option value="1">Quý 1</option>
@@ -216,42 +301,45 @@ const TeacherSubjectRegistration = () => {
                                     <option value="4">Quý 4</option>
                                 </select>
                             </div>
+
+                            {/* Trạng thái */}
                             <div className="filter-group">
                                 <label className="filter-label">Trạng thái</label>
                                 <select
                                     className="filter-select"
                                     value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    onChange={(e) => {
+                                        setFiltersReset(false);
+                                        setStatusFilter(e.target.value); // lưu ENUM
+                                    }}
                                 >
-                                    <option value="">Tất cả</option>
-                                    <option value="REGISTERED">Đã đăng ký</option>
-                                    <option value="COMPLETED">Hoàn thành</option>
-                                    <option value="NOT_COMPLETED">Chưa hoàn thành</option>
+                                    {STATUS_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
+
+                            {/* Reset */}
                             <div className="filter-group">
                                 <button
                                     className="btn btn-secondary"
                                     onClick={() => {
-                                        // Reset filter
-                                        setYearFilter(currentYear);
+                                        setYearFilter("");
                                         setQuarterFilter("");
                                         setStatusFilter("");
-
-                                        // Reset filtersReset để không áp dụng lọc
-                                        setFiltersReset(true);
-                                        applyFilters();  // Hiển thị lại toàn bộ dữ liệu
+                                        setFiltersReset(true); // quay về hiển thị tất cả
                                     }}
                                     style={{ width: "100%" }}
                                 >
                                     <i className="bi bi-arrow-clockwise"></i> Reset
                                 </button>
-
                             </div>
                         </div>
                     </div>
 
-                    {/* Registrations Table */}
+                    {/* TABLE */}
                     <div className="table-container">
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
@@ -281,13 +369,17 @@ const TeacherSubjectRegistration = () => {
                                     pageRegistrations.map((reg, index) => (
                                         <tr key={reg.id} className="fade-in">
                                             <td>{startIndex + index + 1}</td>
-                                            <td><span className="teacher-code">{reg.subject_code || 'N/A'}</span></td>
-                                            <td>{reg.subject_name || 'N/A'}</td>
-                                            <td>{reg.year || 'N/A'}</td>
-                                            <td>{reg.quarter ? `${reg.quarter}` : 'N/A'}</td>
-                                            <td>{reg.registration_date}</td>
+                                            <td>
+                          <span className="teacher-code">
+                            {reg.subject_code || "N/A"}
+                          </span>
+                                            </td>
+                                            <td>{reg.subject_name || "N/A"}</td>
+                                            <td>{reg.year || "N/A"}</td>
+                                            <td>{reg.quarter ? `QUY${reg.quarter}` : "N/A"}</td>
+                                            <td>{reg.registration_date || "N/A"}</td>
                                             <td>{getStatusBadge(reg.status)}</td>
-                                            <td>{reg.reason_for_carry_over || '-'}</td>
+                                            <td>{reg.reason_for_carry_over || "-"}</td>
                                         </tr>
                                     ))
                                 )}
@@ -298,10 +390,16 @@ const TeacherSubjectRegistration = () => {
                         {totalPages > 1 && (
                             <nav aria-label="Page navigation" className="mt-4">
                                 <ul className="pagination justify-content-center">
-                                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                    <li
+                                        className={`page-item ${
+                                            currentPage === 1 ? "disabled" : ""
+                                        }`}
+                                    >
                                         <button
                                             className="page-link"
-                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            onClick={() =>
+                                                setCurrentPage((prev) => Math.max(1, prev - 1))
+                                            }
                                             disabled={currentPage === 1}
                                         >
                                             <i className="bi bi-chevron-left"></i>
@@ -309,10 +407,22 @@ const TeacherSubjectRegistration = () => {
                                     </li>
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
-                                        if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                                        if (
+                                            page === 1 ||
+                                            page === totalPages ||
+                                            (page >= currentPage - 2 && page <= currentPage + 2)
+                                        ) {
                                             return (
-                                                <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                                                    <button className="page-link" onClick={() => setCurrentPage(page)}>
+                                                <li
+                                                    key={page}
+                                                    className={`page-item ${
+                                                        currentPage === page ? "active" : ""
+                                                    }`}
+                                                >
+                                                    <button
+                                                        className="page-link"
+                                                        onClick={() => setCurrentPage(page)}
+                                                    >
                                                         {page}
                                                     </button>
                                                 </li>
@@ -320,10 +430,18 @@ const TeacherSubjectRegistration = () => {
                                         }
                                         return null;
                                     })}
-                                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                                    <li
+                                        className={`page-item ${
+                                            currentPage === totalPages ? "disabled" : ""
+                                        }`}
+                                    >
                                         <button
                                             className="page-link"
-                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            onClick={() =>
+                                                setCurrentPage((prev) =>
+                                                    Math.min(totalPages, prev + 1)
+                                                )
+                                            }
                                             disabled={currentPage === totalPages}
                                         >
                                             <i className="bi bi-chevron-right"></i>
@@ -335,43 +453,80 @@ const TeacherSubjectRegistration = () => {
                     </div>
                 </div>
 
-                {/* Info Box */}
-                <div className="alert alert-info" style={{ marginBottom: '20px' }}>
+                {/* INFO BOX */}
+                <div className="alert alert-info" style={{ marginBottom: "20px" }}>
                     <i className="bi bi-info-circle me-2"></i>
-                    Tối thiểu 4 môn/năm và 1 môn/quý. Môn chưa hoàn thành có thể được dời sang năm khác.
+                    Tối thiểu 4 môn/năm và 1 môn/quý. Môn chưa hoàn thành có thể được dời
+                    sang năm khác.
                 </div>
 
-                {/* Register Modal */}
+                {/* REGISTER MODAL */}
                 {showRegisterModal && (
-                    <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div className="modal-content" style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '600px' }}>
-                            <h3 style={{ marginBottom: '20px' }}>Đăng ký Môn học Mới</h3>
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
+                    <div
+                        className="modal-overlay"
+                        style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: "rgba(0,0,0,0.5)",
+                            zIndex: 1000,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        <div
+                            className="modal-content"
+                            style={{
+                                background: "white",
+                                padding: "30px",
+                                borderRadius: "8px",
+                                width: "90%",
+                                maxWidth: "600px",
+                            }}
+                        >
+                            <h3 style={{ marginBottom: "20px" }}>Đăng ký Môn học Mới</h3>
+
+                            <div className="form-group" style={{ marginBottom: "20px" }}>
                                 <label className="form-label">Chọn Môn học</label>
                                 <select
                                     className="form-control"
-                                    value={selectedSubject || ''}
+                                    value={selectedSubject || ""}
                                     onChange={(e) => setSelectedSubject(e.target.value)}
                                 >
                                     <option value="">-- Chọn môn học --</option>
-                                    {availableSubjects.map(subject => (
+                                    {availableSubjects.map((subject) => (
                                         <option key={subject.id} value={subject.id}>
                                             {subject.subjectCode} - {subject.subjectName}
                                         </option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
+
+                            <div className="form-group" style={{ marginBottom: "20px" }}>
                                 <label className="form-label">Năm</label>
-                                <select className="form-control" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
-                                    {[currentYear, currentYear + 1].map(year => (
-                                        <option key={year} value={year}>{year}</option>
+                                <select
+                                    className="form-control"
+                                    value={registerYear}
+                                    onChange={(e) => setRegisterYear(e.target.value)}
+                                >
+                                    {[currentYear, currentYear + 1].map((year) => (
+                                        <option key={year} value={year}>
+                                            {year}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
+
+                            <div className="form-group" style={{ marginBottom: "20px" }}>
                                 <label className="form-label">Quý</label>
-                                <select className="form-control" value={quarterFilter} onChange={(e) => setQuarterFilter(e.target.value)}>
+                                <select
+                                    className="form-control"
+                                    value={registerQuarter}
+                                    onChange={(e) => setRegisterQuarter(e.target.value)}
+                                >
                                     <option value="">-- Chọn quý --</option>
                                     <option value="1">Quý 1</option>
                                     <option value="2">Quý 2</option>
@@ -379,17 +534,35 @@ const TeacherSubjectRegistration = () => {
                                     <option value="4">Quý 4</option>
                                 </select>
                             </div>
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <button className="btn btn-secondary" onClick={() => {
-                                    setShowRegisterModal(false);
-                                    setSelectedSubject(null);
-                                }}>
+
+                            <div
+                                style={{
+                                    display: "flex",
+                                    gap: "10px",
+                                    justifyContent: "flex-end",
+                                }}
+                            >
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        setShowRegisterModal(false);
+                                        setSelectedSubject(null);
+                                    }}
+                                >
                                     Hủy
                                 </button>
                                 <button
                                     className="btn btn-primary"
-                                    onClick={() => selectedSubject && quarterFilter && handleRegister(selectedSubject, parseInt(yearFilter), parseInt(quarterFilter))}
-                                    disabled={!selectedSubject || !quarterFilter}
+                                    onClick={() =>
+                                        selectedSubject &&
+                                        registerQuarter &&
+                                        handleRegister(
+                                            selectedSubject,
+                                            registerYear,
+                                            registerQuarter
+                                        )
+                                    }
+                                    disabled={!selectedSubject || !registerQuarter}
                                 >
                                     Đăng ký
                                 </button>
@@ -398,12 +571,13 @@ const TeacherSubjectRegistration = () => {
                     </div>
                 )}
             </div>
+
             {toast.show && (
                 <Toast
                     title={toast.title}
                     message={toast.message}
                     type={toast.type}
-                    onClose={() => setToast(prev => ({ ...prev, show: false }))}
+                    onClose={() => setToast((prev) => ({ ...prev, show: false }))}
                 />
             )}
         </MainLayout>

@@ -12,5 +12,6 @@ public interface TrialTeachingRepository extends JpaRepository<TrialTeaching, St
     List<TrialTeaching> findByTeacher(User teacher);
     List<TrialTeaching> findBySubject(Subject subject);
     List<TrialTeaching> findByTeachingDate(LocalDate teachingDate);
+    List<TrialTeaching> findByTeacher_Id(String teacherId);
 }
 

@@ -41,5 +41,8 @@ public class TrialTeaching extends BaseEntity {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    @Column(name = "teaching_time")
+    private String teachingTime;
 }
 

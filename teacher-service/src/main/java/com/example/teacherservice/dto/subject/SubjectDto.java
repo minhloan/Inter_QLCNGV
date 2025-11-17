@@ -10,5 +10,6 @@ public class SubjectDto {
     private String subjectName;
     private Integer credit;
     private SubjectSystem system;
+    private String description;
     private Boolean isActive;
 }

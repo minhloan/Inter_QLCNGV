@@ -11,3 +11,7 @@ export const updateRegistrationStatus = async (id, status) => {
     const res = await api.put(`/update-status/${id}`, { status });
     return res.data;
 };
+export const getRegistrationDetailForAdmin = async (id) => {
+    const res = await api.get(`/${id}`);
+    return res.data;
+};

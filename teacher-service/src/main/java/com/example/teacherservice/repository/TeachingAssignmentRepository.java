@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TeachingAssignmentRepository extends JpaRepository<TeachingAssignment, String> {
-    Optional<TeachingAssignment> findByTeacherAndSubjectAndYearAndQuarter(
-            User teacher, Subject subject, Integer year, Integer quarter);
-    List<TeachingAssignment> findByTeacher(User teacher);
-    List<TeachingAssignment> findBySubject(Subject subject);
+//    Optional<TeachingAssignment> findByTeacherAndSubjectAndYearAndQuarter(
+//            User teacher, Subject subject, Integer year, Integer quarter);
+//    List<TeachingAssignment> findByTeacher(User teacher);
+//    List<TeachingAssignment> findBySubject(Subject subject);
 }
 

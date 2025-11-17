@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import { getAllRegistrationsForAdmin, updateRegistrationStatus } from '../../api/adminSubjectRegistrationApi';
+import {
+    getAllRegistrationsForAdmin,
+    updateRegistrationStatus,
+} from '../../api/adminSubjectRegistrationApi';
 
 const SubjectRegistrationManagement = () => {
     const navigate = useNavigate();
@@ -30,7 +33,16 @@ const SubjectRegistrationManagement = () => {
         applyFilters();
     }, [registrations, searchTerm, statusFilter, subjectFilter]);
 
-    // 🔥 Lấy danh sách đăng ký từ backend
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+
+        const [datePart] = dateStr.split(/[T ]/); // tách theo T hoặc khoảng trắng
+        const [year, month, day] = datePart.split('-'); // "2025-11-14" -> ["2025","11","14"]
+        if (!year || !month || !day) return dateStr;
+        return `${day}/${month}/${year}`; // dd/MM/yyyy
+    };
+
+    // Lấy danh sách đăng ký từ backend
     const loadRegistrations = async () => {
         try {
             setLoading(true);
@@ -42,7 +54,8 @@ const SubjectRegistrationManagement = () => {
                 subject_id: reg.subjectId || null,
                 subject_name: reg.subjectName || 'N/A',
                 quarter: reg.quarter ?? null,
-                registration_date: reg.registrationDate || 'N/A',
+                registration_date: formatDate(reg.registrationDate),
+                // backend trả về "registered" | "completed" | "not_completed"
                 status: (reg.status || '').toLowerCase(),
                 notes: reg.notes || '',
             }));
@@ -50,45 +63,67 @@ const SubjectRegistrationManagement = () => {
             setFilteredRegistrations(normalized);
             setCurrentPage(1);
         } catch (error) {
-            console.error('Lỗi load đăng ký:', error.response ? error.response.data : error.message);
+            console.error(
+                'Lỗi load đăng ký:',
+                error.response ? error.response.data : error.message
+            );
             showToast('Lỗi', 'Không thể tải danh sách đăng ký', 'danger');
         } finally {
             setLoading(false);
         }
     };
 
-
     const applyFilters = () => {
         let filtered = [...registrations];
+
+        // Tìm kiếm
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(
                 (reg) =>
-                    (reg.teacher_name && reg.teacher_name.toLowerCase().includes(term)) ||
-                    (reg.teacher_code && reg.teacher_code.toLowerCase().includes(term)) ||
-                    (reg.subject_name && reg.subject_name.toLowerCase().includes(term))
+                    (reg.teacher_name &&
+                        reg.teacher_name.toLowerCase().includes(term)) ||
+                    (reg.teacher_code &&
+                        reg.teacher_code.toLowerCase().includes(term)) ||
+                    (reg.subject_name &&
+                        reg.subject_name.toLowerCase().includes(term))
             );
         }
+
+        // Lọc theo trạng thái
         if (statusFilter) {
-            filtered = filtered.filter((reg) => reg.status === statusFilter);
+            filtered = filtered.filter(
+                (reg) => (reg.status || '').toLowerCase() === statusFilter
+            );
         }
+
+        // (nếu sau này dùng subjectFilter thì thêm điều kiện ở đây)
         if (subjectFilter) {
-            filtered = filtered.filter((reg) => reg.subject_id === parseInt(subjectFilter, 10));
+            filtered = filtered.filter(
+                (reg) => reg.subject_id === parseInt(subjectFilter, 10)
+            );
         }
+
         setFilteredRegistrations(filtered);
         setCurrentPage(1);
     };
 
-    // 🔥 Duyệt / từ chối đăng ký – gọi backend + cập nhật state
+    // Duyệt / từ chối đăng ký – gọi backend + cập nhật state
     const handleStatusChange = async (registrationId, newStatus) => {
         try {
             setLoading(true);
-            // Gửi 'APPROVED'/'REJECTED' lên backend
-            await updateRegistrationStatus(registrationId, newStatus.toUpperCase());
-            // Cập nhật lại local state
+
+            // newStatus: 'COMPLETED' hoặc 'NOT_COMPLETED' (ENUM gửi lên backend)
+            await updateRegistrationStatus(registrationId, newStatus);
+
+            // Cập nhật lại state phía frontend (lưu lowercase cho đồng bộ)
+            const normalized = newStatus.toLowerCase(); // "completed" | "not_completed"
             setRegistrations((prev) =>
-                prev.map((reg) => (reg.id === registrationId ? { ...reg, status: newStatus } : reg))
+                prev.map((reg) =>
+                    reg.id === registrationId ? { ...reg, status: normalized } : reg
+                )
             );
+
             showToast('Thành công', 'Cập nhật trạng thái thành công', 'success');
         } catch (error) {
             console.error('Lỗi cập nhật trạng thái:', error);
@@ -104,25 +139,40 @@ const SubjectRegistrationManagement = () => {
     };
 
     const getStatusBadge = (status) => {
+        const key = (status || '').toLowerCase();
+
         const statusMap = {
-            pending: { label: 'Chờ duyệt', class: 'warning' },
-            approved: { label: 'Đã duyệt', class: 'success' },
-            rejected: { label: 'Từ chối', class: 'danger' },
+            registered: { label: 'Đang chờ duyệt', class: 'info' },
+            completed: { label: 'Đã duyệt', class: 'success' },
+            not_completed: { label: 'Từ chối', class: 'secondary' },
         };
-        const statusInfo = statusMap[status] || { label: status, class: 'secondary' };
+
+        const info = statusMap[key] || {
+            label: status || 'Không rõ',
+            class: 'secondary',
+        };
+
         return (
-            <span className={`badge badge-status ${statusInfo.class}`}>
-        {statusInfo.label}
+            <span className={`badge badge-status ${info.class}`}>
+        {info.label}
       </span>
         );
     };
 
     const totalPages = Math.ceil(filteredRegistrations.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
-    const pageRegistrations = filteredRegistrations.slice(startIndex, startIndex + pageSize);
+    const pageRegistrations = filteredRegistrations.slice(
+        startIndex,
+        startIndex + pageSize
+    );
 
     if (loading) {
-        return <Loading fullscreen={true} message="Đang tải danh sách đăng ký môn học..." />;
+        return (
+            <Loading
+                fullscreen={true}
+                message="Đang tải danh sách đăng ký môn học..."
+            />
+        );
     }
 
     return (
@@ -162,9 +212,10 @@ const SubjectRegistrationManagement = () => {
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                 >
                                     <option value="">Tất cả</option>
-                                    <option value="pending">Chờ duyệt</option>
-                                    <option value="approved">Đã duyệt</option>
-                                    <option value="rejected">Từ chối</option>
+                                    {/* value phải TRÙNG với reg.status (registered/completed/not_completed) */}
+                                    <option value="registered">Chờ duyệt</option>
+                                    <option value="completed">Đã duyệt</option>
+                                    <option value="not_completed">Từ chối</option>
                                 </select>
                             </div>
 
@@ -196,7 +247,9 @@ const SubjectRegistrationManagement = () => {
                                     <th width="10%">Quý</th>
                                     <th width="12%">Ngày đăng ký</th>
                                     <th width="10%">Trạng thái</th>
-                                    <th width="13%" className="text-center">Thao tác</th>
+                                    <th width="13%" className="text-center">
+                                        Thao tác
+                                    </th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -213,35 +266,49 @@ const SubjectRegistrationManagement = () => {
                                     pageRegistrations.map((reg, index) => (
                                         <tr key={reg.id} className="fade-in">
                                             <td>{startIndex + index + 1}</td>
-                                            <td><span className="teacher-code">{reg.teacher_code}</span></td>
+                                            <td>
+                          <span className="teacher-code">
+                            {reg.teacher_code}
+                          </span>
+                                            </td>
                                             <td>{reg.teacher_name}</td>
                                             <td>{reg.subject_name}</td>
-                                            <td>{reg.quarter ? ` ${reg.quarter}` : "N/A"}</td>
+                                            <td>{reg.quarter ? `${reg.quarter}` : 'N/A'}</td>
                                             <td>{reg.registration_date}</td>
                                             <td>{getStatusBadge(reg.status)}</td>
                                             <td className="text-center">
                                                 <div className="action-buttons">
-                                                    {reg.status === 'pending' && (
+                                                    {/* Chỉ cho duyệt / từ chối khi đang ở trạng thái đã đăng ký */}
+                                                    {reg.status === 'registered' && (
                                                         <>
                                                             <button
                                                                 className="btn btn-sm btn-success btn-action"
-                                                                onClick={() => handleStatusChange(reg.id, 'approved')}
+                                                                onClick={() =>
+                                                                    handleStatusChange(reg.id, 'COMPLETED')
+                                                                }
                                                                 title="Duyệt"
                                                             >
                                                                 <i className="bi bi-check-circle"></i>
                                                             </button>
                                                             <button
                                                                 className="btn btn-sm btn-danger btn-action"
-                                                                onClick={() => handleStatusChange(reg.id, 'rejected')}
+                                                                onClick={() =>
+                                                                    handleStatusChange(reg.id, 'NOT_COMPLETED')
+                                                                }
                                                                 title="Từ chối"
                                                             >
                                                                 <i className="bi bi-x-circle"></i>
                                                             </button>
                                                         </>
                                                     )}
+
                                                     <button
                                                         className="btn btn-sm btn-info btn-action"
-                                                        onClick={() => navigate(`/subject-registration-detail/${reg.id}`)}
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/subject-registration-detail/${reg.id}`
+                                                            )
+                                                        }
                                                         title="Chi tiết"
                                                     >
                                                         <i className="bi bi-eye"></i>
@@ -258,17 +325,39 @@ const SubjectRegistrationManagement = () => {
                         {totalPages > 1 && (
                             <nav aria-label="Page navigation" className="mt-4">
                                 <ul className="pagination justify-content-center">
-                                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                                        <button className="page-link" onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1}>
+                                    <li
+                                        className={`page-item ${
+                                            currentPage === 1 ? 'disabled' : ''
+                                        }`}
+                                    >
+                                        <button
+                                            className="page-link"
+                                            onClick={() =>
+                                                setCurrentPage((prev) => Math.max(1, prev - 1))
+                                            }
+                                            disabled={currentPage === 1}
+                                        >
                                             <i className="bi bi-chevron-left"></i>
                                         </button>
                                     </li>
                                     {[...Array(totalPages)].map((_, i) => {
                                         const page = i + 1;
-                                        if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                                        if (
+                                            page === 1 ||
+                                            page === totalPages ||
+                                            (page >= currentPage - 2 && page <= currentPage + 2)
+                                        ) {
                                             return (
-                                                <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                                                    <button className="page-link" onClick={() => setCurrentPage(page)}>
+                                                <li
+                                                    key={page}
+                                                    className={`page-item ${
+                                                        currentPage === page ? 'active' : ''
+                                                    }`}
+                                                >
+                                                    <button
+                                                        className="page-link"
+                                                        onClick={() => setCurrentPage(page)}
+                                                    >
                                                         {page}
                                                     </button>
                                                 </li>
@@ -276,8 +365,20 @@ const SubjectRegistrationManagement = () => {
                                         }
                                         return null;
                                     })}
-                                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                                        <button className="page-link" onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages}>
+                                    <li
+                                        className={`page-item ${
+                                            currentPage === totalPages ? 'disabled' : ''
+                                        }`}
+                                    >
+                                        <button
+                                            className="page-link"
+                                            onClick={() =>
+                                                setCurrentPage((prev) =>
+                                                    Math.min(totalPages, prev + 1)
+                                                )
+                                            }
+                                            disabled={currentPage === totalPages}
+                                        >
                                             <i className="bi bi-chevron-right"></i>
                                         </button>
                                     </li>
@@ -288,7 +389,14 @@ const SubjectRegistrationManagement = () => {
                 </div>
 
                 {toast.show && (
-                    <Toast title={toast.title} message={toast.message} type={toast.type} onClose={() => setToast((prev) => ({ ...prev, show: false }))} />
+                    <Toast
+                        title={toast.title}
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() =>
+                            setToast((prev) => ({ ...prev, show: false }))
+                        }
+                    />
                 )}
             </div>
         </MainLayout>

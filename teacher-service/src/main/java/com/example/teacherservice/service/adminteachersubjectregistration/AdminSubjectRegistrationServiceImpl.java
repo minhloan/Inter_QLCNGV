@@ -41,6 +41,14 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
         return toDto(reg);
     }
 
+    // 👉 HÀM MỚI: lấy chi tiết
+    @Override
+    public AdminSubjectRegistrationDto getById(String id) {
+        SubjectRegistration reg = subjectRegistrationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đăng ký"));
+        return toDto(reg);
+    }
+
     // ============================================
     // Convert to DTO
     // ============================================
@@ -53,7 +61,7 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
 
         dto.setSubjectId(reg.getSubject() != null ? reg.getSubject().getId() : null);
         dto.setSubjectName(reg.getSubject() != null ? reg.getSubject().getSubjectName() : "N/A");
-
+        dto.setSubjectCode(reg.getSubject().getSubjectCode());
         dto.setQuarter(reg.getQuarter());
 
         dto.setRegistrationDate(reg.getCreationTimestamp() != null ? reg.getCreationTimestamp().toString() : "N/A");

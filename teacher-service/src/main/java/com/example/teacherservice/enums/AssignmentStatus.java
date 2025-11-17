@@ -6,4 +6,3 @@ public enum AssignmentStatus {
     NOT_COMPLETED,
     FAILED
 }
-

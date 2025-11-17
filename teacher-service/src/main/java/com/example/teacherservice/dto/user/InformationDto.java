@@ -8,4 +8,6 @@ public class InformationDto {
     private String email;
     private String phoneNumber;
     private String active;
+    private String role;
+    private String teacherCode;
 }

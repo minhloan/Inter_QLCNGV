@@ -18,19 +18,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TeachingAssignment extends BaseEntity {
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_id", nullable = false)
-    private Subject subject;
-
-    @Column(name = "year", nullable = false)
-    private Integer year;
-
-    @Column(name = "quarter", nullable = false)
-    private Integer quarter;
+    @JoinColumn(name = "class_id", nullable = false)
+    private ScheduleClass scheduleClass;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

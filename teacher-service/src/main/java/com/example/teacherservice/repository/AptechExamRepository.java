@@ -1,5 +1,6 @@
 package com.example.teacherservice.repository;
 
+import com.example.teacherservice.enums.ExamResult;
 import com.example.teacherservice.model.AptechExam;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.model.Subject;
@@ -12,5 +13,10 @@ public interface AptechExamRepository extends JpaRepository<AptechExam, String> 
     List<AptechExam> findByTeacher(User teacher);
     List<AptechExam> findBySubject(Subject subject);
     Optional<AptechExam> findByTeacherAndSubjectAndAttempt(User teacher, Subject subject, Integer attempt);
+    boolean existsByTeacher_IdAndSubject_IdAndResult(
+            String teacherId,
+            String subjectId,
+            ExamResult result
+    );
 }
 

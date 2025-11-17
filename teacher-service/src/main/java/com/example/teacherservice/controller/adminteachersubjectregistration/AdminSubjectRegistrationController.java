@@ -46,4 +46,10 @@ public class AdminSubjectRegistrationController {
             this.status = status;
         }
     }
+
+    // 👉 MỚI: lấy chi tiết theo id
+    @GetMapping("/{id}")
+    public AdminSubjectRegistrationDto getById(@PathVariable String id) {
+        return adminService.getById(id);
+    }
 }

@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface TrialAttendeeRepository extends JpaRepository<TrialAttendee, String> {
     List<TrialAttendee> findByTrial(TrialTeaching trial);
+    List<TrialAttendee> findByTrial_Id(String trialId);
 }
 

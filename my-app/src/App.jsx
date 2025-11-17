@@ -35,8 +35,10 @@ import Notifications from './pages/Notifications';
 
 import './assets/styles/Common.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import AdminManageSubjects from "./pages/admin/AdminManageSubject.jsx";
 import AdminManageSubjectAdd from "./pages/admin/AdminManageSubjectAdd.jsx";
+import TrialTeachingDetail from "./pages/admin/TrialTeachingDetail.jsx";
+import TrialTeachingAdd from "./pages/admin/TrialTeachingAdd.jsx";
+import SubjectRegistrationDetail from "./pages/admin/SubjectRegistrationDetail.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -159,6 +161,31 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/*<Route*/}
+      {/*      path="/teaching-assignment-management-add"*/}
+      {/*      element={*/}
+      {/*          <ProtectedRoute requiredRole="Manage-Leader">*/}
+      {/*              <TeachingAssignmentAdd />*/}
+      {/*          </ProtectedRoute>*/}
+      {/*      }*/}
+      {/*/>*/}
+
+        <Route
+            path="/trial-teaching-detail/:id"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <TrialTeachingDetail />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/trial-teaching-add"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <TrialTeachingAdd />
+                </ProtectedRoute>
+            }
+        />
       <Route
         path="/reporting-export"
         element={
@@ -193,6 +220,10 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+        <Route
+            path="/subject-registration-detail/:id"
+            element={<SubjectRegistrationDetail />}
+        />
       <Route
         path="/teacher-aptech-exam"
         element={

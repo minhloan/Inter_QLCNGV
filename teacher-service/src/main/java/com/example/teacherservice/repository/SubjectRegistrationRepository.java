@@ -21,4 +21,10 @@ public interface SubjectRegistrationRepository extends JpaRepository<SubjectRegi
 
     // Lọc theo trạng thái
     List<SubjectRegistration> findByStatus(RegistrationStatus status);
+
+    boolean existsByTeacher_IdAndSubject_IdAndStatus(
+            String teacherId,
+            String subjectId,
+            RegistrationStatus status
+    );
 }
