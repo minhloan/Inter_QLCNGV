@@ -28,17 +28,20 @@ const TeacherSubjectRegistration = () => {
     const [pageSize] = useState(10);
 
     // ===== BỘ LỌC TRÊN TABLE =====
-    const [yearFilter, setYearFilter] = useState("");      // "" = tất cả năm
+    const [yearFilter, setYearFilter] = useState(""); // "" = tất cả năm
     const [quarterFilter, setQuarterFilter] = useState(""); // "" = tất cả quý
-    const [statusFilter, setStatusFilter] = useState("");   // "" = tất cả trạng thái
+    const [statusFilter, setStatusFilter] = useState(""); // "" = tất cả trạng thái
 
     // ===== STATE TRONG MODAL ĐĂNG KÝ =====
     const currentYear = new Date().getFullYear();
     const [registerYear, setRegisterYear] = useState(currentYear);
     const [registerQuarter, setRegisterQuarter] = useState("");
+    const [selectedSubject, setSelectedSubject] = useState("");
+
+    // 🔍 state tìm kiếm môn học trong modal
+    const [subjectSearchTerm, setSubjectSearchTerm] = useState("");
 
     const [showRegisterModal, setShowRegisterModal] = useState(false);
-    const [selectedSubject, setSelectedSubject] = useState("");
     const [loading, setLoading] = useState(false);
 
     // true = đang hiển thị tất cả, không áp dụng lọc
@@ -108,7 +111,7 @@ const TeacherSubjectRegistration = () => {
                     subject_name: item.subjectName ?? "N/A",
                     year: item.year ?? null,
                     quarter: quarterNumber, // "1" | "2" | "3" | "4"
-                    status,                 // REGISTERED | COMPLETED | NOT_COMPLETED
+                    status, // REGISTERED | COMPLETED | NOT_COMPLETED
                     reason_for_carry_over: item.reasonForCarryOver ?? "-",
                     registration_date: formattedDate,
                 };
@@ -136,7 +139,7 @@ const TeacherSubjectRegistration = () => {
         }
     };
 
-    // ===================== FILTER =====================
+    // ===================== FILTER TABLE =====================
     const applyFilters = () => {
         // Nếu đang reset: luôn show toàn bộ
         if (filtersReset) {
@@ -227,6 +230,14 @@ const TeacherSubjectRegistration = () => {
         startIndex + pageSize
     );
 
+    // 🔍 danh sách môn học đã lọc theo ô tìm kiếm trong modal
+    const filteredSubjectsForModal = availableSubjects.filter((s) => {
+        if (!subjectSearchTerm) return true;
+        const keyword = subjectSearchTerm.toLowerCase();
+        const combined = `${s.subjectCode || ""} ${s.subjectName || ""}`.toLowerCase();
+        return combined.includes(keyword);
+    });
+
     if (loading) {
         return <Loading fullscreen={true} message="Đang tải dữ liệu..." />;
     }
@@ -249,6 +260,8 @@ const TeacherSubjectRegistration = () => {
                             // mỗi lần mở modal, reset giá trị mặc định cho đăng ký
                             setRegisterYear(currentYear);
                             setRegisterQuarter("");
+                            setSelectedSubject("");
+                            setSubjectSearchTerm(""); // reset ô tìm kiếm
                             setShowRegisterModal(true);
                         }}
                     >
@@ -273,13 +286,11 @@ const TeacherSubjectRegistration = () => {
                                     }}
                                 >
                                     <option value="">Tất cả</option>
-                                    {[currentYear - 1, currentYear, currentYear + 1].map(
-                                        (year) => (
-                                            <option key={year} value={year}>
-                                                {year}
-                                            </option>
-                                        )
-                                    )}
+                                    {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
+                                        <option key={year} value={year}>
+                                            {year}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -489,19 +500,37 @@ const TeacherSubjectRegistration = () => {
                         >
                             <h3 style={{ marginBottom: "20px" }}>Đăng ký Môn học Mới</h3>
 
+                            {/* 🔍 TÌM KIẾM + CHỌN MÔN HỌC */}
                             <div className="form-group" style={{ marginBottom: "20px" }}>
-                                <label className="form-label">Chọn Môn học</label>
+                                <label className="form-label">Môn học</label>
+
+                                {/* Ô tìm kiếm môn */}
+                                <input
+                                    type="text"
+                                    className="form-control mb-2"
+                                    placeholder="Tìm kiếm môn học (mã hoặc tên)..."
+                                    value={subjectSearchTerm}
+                                    onChange={(e) => setSubjectSearchTerm(e.target.value)}
+                                />
+
+                                {/* Select danh sách môn đã lọc */}
                                 <select
                                     className="form-control"
                                     value={selectedSubject || ""}
                                     onChange={(e) => setSelectedSubject(e.target.value)}
                                 >
                                     <option value="">-- Chọn môn học --</option>
-                                    {availableSubjects.map((subject) => (
-                                        <option key={subject.id} value={subject.id}>
-                                            {subject.subjectCode} - {subject.subjectName}
+                                    {filteredSubjectsForModal.length === 0 ? (
+                                        <option value="" disabled>
+                                            Không tìm thấy môn học phù hợp
                                         </option>
-                                    ))}
+                                    ) : (
+                                        filteredSubjectsForModal.map((subject) => (
+                                            <option key={subject.id} value={subject.id}>
+                                                {subject.subjectCode} - {subject.subjectName}
+                                            </option>
+                                        ))
+                                    )}
                                 </select>
                             </div>
 
@@ -546,7 +575,7 @@ const TeacherSubjectRegistration = () => {
                                     className="btn btn-secondary"
                                     onClick={() => {
                                         setShowRegisterModal(false);
-                                        setSelectedSubject(null);
+                                        setSelectedSubject("");
                                     }}
                                 >
                                     Hủy
@@ -556,11 +585,7 @@ const TeacherSubjectRegistration = () => {
                                     onClick={() =>
                                         selectedSubject &&
                                         registerQuarter &&
-                                        handleRegister(
-                                            selectedSubject,
-                                            registerYear,
-                                            registerQuarter
-                                        )
+                                        handleRegister(selectedSubject, registerYear, registerQuarter)
                                     }
                                     disabled={!selectedSubject || !registerQuarter}
                                 >

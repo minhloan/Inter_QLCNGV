@@ -49,12 +49,12 @@ export const getAllSubjects = async () => {
     return response.data;
 };
 
-export const searchSubjects = async (keyword, system, isActive) => {
+export const searchSubjects = async ({ keyword = "", system, isActive } = {}) => {
     const response = await api.get("/search", {
         params: {
             keyword,
             system,
-            isActive
+            isActive,
         },
     });
     return response.data;

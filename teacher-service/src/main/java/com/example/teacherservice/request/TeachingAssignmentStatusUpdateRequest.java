@@ -8,5 +8,5 @@ import lombok.Setter;
 @Setter
 public class TeachingAssignmentStatusUpdateRequest {
     private AssignmentStatus status;
-    private String failureReason; // dùng khi NOT_COMPLETED/FAILED
+    private String failureReason;
 }

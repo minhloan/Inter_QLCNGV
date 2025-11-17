@@ -1,20 +1,18 @@
 package com.example.teacherservice.model;
 
-
-import com.example.teacherservice.enums.DayOfWeek;
 import com.example.teacherservice.enums.Quarter;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "schedule_classes", indexes = {
-    @Index(name = "idx_class_code", columnList = "class_code"),
-    @Index(name = "idx_subject_id", columnList = "subject_id"),
-    @Index(name = "idx_year_quarter", columnList = "year,quarter")
+        @Index(name = "idx_class_code", columnList = "class_code"),
+        @Index(name = "idx_subject_id", columnList = "subject_id"),
+        @Index(name = "idx_year_quarter", columnList = "year,quarter")
 })
-
 @Getter
 @Setter
 @Builder
@@ -36,41 +34,17 @@ public class ScheduleClass extends BaseEntity {
     @Column(name = "quarter", nullable = false)
     private Quarter quarter;       // QUY1, QUY2...
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "day_of_week_1")
-    private DayOfWeek dayOfWeek1;
-
-    @Column(name = "start_time_1")
-    private LocalTime startTime1;
-
-    @Column(name = "end_time_1")
-    private LocalTime endTime1;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "day_of_week_2")
-    private DayOfWeek dayOfWeek2;
-
-    @Column(name = "start_time_2")
-    private LocalTime startTime2;
-
-    @Column(name = "end_time_2")
-    private LocalTime endTime2;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "day_of_week_3")
-    private DayOfWeek dayOfWeek3;
-
-    @Column(name = "start_time_3")
-    private LocalTime startTime3;
-
-    @Column(name = "end_time_3")
-    private LocalTime endTime3;
-
     @Column(name = "location", length = 100)
     private String location;  // phòng học
 
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-
+    // nhiều buổi học
+    @OneToMany(
+            mappedBy = "scheduleClass",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<ScheduleSlot> slots = new ArrayList<>();
 }

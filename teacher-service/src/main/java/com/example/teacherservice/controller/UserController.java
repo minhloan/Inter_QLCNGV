@@ -22,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/v1/teacher/user")
 @RequiredArgsConstructor
@@ -30,6 +32,19 @@ public class UserController {
     private final ModelMapper modelMapper;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+
+    @GetMapping("/searchFullNameByTeaching")
+    public ResponseEntity<List<InformationDto>> searchFullNameByTeaching(
+            @RequestParam(required = false) String keyword) {
+
+        List<User> users = userService.searchUsers(keyword);
+
+        List<InformationDto> result = users.stream()
+                .map(user -> modelMapper.map(user, InformationDto.class))
+                .toList();
+
+        return ResponseEntity.ok(result);
+    }
 
     @GetMapping("/information")
     ResponseEntity<UserInformationDto> getInformation(HttpServletRequest request){
@@ -55,6 +70,8 @@ public class UserController {
                 .map(user -> userService.convertUserToInformationDto(user));
         return ResponseEntity.ok(users);
     }
+
+
 
     @PostMapping("/save")
     public ResponseEntity<UserDto> save(@Valid @RequestBody RegisterRequest request) {

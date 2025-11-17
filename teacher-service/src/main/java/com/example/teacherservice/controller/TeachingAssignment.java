@@ -54,6 +54,12 @@ public class TeachingAssignment {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<TeachingAssignmentDetailResponse> getDetail(@PathVariable String id) {
+        TeachingAssignmentDetailResponse response = teachingAssignmentService.getById(id);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     public ResponseEntity<List<TeachingAssignmentListItemResponse>> getAllAssignments() {
         return ResponseEntity.ok(

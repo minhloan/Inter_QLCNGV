@@ -37,6 +37,14 @@ import java.util.Set;
 public class UserServiceImpl implements UserService {
 
     @Override
+    public List<User> searchUsers(String keyword) {
+        if (keyword != null && !keyword.isBlank()) {
+            return userRepository.searchByKeyword(keyword.trim());
+        }
+        return userRepository.findAll();
+    }
+
+    @Override
     public Page<User> getAllUsers(Integer pageNo, Integer pageSize) {
         Pageable pageable = PageRequest.of(pageNo - 1, pageSize);
         List<User> fullList = userRepository.findAll();

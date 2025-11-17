@@ -4,9 +4,8 @@ import MainLayout from "../../components/Layout/MainLayout";
 import Toast from "../../components/Common/Toast";
 import Loading from "../../components/Common/Loading";
 
-// API
-import { getAllUsers } from "../../api/user";
-import { listAllSubjects as getAllSubjects } from "../../api/subject";
+import { searchUsersByTeaching } from "../../api/user";
+import { searchSubjects } from "../../api/subject";
 import { createTeachingAssignment } from "../../api/teaching-assignments";
 
 const dayOfWeekOptions = [
@@ -33,34 +32,36 @@ const TeachingAssignmentAdd = () => {
     const [teachers, setTeachers] = useState([]);
     const [subjects, setSubjects] = useState([]);
 
+    // keyword search
+    const [teacherKeyword, setTeacherKeyword] = useState("");
+    const [subjectKeyword, setSubjectKeyword] = useState("");
+
     const [form, setForm] = useState({
         teacherId: "",
         subjectId: "",
         classCode: "",
         year: "",
-        quarter: "", // 1..4
+        quarter: "",
         location: "",
         notes: "",
     });
 
-    // 3 buổi học tối đa
+    // Dynamic slots (bắt đầu 1 buổi)
     const [slots, setSlots] = useState([
-        { dayOfWeek: "", startTime: "", endTime: "" },
-        { dayOfWeek: "", startTime: "", endTime: "" },
         { dayOfWeek: "", startTime: "", endTime: "" },
     ]);
 
     useEffect(() => {
-        loadTeachers();
-        loadSubjects();
+        // load lần đầu: không filter keyword
+        loadTeachers("");
+        loadSubjects("");
     }, []);
 
     // ========== LOAD DATA ==========
-    const loadTeachers = async () => {
+    const loadTeachers = async (keyword = "") => {
         try {
             setLoading(true);
-            // /getAllUsers trả về Page<InformationDto>
-            const res = await getAllUsers(1, 200);
+            const res = await searchUsersByTeaching(keyword);
             const list = Array.isArray(res) ? res : res?.content || [];
             setTeachers(list);
         } catch (err) {
@@ -71,10 +72,13 @@ const TeachingAssignmentAdd = () => {
         }
     };
 
-    const loadSubjects = async () => {
+    const loadSubjects = async (keyword = "") => {
         try {
             setLoading(true);
-            const res = await getAllSubjects();
+            const res = await searchSubjects({
+                keyword,
+                isActive: true, // nếu muốn chỉ lấy môn đang active
+            });
             const list = Array.isArray(res) ? res : [];
             setSubjects(list);
         } catch (err) {
@@ -104,6 +108,17 @@ const TeachingAssignmentAdd = () => {
         });
     };
 
+    const handleAddSlot = () => {
+        setSlots((prev) => [
+            ...prev,
+            { dayOfWeek: "", startTime: "", endTime: "" },
+        ]);
+    };
+
+    const handleRemoveSlot = (index) => {
+        setSlots((prev) => prev.filter((_, i) => i !== index));
+    };
+
     // ========== VALIDATE & SUBMIT ==========
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -115,19 +130,13 @@ const TeachingAssignmentAdd = () => {
             !form.year ||
             !form.quarter
         ) {
-            showToast(
-                "Thông báo",
-                "Vui lòng điền đầy đủ các trường bắt buộc",
-                "danger"
-            );
+            showToast("Thông báo", "Vui lòng điền đầy đủ các trường bắt buộc", "danger");
             return;
         }
 
-        // Build slots payload: chỉ lấy những slot đủ dayOfWeek + startTime + endTime
+        // Build slots payload
         const slotsPayload = slots
-            .filter(
-                (s) => s.dayOfWeek && s.startTime && s.endTime
-            )
+            .filter((s) => s.dayOfWeek && s.startTime && s.endTime)
             .map((s) => ({
                 dayOfWeek: Number(s.dayOfWeek),
                 startTime: s.startTime, // "HH:mm"
@@ -161,7 +170,7 @@ const TeachingAssignmentAdd = () => {
             subjectId: form.subjectId,
             classCode: form.classCode.trim(),
             year: yearNumber,
-            quarter: quarterNumber, // 1..4 → BE convertQuarter(...)
+            quarter: quarterNumber,
             location: form.location || "",
             notes: form.notes || "",
             slots: slotsPayload,
@@ -171,7 +180,6 @@ const TeachingAssignmentAdd = () => {
             setLoading(true);
             const res = await createTeachingAssignment(payload);
 
-            // res = TeachingAssignmentDetailResponse
             if (res.status === "FAILED") {
                 showToast(
                     "Phân công thất bại",
@@ -235,6 +243,56 @@ const TeachingAssignmentAdd = () => {
                     <div style={{ ...cardStyle, padding: 28 }}>
                         <form onSubmit={handleSubmit}>
                             <div className="row gx-4">
+                                {/* SEARCH GIÁO VIÊN */}
+                                <div className="col-md-6 mb-3">
+                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                        Tìm giáo viên
+                                    </label>
+                                    <div className="input-group">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Nhập tên, email, mã giáo viên..."
+                                            value={teacherKeyword}
+                                            onChange={(e) => setTeacherKeyword(e.target.value)}
+                                            style={{ ...inputRadius }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => loadTeachers(teacherKeyword)}
+                                            style={{ borderRadius: 10, marginLeft: 8 }}
+                                        >
+                                            <i className="bi bi-search"></i> Tìm
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* SEARCH MÔN HỌC */}
+                                <div className="col-md-6 mb-3">
+                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                        Tìm môn học
+                                    </label>
+                                    <div className="input-group">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Nhập tên hoặc mã môn học..."
+                                            value={subjectKeyword}
+                                            onChange={(e) => setSubjectKeyword(e.target.value)}
+                                            style={{ ...inputRadius }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => loadSubjects(subjectKeyword)}
+                                            style={{ borderRadius: 10, marginLeft: 8 }}
+                                        >
+                                            <i className="bi bi-search"></i> Tìm
+                                        </button>
+                                    </div>
+                                </div>
+
                                 {/* Giáo viên */}
                                 <div className="col-md-6 mb-3">
                                     <label style={{ fontSize: 14, fontWeight: 600 }}>
@@ -382,10 +440,18 @@ const TeachingAssignmentAdd = () => {
                                 </div>
 
                                 {/* BUỔI HỌC */}
-                                <div className="col-12 mb-2">
+                                <div className="col-12 mb-2 d-flex justify-content-between align-items-center">
                                     <h5 style={{ fontWeight: 700, marginBottom: 12 }}>
-                                        Buổi học (tối đa 3)
+                                        Buổi học
                                     </h5>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary btn-sm"
+                                        onClick={handleAddSlot}
+                                        style={{ borderRadius: 10 }}
+                                    >
+                                        <i className="bi bi-plus-circle me-1"></i> Thêm buổi học
+                                    </button>
                                 </div>
 
                                 {slots.map((slot, index) => (
@@ -438,10 +504,20 @@ const TeachingAssignmentAdd = () => {
                                                     style={{ ...inputRadius }}
                                                 />
                                             </div>
-                                            <div className="col-md-2 mb-2">
-                                                <small className="text-muted">
+                                            <div className="col-md-2 mb-2 d-flex flex-column">
+                                                <small className="text-muted mb-1">
                                                     Chỉ tính nếu chọn đủ Thứ + giờ
                                                 </small>
+                                                {slots.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline-danger btn-sm"
+                                                        onClick={() => handleRemoveSlot(index)}
+                                                        style={{ borderRadius: 10 }}
+                                                    >
+                                                        <i className="bi bi-trash"></i>
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

@@ -1,10 +1,7 @@
 package com.example.teacherservice.service.teachingassignmentserivce;
 
 import com.example.teacherservice.enums.*;
-import com.example.teacherservice.model.ScheduleClass;
-import com.example.teacherservice.model.Subject;
-import com.example.teacherservice.model.TeachingAssignment;
-import com.example.teacherservice.model.User;
+import com.example.teacherservice.model.*;
 import com.example.teacherservice.repository.*;
 import com.example.teacherservice.request.ScheduleSlotRequest;
 import com.example.teacherservice.request.TeachingAssignmentCreateRequest;
@@ -20,9 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,13 +29,11 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     private final ScheduleClassRepository scheduleClassRepository;
     private final SubjectRegistrationRepository subjectRegistrationRepository;
     private final AptechExamRepository aptechExamRepository;
-    private final TrialEvaluationRepository trialEvaluationRepository; // chưa dùng nhưng cứ để
+    private final TrialEvaluationRepository trialEvaluationRepository;
     private final EvidenceRepository evidenceRepository;
     private final NotificationService notificationService;
     private final SubjectRepository subjectRepository;
     private final ModelMapper modelMapper;
-
-    // ===================== ELIGIBILITY =====================
 
     @Override
     public TeachingEligibilityResponse checkEligibility(String teacherId, String subjectId) {
@@ -73,21 +66,29 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
                 .build();
     }
 
-    // ===================== CREATE ASSIGNMENT =====================
+    @Override
+    public TeachingAssignmentDetailResponse getById(String id) {
+        TeachingAssignment assignment = teachingAssignmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Phân công giảng dạy không tồn tại"));
+
+        return toDetailResponse(assignment);
+    }
+
+    // CREATE ASSIGNMENT
 
     @Override
     public TeachingAssignmentDetailResponse createAssignment(TeachingAssignmentCreateRequest request,
                                                              String assignedByUserId) {
-
         // 1. Lấy teacher
         User teacher = userRepository.findById(request.getTeacherId())
                 .orElseThrow(() -> new IllegalArgumentException("Giáo viên không tồn tại"));
+        System.out.println("Teacher" +  teacher.getId());
 
         // 2. Lấy subject
         Subject subject = subjectRepository.findById(request.getSubjectId())
                 .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại"));
 
-        // 3. Tạo ScheduleClass từ request (FE truyền classCode + year + quarter + slots)
+        // 3. Tạo ScheduleClass từ request
         ScheduleClass sc = new ScheduleClass();
         sc.setClassCode(request.getClassCode());
         sc.setSubject(subject);
@@ -96,7 +97,11 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         sc.setLocation(request.getLocation());
         sc.setNotes(request.getNotes());
 
-        applySlotsToScheduleClass(sc, request.getSlots());
+        // 3.1. Tạo list slots từ request
+        List<ScheduleSlot> slotEntities = buildSlotsFromRequest(sc, request.getSlots());
+        sc.setSlots(slotEntities);
+
+        // lưu class + slots
         sc = scheduleClassRepository.save(sc);
 
         // 4. Người phân công
@@ -105,6 +110,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
             assignedBy = userRepository.findById(assignedByUserId)
                     .orElseThrow(() -> new IllegalArgumentException("Người phân công không tồn tại"));
         }
+        System.out.println("Manage" + assignedByUserId);
 
         // 5. Check eligibility
         String subjectId = subject.getId();
@@ -120,12 +126,10 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
 
         TeachingAssignment assignment;
         if (eligibilityResponse.isEligible()) {
-            // Đủ điều kiện
             assignment = builder
                     .status(AssignmentStatus.ASSIGNED)
                     .build();
         } else {
-            // Không đủ điều kiện
             String reason = String.join("\n", eligibilityResponse.getMissingConditions());
             assignment = builder
                     .status(AssignmentStatus.FAILED)
@@ -146,41 +150,27 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     }
 
     /**
-     * Nhận list slots từ FE, gán vào 3 slot (day/time) của ScheduleClass
+     * Nhận list slots từ FE, tạo list ScheduleSlot
      */
-    private void applySlotsToScheduleClass(ScheduleClass sc, List<ScheduleSlotRequest> slots) {
-        if (slots == null || slots.isEmpty()) return;
+    private List<ScheduleSlot> buildSlotsFromRequest(ScheduleClass sc, List<ScheduleSlotRequest> slots) {
+        if (slots == null) return Collections.emptyList();
 
-        int index = 0;
-        for (ScheduleSlotRequest s : slots) {
-            if (s.getDayOfWeek() == null || s.getStartTime() == null || s.getEndTime() == null) {
-                continue;
-            }
-
-            DayOfWeek dayEnum = dayOfWeekFromNumber(s.getDayOfWeek());
-            LocalTime start = LocalTime.parse(s.getStartTime());
-            LocalTime end   = LocalTime.parse(s.getEndTime());
-
-            if (index == 0) {
-                sc.setDayOfWeek1(dayEnum);
-                sc.setStartTime1(start);
-                sc.setEndTime1(end);
-            } else if (index == 1) {
-                sc.setDayOfWeek2(dayEnum);
-                sc.setStartTime2(start);
-                sc.setEndTime2(end);
-            } else if (index == 2) {
-                sc.setDayOfWeek3(dayEnum);
-                sc.setStartTime3(start);
-                sc.setEndTime3(end);
-            } else {
-                break; // chỉ hỗ trợ 3 slot
-            }
-            index++;
-        }
+        return slots.stream()
+                .filter(s -> s.getDayOfWeek() != null
+                        && s.getStartTime() != null
+                        && s.getEndTime() != null)
+                .map(s -> {
+                    ScheduleSlot slot = new ScheduleSlot();
+                    slot.setScheduleClass(sc);
+                    slot.setDayOfWeek(dayOfWeekFromNumber(s.getDayOfWeek()));
+                    slot.setStartTime(LocalTime.parse(s.getStartTime())); // "HH:mm"
+                    slot.setEndTime(LocalTime.parse(s.getEndTime()));
+                    return slot;
+                })
+                .collect(Collectors.toList());
     }
 
-    // ===================== UPDATE STATUS =====================
+    // UPDATE STATUS
 
     @Override
     public TeachingAssignmentDetailResponse updateStatus(
@@ -294,7 +284,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         return toDetailResponse(saved);
     }
 
-    // ===================== LIST / SEARCH =====================
+    // LIST / SEARCH
 
     @Override
     public List<TeachingAssignmentListItemResponse> getAllAssignments() {
@@ -306,15 +296,15 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
 
     @Override
     public Page<TeachingAssignmentListItemResponse> getAllAssignments(Integer page, Integer size) {
-        return null; // TODO: nếu sau này cần phân trang
+        return null;
     }
 
     @Override
     public Page<TeachingAssignmentListItemResponse> searchAssignments(String keyword, Integer page, Integer size) {
-        return null; // TODO: nếu sau này cần search
+        return null;
     }
 
-    // ===================== MAPPING DTO =====================
+    //  MAPPING DTO
 
     private TeachingAssignmentListItemResponse toListItemResponse(TeachingAssignment a) {
         ScheduleClass c = a.getScheduleClass();
@@ -361,8 +351,6 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         return dto;
     }
 
-    // ===================== HELPERS =====================
-
     private String buildQuarterLabel(ScheduleClass c) {
         int qNumber = switch (c.getQuarter()) {
             case QUY1 -> 1;
@@ -374,35 +362,18 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     }
 
     /**
-     * Ví dụ: "Thứ 2 (09:00-11:00), Thứ 4 (09:00-11:00), Thứ 6 (14:00-16:00)"
+     * Ví dụ: "Thứ 2 (09:00-11:00), Thứ 2 (14:00-16:00), Thứ 4 (09:00-11:00)"
      */
     private String buildScheduleText(ScheduleClass c) {
-        StringBuilder sb = new StringBuilder();
+        if (c.getSlots() == null || c.getSlots().isEmpty()) return "";
 
-        appendSlot(sb, c.getDayOfWeek1(), c.getStartTime1(), c.getEndTime1());
-        appendSlot(sb, c.getDayOfWeek2(), c.getStartTime2(), c.getEndTime2());
-        appendSlot(sb, c.getDayOfWeek3(), c.getStartTime3(), c.getEndTime3());
-
-        return sb.toString();
-    }
-
-    private void appendSlot(StringBuilder sb,
-                            DayOfWeek day,
-                            LocalTime start,
-                            LocalTime end) {
-        if (day == null || start == null || end == null) {
-            return;
-        }
-        if (!sb.isEmpty()) {
-            sb.append(", ");
-        }
-        sb.append("Thứ ")
-                .append(day.getDayNumber())
-                .append(" (")
-                .append(start)
-                .append("-")
-                .append(end)
-                .append(")");
+        return c.getSlots().stream()
+                .sorted(Comparator
+                        .comparing((ScheduleSlot s) -> s.getDayOfWeek().getDayNumber())
+                        .thenComparing(ScheduleSlot::getStartTime))
+                .map(s -> "Thứ " + s.getDayOfWeek().getDayNumber()
+                        + " (" + s.getStartTime() + "-" + s.getEndTime() + ")")
+                .collect(Collectors.joining(", "));
     }
 
     private Quarter convertQuarter(Integer q) {
@@ -436,7 +407,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
 
         String subjectName = scheduleClass.getSubject().getSubjectName();
         String classCode = scheduleClass.getClassCode();
-        String hocKy = buildQuarterLabel(scheduleClass); // "2025-1"
+        String hocKy = buildQuarterLabel(scheduleClass);
 
         String title = "Phân công giảng dạy thất bại";
 

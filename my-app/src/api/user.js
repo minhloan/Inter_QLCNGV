@@ -16,6 +16,13 @@ export const getAllUsers = async (pageNo = 1, pageSize = 10) => {
   return response.data;
 };
 
+export const searchUsersByTeaching = async (keyword = "") => {
+    const response = await api.get("/searchFullNameByTeaching", {
+        params: { keyword },
+    });
+    return response.data;
+};
+
 export const searchUsers = async (keyword, pageNo = 1, pageSize = 10) => {
   const response = await api.get("/search", {
     params: { keyword, pageNo, pageSize }

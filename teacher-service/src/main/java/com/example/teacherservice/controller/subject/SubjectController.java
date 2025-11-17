@@ -20,12 +20,6 @@ import java.util.List;
 public class SubjectController {
     private final SubjectService subjectService;
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<Subject>> getAllSubject() {
-        List<Subject> subjects = subjectService.getAllSubjects();
-        return ResponseEntity.ok(subjects);
-    }
-
     @GetMapping("/search")
     public ResponseEntity<List<Subject>> searchSubjects(
             @RequestParam(required = false) String keyword,
@@ -33,6 +27,12 @@ public class SubjectController {
             @RequestParam(required = false) Boolean isActive
     ) {
         List<Subject> subjects = subjectService.searchSubjects(keyword, system, isActive);
+        return ResponseEntity.ok(subjects);
+    }
+
+    @GetMapping("/getAll")
+    public ResponseEntity<List<Subject>> getAllSubject() {
+        List<Subject> subjects = subjectService.getAllSubjects();
         return ResponseEntity.ok(subjects);
     }
 
@@ -61,7 +61,7 @@ public class SubjectController {
     }
 
     @GetMapping
-    public List<com.example.teacherservice.dto.subject.SubjectDto> getAllSubjects() {
+    public List<SubjectDto> getAllSubjects() {
         return subjectService.getAll();
     }
 

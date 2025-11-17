@@ -23,4 +23,5 @@ public interface TeachingAssignmentService {
     List<TeachingAssignmentListItemResponse> getAllAssignments();
     Page<TeachingAssignmentListItemResponse> getAllAssignments(Integer page, Integer size);
     Page<TeachingAssignmentListItemResponse> searchAssignments(String keyword, Integer page, Integer size);
+    TeachingAssignmentDetailResponse getById(String id);
 }
