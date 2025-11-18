@@ -7,7 +7,7 @@ spring:
   cloud:
     gateway:
       default-filters:
-        - AddRequestHeader=X-Internal-Call, true 
+        - AddRequestHeader=X-Internal-Call, true
       forwarded-headers:
         enabled: true
       server:
@@ -20,18 +20,22 @@ spring:
             response-timeout: 60s
       globalcors:
         corsConfigurations:
-          '[/**]':
+          # CORS for REST API routes
+          '[/v1/**]':
             allowedOrigins:
-              - http://localhost:5173
+              - http://localhost:5173                    # Development
+              - http://shopee-fake.id.vn                  # Production Domain
+              - http://www.shopee-fake.id.vn              # Production Domain (www)
             allowedMethods:
               - GET
               - POST
               - PUT
               - DELETE
               - OPTIONS
-              - PATCH
             allowedHeaders: "*"
             exposedHeaders:
               - Authorization
-              - Content-Type
             allowCredentials: true
+          # CORS for WebSocket endpoints is handled by teacher-service
+          # Gateway should NOT add CORS headers for /ws/** to avoid duplicate headers
+          # Teacher-service's WebSocketConfig will handle CORS for WebSocket handshake

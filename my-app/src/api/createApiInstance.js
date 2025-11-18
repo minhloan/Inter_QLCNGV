@@ -20,6 +20,7 @@ const createApiInstance = (baseURL) => {
         "/v1/teacher/auth/refresh",
         "/v1/teacher/auth/logout",
         "/eureka",
+        "/ws"
     ];
 
     const isTokenExpiredOrExpiringSoon = (token) => {

@@ -1498,6 +1498,7 @@ body {
 .main-content:has(.page-admin-evidence),
 .main-content:has(.page-admin-manage-teacher),
 .main-content:has(.page-admin-add-teacher),
+.main-content:has(.page-admin-teaching-assignment-detail),
 .main-content:has(.page-admin-subject),
 .main-content:has(.page-admin-add-subject),
 .main-content:has(.page-admin-audit-log) {
@@ -1509,6 +1510,7 @@ body {
 .main-content:has(.page-admin-aptech-exam) .content-header,
 .main-content:has(.page-admin-evidence) .content-header,
 .main-content:has(.page-admin-add-teacher) .content-header,
+.main-content:has(.page-admin-teaching-assignment-detail) .content-header,
 .main-content:has(.page-admin-subject) .content-header,
 .main-content:has(.page-admin-add-subject) .content-header,
 .main-content:has(.page-admin-audit-log) .content-header {
@@ -1521,6 +1523,10 @@ body {
 .main-content:has(.page-teacher-aptech-exam),
 .main-content:has(.page-teacher-evidence),
 .main-content:has(.page-teacher-teaching-assignment) {
+    padding-top: 12px;
+}
+
+.main-content:has(.edit-profile-container) {
     padding-top: 12px;
 }
 
@@ -1539,6 +1545,7 @@ body {
     .main-content:has(.page-admin-evidence),
     .main-content:has(.page-admin-manage-teacher),
     .main-content:has(.page-admin-add-teacher),
+.main-content:has(.page-admin-teaching-assignment-detail),
     .main-content:has(.page-admin-subject),
     .main-content:has(.page-admin-add-subject),
     .main-content:has(.page-admin-audit-log),
@@ -1546,7 +1553,8 @@ body {
     .main-content:has(.page-teacher-subject-registration),
     .main-content:has(.page-teacher-aptech-exam),
     .main-content:has(.page-teacher-evidence),
-    .main-content:has(.page-teacher-teaching-assignment) {
+    .main-content:has(.page-teacher-teaching-assignment),
+    .main-content:has(.edit-profile-container) {
         padding-top: 50px;
     }
 
@@ -1555,6 +1563,7 @@ body {
     .main-content:has(.page-admin-aptech-exam) .content-header,
     .main-content:has(.page-admin-evidence) .content-header,
     .main-content:has(.page-admin-add-teacher) .content-header,
+.main-content:has(.page-admin-teaching-assignment-detail) .content-header,
     .main-content:has(.page-admin-subject) .content-header,
     .main-content:has(.page-admin-add-subject) .content-header,
     .main-content:has(.page-admin-audit-log) .content-header,
@@ -1562,7 +1571,8 @@ body {
     .main-content:has(.page-teacher-subject-registration) .content-header,
     .main-content:has(.page-teacher-aptech-exam) .content-header,
     .main-content:has(.page-teacher-evidence) .content-header,
-    .main-content:has(.page-teacher-teaching-assignment) .content-header {
+    .main-content:has(.page-teacher-teaching-assignment) .content-header,
+    .main-content:has(.edit-profile-container) .edit-profile-header {
         margin-bottom: 12px;
     }
 }
@@ -1662,6 +1672,21 @@ body {
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
+}
+
+.page-align-with-form {
+    --page-section-width: 1200px;
+}
+
+.page-align-with-form .content-header {
+    width: 100%;
+    max-width: var(--page-section-width, 900px);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.page-align-with-form .form-container {
+    max-width: var(--page-section-width, 900px);
 }
 
 .form-container .row {
@@ -1846,6 +1871,7 @@ body {
 .action-buttons .btn {
     margin: 0;
 }
+
 
 /* Table Styles */
 .table-container {
@@ -2077,6 +2103,109 @@ body {
         width: 100%;
         white-space: normal;
     }
+
+}
+
+.page-admin-teaching-assignment-detail {
+    width: 100%;
+}
+
+.page-admin-teaching-assignment-detail .content-header {
+    gap: 16px;
+}
+
+.page-admin-teaching-assignment-detail .status-wrapper {
+    margin-top: 6px;
+}
+
+.detail-card-grid {
+    display: grid;
+    gap: 20px;
+    margin: 0 auto;
+    max-width: var(--page-section-width, 960px);
+}
+
+
+
+.detail-card {
+    background: var(--bg-white);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.detail-card-wide {
+    grid-column: 1 / -1;
+}
+
+.detail-section-header h5 {
+    margin: 0 0 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dark);
+}
+
+.detail-section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-row .label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.muted-box {
+    background: #f8f9fb;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 70px;
+}
+
+.note-box {
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 96px;
+    white-space: pre-wrap;
+}
+
+.note-box.danger {
+    border-color: #f5c6cb;
+    background: #fdf2f2;
+    color: #c0392b;
+}
+
+.timeline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.timeline-grid .label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+    .detail-card {
+        padding: 18px;
+    }
+
+    .info-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 /* Badge Styles */
@@ -2086,6 +2215,47 @@ body {
     font-size: 12px;
     font-weight: 500;
     display: inline-block;
+    line-height: 1.2;
+}
+
+.badge-status {
+    font-weight: 600;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-status.success,
+.badge-status.completed {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.badge-status.danger,
+.badge-status.failed,
+.badge-status.error {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.badge-status.warning,
+.badge-status.pending,
+.badge-status.review {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.badge-status.info,
+.badge-status.assigned {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+
+.badge-status.secondary,
+.badge-status.default {
+    background-color: #e2e3e5;
+    color: #41464b;
 }
 
 .badge-status.active {
@@ -2096,6 +2266,10 @@ body {
 .badge-status.inactive {
     background-color: #f8d7da;
     color: #842029;
+}
+
+.badge-status .small-dot {
+    font-size: 8px;
 }
 
 .badge-success {

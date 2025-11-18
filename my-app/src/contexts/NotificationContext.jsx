@@ -6,6 +6,7 @@ import {
   deleteNotification as deleteNotificationApi
 } from '../api/notification';
 import { formatTime } from '../data/notifications';
+import { connectWebSocket, disconnectWebSocket } from '../api/websocket';
 
 import { useAuth } from './AuthContext.jsx';
 
@@ -105,24 +106,71 @@ export const NotificationProvider = ({ children }) => {
     [setWithEnrichment]
   );
 
+  // Kết nối WebSocket và lắng nghe notifications
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Ngắt kết nối WebSocket nếu user đã logout
+      disconnectWebSocket();
+      setWithEnrichment([]);
+      setError(null);
+      return;
+    }
+
+    // Kết nối WebSocket
+    const handleNotification = (notificationPayload) => {
+      // console.log('[NotificationContext] Received new notification via WebSocket:', notificationPayload);
+      
+      // Chuyển đổi payload từ backend sang format frontend
+      const newNotification = {
+        id: notificationPayload.id,
+        title: notificationPayload.title,
+        message: notificationPayload.message,
+        type: notificationPayload.type || 'info',
+        relatedEntity: notificationPayload.relatedEntity,
+        relatedId: notificationPayload.relatedId,
+        createdAt: notificationPayload.createdAt,
+        isRead: false
+      };
+
+      // Thêm notification mới vào đầu danh sách
+      setWithEnrichment((prev) => {
+        // Kiểm tra xem notification đã tồn tại chưa
+        const exists = prev.some(n => n.id === newNotification.id);
+        if (exists) {
+          return prev;
+        }
+        return [newNotification, ...prev];
+      });
+    };
+
+    const handleError = (error) => {
+      console.error('[NotificationContext] WebSocket error:', error);
+      setError('Lỗi kết nối thông báo thời gian thực. Đang thử kết nối lại...');
+    };
+
+    const handleConnect = () => {
+      console.log('[NotificationContext] WebSocket connected');
+      setError(null);
+    };
+
+    // Kết nối WebSocket (async)
+    connectWebSocket(handleNotification, handleError, handleConnect).catch(err => {
+      console.error('[NotificationContext] Failed to connect WebSocket:', err);
+      setError('Lỗi kết nối thông báo thời gian thực.');
+    });
+
+    // Cleanup: ngắt kết nối khi component unmount hoặc user logout
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [isAuthenticated, setWithEnrichment]);
+
+  // Load notifications ban đầu khi authenticated
   useEffect(() => {
     if (isAuthenticated) {
       refreshNotifications();
-    } else {
-      setWithEnrichment([]);
-      setError(null);
     }
-  }, [refreshNotifications, isAuthenticated, setWithEnrichment]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const interval = setInterval(() => {
-        setWithEnrichment((prev) => prev);
-      }, 60000);
-
-      return () => clearInterval(interval);
-    }
-  }, [setWithEnrichment, isAuthenticated]);
+  }, [refreshNotifications, isAuthenticated]);
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,

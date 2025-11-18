@@ -20,6 +20,7 @@ const dayOfWeekOptions = [
 
 const TeachingAssignmentAdd = () => {
     const navigate = useNavigate();
+    const formSectionWidth = "1200px";
 
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({
@@ -215,34 +216,27 @@ const TeachingAssignmentAdd = () => {
 
     return (
         <MainLayout>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 18 }}>
-                <button
-                    onClick={() => navigate(-1)}
-                    style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "50%",
-                        border: "none",
-                        background: "#fff",
-                        boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-                        cursor: "pointer",
-                        marginRight: 18,
-                    }}
-                    aria-label="back"
-                >
-                    <i className="bi bi-arrow-left" style={{ fontSize: 18 }} />
-                </button>
+            <div
+                className="page-admin-add-teacher page-align-with-form"
+                style={{ "--page-section-width": formSectionWidth }}
+            >
+                <div className="content-header">
+                    <div className="content-title">
+                        <button
+                            className="back-button"
+                            onClick={() => navigate("/teaching-assignment-management")}
+                            aria-label="back"
+                        >
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h1 className="page-title">Tạo Phân Công Giảng Dạy</h1>
+                    </div>
+                </div>
 
-                <h1 style={{ fontSize: 40, margin: 0, fontWeight: 700 }}>
-                    Tạo phân công giảng dạy
-                </h1>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "center" }}>
-                <div style={{ width: "100%", maxWidth: 980 }}>
+                <div className="form-container">
                     <div style={{ ...cardStyle, padding: 28 }}>
-                        <form onSubmit={handleSubmit}>
-                            <div className="row gx-4">
+                        <form onSubmit={handleSubmit} noValidate>
+                            <div className="row gy-4">
                                 {/* SEARCH GIÁO VIÊN */}
                                 <div className="col-md-6 mb-3">
                                     <label style={{ fontSize: 14, fontWeight: 600 }}>

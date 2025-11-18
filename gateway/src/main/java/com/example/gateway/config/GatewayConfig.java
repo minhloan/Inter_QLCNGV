@@ -17,6 +17,10 @@ public class GatewayConfig {
     @Bean
     public RouteLocator routes(RouteLocatorBuilder builder) {
         return builder.routes()
+                .route("teacher-service-websocket", r -> r
+                        .path("/ws/**")
+                        .filters(f -> f.filter(filter))
+                        .uri("lb://teacher-service"))
                 .route("teacher-service", r -> r.path("/v1/teacher/**")
                         .filters(f -> f.filter(filter))
                         .uri("lb://teacher-service"))

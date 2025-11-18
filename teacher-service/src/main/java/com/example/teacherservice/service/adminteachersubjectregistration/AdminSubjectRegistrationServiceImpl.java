@@ -1,9 +1,11 @@
 package com.example.teacherservice.service.adminteachersubjectregistration;
 
 import com.example.teacherservice.dto.adminteachersubjectregistration.AdminSubjectRegistrationDto;
+import com.example.teacherservice.enums.NotificationType;
 import com.example.teacherservice.enums.RegistrationStatus;
 import com.example.teacherservice.model.SubjectRegistration;
 import com.example.teacherservice.repository.SubjectRegistrationRepository;
+import com.example.teacherservice.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
 public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistrationService {
 
     private final SubjectRegistrationRepository subjectRegistrationRepository;
+    private final NotificationService notificationService;
 
     // ============================================
     // Lấy danh sách đăng ký cho Admin
@@ -36,9 +39,11 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đăng ký"));
 
         reg.setStatus(status);
-        subjectRegistrationRepository.save(reg);
+        SubjectRegistration saved = subjectRegistrationRepository.save(reg);
 
-        return toDto(reg);
+        notifyTeacherStatusUpdate(saved);
+
+        return toDto(saved);
     }
 
     // 👉 HÀM MỚI: lấy chi tiết
@@ -70,6 +75,59 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
         dto.setNotes(reg.getReasonForCarryOver() != null ? reg.getReasonForCarryOver() : "N/A");
 
         return dto;
+    }
+
+    private void notifyTeacherStatusUpdate(SubjectRegistration registration) {
+        if (registration.getTeacher() == null) {
+            return;
+        }
+
+        String subjectLabel = resolveSubjectLabel(registration);
+        String statusMessage = switch (registration.getStatus()) {
+            case COMPLETED -> "được duyệt";
+            case NOT_COMPLETED -> "bị từ chối";
+            default -> "được cập nhật";
+        };
+        String title = switch (registration.getStatus()) {
+            case COMPLETED -> "Đăng ký môn học đã được duyệt";
+            case NOT_COMPLETED -> "Đăng ký môn học bị từ chối";
+            default -> "Đăng ký môn học được cập nhật";
+        };
+
+        StringBuilder messageBuilder = new StringBuilder();
+        messageBuilder.append("Đăng ký");
+        if (subjectLabel != null && !subjectLabel.isBlank()) {
+            messageBuilder.append(" môn ").append(subjectLabel);
+        } else {
+            messageBuilder.append(" môn học");
+        }
+        if (registration.getQuarter() != null) {
+            messageBuilder.append(" học kỳ ").append(registration.getQuarter());
+        }
+        if (registration.getYear() != null) {
+            messageBuilder.append(" năm học ").append(registration.getYear());
+        }
+        messageBuilder.append(" đã ").append(statusMessage).append(".");
+
+        notificationService.createAndSend(
+                registration.getTeacher().getId(),
+                title,
+                messageBuilder.toString().trim(),
+                NotificationType.SUBJECT_NOTIFICATION,
+                "SubjectRegistration",
+                registration.getId()
+        );
+    }
+
+    private String resolveSubjectLabel(SubjectRegistration registration) {
+        if (registration.getSubject() == null) {
+            return null;
+        }
+        if (registration.getSubject().getSubjectName() != null
+                && !registration.getSubject().getSubjectName().isBlank()) {
+            return registration.getSubject().getSubjectName();
+        }
+        return registration.getSubject().getSubjectCode();
     }
 
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/Layout/MainLayout";
 import Toast from "../../components/Common/Toast";
@@ -9,9 +9,9 @@ import { getAllTeachingAssignments } from "../../api/teaching-assignments";
 const TeachingAssignmentManagement = () => {
     const navigate = useNavigate();
     const [assignments, setAssignments] = useState([]);
-    const [filteredAssignments, setFilteredAssignments] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [semesterFilter, setSemesterFilter] = useState("");
@@ -23,62 +23,33 @@ const TeachingAssignmentManagement = () => {
         type: "info",
     });
 
-    useEffect(() => {
-        loadAssignments();
-    }, []);
-
-    useEffect(() => {
-        applyFilters();
-    }, [assignments, searchTerm, statusFilter, semesterFilter]);
-
-    const loadAssignments = async () => {
+    const loadAssignments = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await getAllTeachingAssignments();
-            setAssignments(res || []);
-            setFilteredAssignments(res || []);
+            const res = await getAllTeachingAssignments({
+                page: currentPage - 1,
+                size: pageSize,
+                keyword: searchTerm.trim() || undefined,
+                status: statusFilter || undefined,
+                semester: semesterFilter || undefined,
+            });
+            setAssignments(res?.content || []);
+            setTotalPages(res?.totalPages || 0);
+
+            if (res?.totalPages > 0 && currentPage > res.totalPages) {
+                setCurrentPage(res.totalPages);
+            }
         } catch (error) {
             console.error(error);
             showToast("Lỗi", "Không thể tải danh sách phân công", "danger");
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, pageSize, searchTerm, statusFilter, semesterFilter]);
 
-    const applyFilters = () => {
-        let filtered = [...assignments];
-
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            filtered = filtered.filter((assignment) => {
-                const teacherName = (assignment.teacherName || "").toLowerCase();
-                const teacherCode = (assignment.teacherCode || "").toLowerCase();
-                const subjectName = (assignment.subjectName || "").toLowerCase();
-                const classCode = (assignment.classCode || "").toLowerCase();
-                return (
-                    teacherName.includes(term) ||
-                    teacherCode.includes(term) ||
-                    subjectName.includes(term) ||
-                    classCode.includes(term)
-                );
-            });
-        }
-
-        if (statusFilter) {
-            filtered = filtered.filter(
-                (assignment) => assignment.status === statusFilter
-            );
-        }
-
-        if (semesterFilter) {
-            filtered = filtered.filter(
-                (assignment) => assignment.semester === semesterFilter
-            );
-        }
-
-        setFilteredAssignments(filtered);
-        setCurrentPage(1);
-    };
+    useEffect(() => {
+        loadAssignments();
+    }, [loadAssignments]);
 
     const showToast = (title, message, type) => {
         setToast({ show: true, title, message, type });
@@ -103,12 +74,17 @@ const TeachingAssignmentManagement = () => {
         );
     };
 
-    const totalPages = Math.ceil(filteredAssignments.length / pageSize);
+    const semesterOptions = useMemo(() => {
+        const set = new Set();
+        assignments.forEach((a) => {
+            if (a.semester) {
+                set.add(a.semester);
+            }
+        });
+        return Array.from(set).sort().reverse();
+    }, [assignments]);
+
     const startIndex = (currentPage - 1) * pageSize;
-    const pageAssignments = filteredAssignments.slice(
-        startIndex,
-        startIndex + pageSize
-    );
 
     if (loading) {
         return (
@@ -162,10 +138,11 @@ const TeachingAssignmentManagement = () => {
                                     onChange={(e) => setSemesterFilter(e.target.value)}
                                 >
                                     <option value="">Tất cả</option>
-                                    {/* Nếu muốn dynamic, có thể lấy từ assignments.map(x => x.semester) rồi unique */}
-                                    <option value="2024-1">2024-1</option>
-                                    <option value="2024-2">2024-2</option>
-                                    <option value="2023-2">2023-2</option>
+                                    {semesterOptions.map((sem) => (
+                                        <option key={sem} value={sem}>
+                                            {sem}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="filter-group">
@@ -189,6 +166,7 @@ const TeachingAssignmentManagement = () => {
                                         setSearchTerm("");
                                         setStatusFilter("");
                                         setSemesterFilter("");
+                                        setCurrentPage(1);
                                     }}
                                     style={{ width: "100%" }}
                                 >
@@ -205,20 +183,19 @@ const TeachingAssignmentManagement = () => {
                                 <thead>
                                 <tr>
                                     <th width="5%">#</th>
-                                    <th width="12%">Mã GV</th>
-                                    <th width="18%">Tên Giáo viên</th>
-                                    <th width="20%">Môn học</th>
-                                    <th width="12%">Mã lớp</th>
+                                    <th width="10%">Mã GV</th>
+                                    <th width="20%">Tên Giáo viên</th>
+                                    <th width="25%">Môn học</th>
+                                    <th width="10%">Mã lớp</th>
                                     <th width="10%">Học kỳ</th>
-                                    <th width="10%">Lịch học</th>
-                                    <th width="8%">Trạng thái</th>
-                                    <th width="5%" className="text-center">
+                                    <th width="10%">Trạng thái</th>
+                                    <th width="10%" className="text-center">
                                         Thao tác
                                     </th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {pageAssignments.length === 0 ? (
+                                {assignments.length === 0 ? (
                                     <tr>
                                         <td colSpan="9" className="text-center">
                                             <div className="empty-state">
@@ -228,7 +205,7 @@ const TeachingAssignmentManagement = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    pageAssignments.map((assignment, index) => (
+                                    assignments.map((assignment, index) => (
                                         <tr key={assignment.id} className="fade-in">
                                             <td>{startIndex + index + 1}</td>
                                             <td>
@@ -244,7 +221,6 @@ const TeachingAssignmentManagement = () => {
                           </span>
                                             </td>
                                             <td>{assignment.semester || "N/A"}</td>
-                                            <td>{assignment.schedule || "N/A"}</td>
                                             <td>{getStatusBadge(assignment.status)}</td>
                                             <td className="text-center">
                                                 <div className="action-buttons">

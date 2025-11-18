@@ -24,6 +24,13 @@ public class JwtAuthenticationFilter implements GatewayFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+        String path = request.getURI().getPath();
+        String method = request.getMethod() != null ? request.getMethod().name() : "UNKNOWN";
+
+        // Cho phép OPTIONS requests (CORS preflight) - đặc biệt quan trọng cho WebSocket
+        if ("OPTIONS".equals(method)) {
+            return chain.filter(exchange);
+        }
 
         final List<String> apiEndpoints = List.of(
                 "/v1/teacher/auth/login",
@@ -35,21 +42,44 @@ public class JwtAuthenticationFilter implements GatewayFilter {
                 "/v1/teacher/auth/logout",
                 "/eureka");
 
-        Predicate<ServerHttpRequest> isApiSecured = r -> apiEndpoints.stream()
-                .noneMatch(uri -> r.getURI().getPath().contains(uri));
+        // Nếu là WebSocket endpoint, luôn cho phép đi qua (kiểm tra TRƯỚC tất cả các kiểm tra khác)
+        // Bao gồm cả /ws/info, /ws/websocket, và các SockJS endpoints khác
+        if (path != null && path.startsWith("/ws")) {
+            return chain.filter(exchange);
+        }
 
-        if (isApiSecured.test(request)) {
-            if (authMissing(request)) return onError(exchange);
+        // Kiểm tra xem path có phải là public endpoint không
+        // Cho phép exact match hoặc path bắt đầu với endpoint + "/"
+        boolean isPublicEndpoint = apiEndpoints.stream()
+                .anyMatch(uri -> {
+                    if (path.equals(uri)) {
+                        return true;
+                    }
+                    if (path.startsWith(uri + "/")) {
+                        return true;
+                    }
+                    return false;
+                });
+
+        // Chỉ yêu cầu authentication cho các endpoint không phải public
+        if (!isPublicEndpoint) {
+            if (authMissing(request)) {
+                return onError(exchange);
+            }
 
             String token = request.getHeaders().getOrEmpty("Authorization").get(0);
 
-            if (token != null && token.startsWith("Bearer ")) token = token.substring(7);
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
 
             try {
                 jwtUtil.validateToken(token);
             } catch (Exception e) {
                 return onError(exchange);
             }
+        } else {
+            System.out.println("[Gateway Filter] Allowing public endpoint: " + path);
         }
 
         return chain.filter(exchange);

@@ -17,6 +17,8 @@ const AdminManageSubjectAdd = () => {
     const mode = searchParams.get('mode');
     const isEditMode = mode === 'edit' && !!editingId;
 
+    const formSectionWidth = isEditMode ? '1400px' : '1200px';
+
     const [formData, setFormData] = useState({
         subjectCode: '',
         subjectName: '',
@@ -34,6 +36,8 @@ const AdminManageSubjectAdd = () => {
     const [imagePreview, setImagePreview] = useState(null);         // preview
     const [existingImageFileId, setExistingImageFileId] = useState(null); // fileId hiện tại khi edit
     const [imageRemoved, setImageRemoved] = useState(false);        // user muốn xóa ảnh
+
+    const showImageRemoveButton = Boolean(imagePreview) || (isEditMode && !!existingImageFileId);
 
     const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
@@ -200,7 +204,9 @@ const AdminManageSubjectAdd = () => {
         setImageFile(null);
         setImagePreview(null);
         if (isEditMode && existingImageFileId) {
-            setImageRemoved(true); // đánh dấu xóa
+            setImageRemoved(true); // đánh dấu xóa ảnh hiện có
+        } else {
+            setImageRemoved(false);
         }
     };
 
@@ -267,7 +273,10 @@ const AdminManageSubjectAdd = () => {
 
     return (
         <MainLayout>
-            <div className="page-admin-add-subject">
+            <div
+                className="page-admin-add-subject page-align-with-form"
+                style={{ '--page-section-width': formSectionWidth }}
+            >
                 <div className="content-header">
                     <div className="content-title">
                         <button className="back-button" onClick={() => navigate('/manage-subjects')}>
@@ -281,145 +290,160 @@ const AdminManageSubjectAdd = () => {
 
                 <div className="form-container">
                     <form onSubmit={handleSubmit} noValidate>
-                        <div className="row">
-                            <div className="col-md-6">
+                        <div className="row gy-4 align-items-start">
+                            <div className="col-12 col-xl-8">
+                                <div className="row">
+                                    <div className="col-md-6">
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Mã môn học
+                                                <span className="required">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className={`form-control ${errors.subjectCode ? 'is-invalid' : ''}`}
+                                                id="subjectCode"
+                                                name="subjectCode"
+                                                value={formData.subjectCode}
+                                                onChange={handleChange}
+                                                placeholder="Nhập mã môn học"
+                                                disabled={isEditMode} // thường không cho đổi mã
+                                            />
+                                            {errors.subjectCode && (
+                                                <div className="invalid-feedback">{errors.subjectCode}</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-md-6">
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Tên môn học
+                                                <span className="required">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className={`form-control ${errors.subjectName ? 'is-invalid' : ''}`}
+                                                id="subjectName"
+                                                name="subjectName"
+                                                value={formData.subjectName}
+                                                onChange={handleChange}
+                                                placeholder="Nhập tên môn học"
+                                            />
+                                            {errors.subjectName && (
+                                                <div className="invalid-feedback">{errors.subjectName}</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="row">
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Số tín chỉ
+                                                <span className="required">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                className={`form-control ${errors.credit ? 'is-invalid' : ''}`}
+                                                id="credit"
+                                                name="credit"
+                                                value={formData.credit}
+                                                onChange={handleChange}
+                                                placeholder="Nhập số tín chỉ"
+                                                min="1"
+                                            />
+                                            {errors.credit && (
+                                                <div className="invalid-feedback">{errors.credit}</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Hệ thống
+                                                <span className="required">*</span>
+                                            </label>
+                                            <select
+                                                className={`form-select ${errors.system ? 'is-invalid' : ''}`}
+                                                id="system"
+                                                name="system"
+                                                value={formData.system}
+                                                onChange={handleChange}
+                                            >
+                                                <option value="">Chọn hệ thống</option>
+
+                                                <option value="ACN_PRO_OV7096">ACN Pro OV 7096</option>
+                                                <option value="ARENA_OV6899">Skill Arena OV 6899</option>
+                                                <option value="APTECH_OV7091">Skill Aptech OV 7091</option>
+                                                <option value="APTECH_OV7195">Skill Aptech OV 7195</option>
+                                            </select>
+
+                                            {errors.system && (
+                                                <div className="invalid-feedback">{errors.system}</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label className="form-label">
+                                                Trạng thái
+                                                <span className="required">*</span>
+                                            </label>
+                                            <select
+                                                className="form-select"
+                                                id="status"
+                                                name="status"
+                                                value={formData.status}
+                                                onChange={handleChange}
+                                            >
+                                                <option value="active">Hoạt động</option>
+                                                <option value="inactive">Không hoạt động</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="form-group">
-                                    <label className="form-label">
-                                        Mã môn học
-                                        <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className={`form-control ${errors.subjectCode ? 'is-invalid' : ''}`}
-                                        id="subjectCode"
-                                        name="subjectCode"
-                                        value={formData.subjectCode}
+                                    <label className="form-label">Mô tả</label>
+                                    <textarea
+                                        className="form-control"
+                                        id="description"
+                                        name="description"
+                                        rows="4"
+                                        placeholder="Nhập mô tả môn học..."
+                                        value={formData.description}
                                         onChange={handleChange}
-                                        placeholder="Nhập mã môn học"
-                                        disabled={isEditMode} // thường không cho đổi mã
-                                    />
-                                    {errors.subjectCode && (
-                                        <div className="invalid-feedback">{errors.subjectCode}</div>
-                                    )}
+                                    ></textarea>
                                 </div>
                             </div>
 
-                            <div className="col-md-6">
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Tên môn học
-                                        <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className={`form-control ${errors.subjectName ? 'is-invalid' : ''}`}
-                                        id="subjectName"
-                                        name="subjectName"
-                                        value={formData.subjectName}
-                                        onChange={handleChange}
-                                        placeholder="Nhập tên môn học"
-                                    />
-                                    {errors.subjectName && (
-                                        <div className="invalid-feedback">{errors.subjectName}</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="row">
-                            <div className="col-md-4">
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Số tín chỉ
-                                        <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        className={`form-control ${errors.credit ? 'is-invalid' : ''}`}
-                                        id="credit"
-                                        name="credit"
-                                        value={formData.credit}
-                                        onChange={handleChange}
-                                        placeholder="Nhập số tín chỉ"
-                                        min="1"
-                                    />
-                                    {errors.credit && (
-                                        <div className="invalid-feedback">{errors.credit}</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="col-md-4">
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Hệ thống
-                                        <span className="required">*</span>
-                                    </label>
-                                    <select
-                                        className={`form-select ${errors.system ? 'is-invalid' : ''}`}
-                                        id="system"
-                                        name="system"
-                                        value={formData.system}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="">Chọn hệ thống</option>
-
-                                        <option value="ACN_PRO_OV7096">ACN Pro OV 7096</option>
-                                        <option value="ARENA_OV6899">Skill Arena OV 6899</option>
-                                        <option value="APTECH_OV7091">Skill Aptech OV 7091</option>
-                                        <option value="APTECH_OV7195">Skill Aptech OV 7195</option>
-                                    </select>
-
-                                    {errors.system && (
-                                        <div className="invalid-feedback">{errors.system}</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="col-md-4">
-                                <div className="form-group">
-                                    <label className="form-label">
-                                        Trạng thái
-                                        <span className="required">*</span>
-                                    </label>
-                                    <select
-                                        className="form-select"
-                                        id="status"
-                                        name="status"
-                                        value={formData.status}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="active">Hoạt động</option>
-                                        <option value="inactive">Không hoạt động</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Mô tả</label>
-                            <textarea
-                                className="form-control"
-                                id="description"
-                                name="description"
-                                rows="4"
-                                placeholder="Nhập mô tả môn học..."
-                                value={formData.description}
-                                onChange={handleChange}
-                            ></textarea>
-                        </div>
-
-                        {/* Ảnh môn học */}
-                        <div className="row">
-                            <div className="col-md-6">
+                            {/* Ảnh môn học */}
+                            <div className="col-12 col-xl-4">
                                 <div className="form-group">
                                     <label className="form-label">Ảnh môn học</label>
                                     <div className="image-upload-section">
-                                        <div className="image-placeholder" style={{ width: '100%', height: '200px', border: '1px dashed #ccc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                        <div
+                                            className="image-placeholder"
+                                            style={{
+                                                width: '100%',
+                                                height: '260px',
+                                                border: '1px dashed #ccc',
+                                                borderRadius: '12px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                overflow: 'hidden',
+                                                backgroundColor: '#fafafa'
+                                            }}
+                                        >
                                             {imagePreview ? (
                                                 <img
                                                     src={imagePreview}
-                                                    alt="Subject"
+                                                    alt="Subject preview"
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     onError={(e) => {
                                                         console.error('Failed to load image preview');
@@ -428,7 +452,7 @@ const AdminManageSubjectAdd = () => {
                                                     }}
                                                 />
                                             ) : (
-                                                <i className="bi bi-image" style={{ fontSize: '40px', color: '#bbb' }}></i>
+                                                <i className="bi bi-image" style={{ fontSize: '48px', color: '#bbb' }}></i>
                                             )}
                                         </div>
                                         <div className="image-upload-actions">
@@ -438,7 +462,7 @@ const AdminManageSubjectAdd = () => {
                                             >
                                                 <i className="bi bi-cloud-upload"></i> Chọn ảnh
                                             </label>
-                                            { (isEditMode && (existingImageFileId || imagePreview)) && (
+                                            {showImageRemoveButton && (
                                                 <button
                                                     type="button"
                                                     className="btn btn-outline-danger"

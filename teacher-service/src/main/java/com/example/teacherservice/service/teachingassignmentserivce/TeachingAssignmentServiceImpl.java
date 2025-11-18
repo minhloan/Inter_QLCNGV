@@ -13,6 +13,9 @@ import com.example.teacherservice.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -285,23 +288,92 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     }
 
     // LIST / SEARCH
-
-    @Override
-    public List<TeachingAssignmentListItemResponse> getAllAssignments() {
-        return teachingAssignmentRepository.findAll()
-                .stream()
-                .map(this::toListItemResponse)
-                .collect(Collectors.toList());
-    }
-
     @Override
     public Page<TeachingAssignmentListItemResponse> getAllAssignments(Integer page, Integer size) {
-        return null;
+        int pageNumber = (page == null || page < 0) ? 0 : page;
+        int pageSize = (size == null || size <= 0) ? 10 : size;
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
+
+        Page<TeachingAssignment> assignmentPage = teachingAssignmentRepository.findAll(pageable);
+
+        return assignmentPage.map(this::toListItemResponse);
     }
 
     @Override
-    public Page<TeachingAssignmentListItemResponse> searchAssignments(String keyword, Integer page, Integer size) {
-        return null;
+    public Page<TeachingAssignmentListItemResponse> searchAssignments(
+            String keyword,
+            AssignmentStatus status,
+            String semester,
+            Integer page,
+            Integer size
+    ) {
+        int pageNumber = (page == null || page < 0) ? 0 : page;
+        int pageSize = (size == null || size <= 0) ? 10 : size;
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
+
+        Integer yearFilter = null;
+        Quarter quarterFilter = null;
+        if (semester != null && !semester.isBlank()) {
+            String[] parts = semester.split("-");
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Học kỳ không hợp lệ. Định dạng hợp lệ: YYYY-Q");
+            }
+            try {
+                yearFilter = Integer.parseInt(parts[0]);
+                int quarterNumber = Integer.parseInt(parts[1]);
+                quarterFilter = convertQuarter(quarterNumber);
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException("Học kỳ không hợp lệ: " + semester, ex);
+            }
+        }
+
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasStatus = status != null;
+        boolean hasSemester = yearFilter != null;
+
+        if (!hasKeyword && !hasStatus && !hasSemester) {
+            return getAllAssignments(pageNumber, pageSize);
+        }
+
+        Page<TeachingAssignment> assignmentPage =
+                teachingAssignmentRepository.searchAssignments(
+                        hasKeyword ? keyword.trim() : null,
+                        status,
+                        yearFilter,
+                        quarterFilter,
+                        pageable);
+
+        return assignmentPage.map(this::toListItemResponse);
+    }
+
+    @Override
+    public Page<TeachingAssignmentListItemResponse> searchAssignmentsForTeacher(
+            String teacherId,
+            String keyword,
+            AssignmentStatus status,
+            Integer year,
+            Integer page,
+            Integer size
+    ) {
+        int pageNumber = (page == null || page < 0) ? 0 : page;
+        int pageSize = (size == null || size <= 0) ? 10 : size;
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
+
+        Integer yearFilter = (year == null || year <= 0) ? null : year;
+
+        Page<TeachingAssignment> assignmentPage =
+                teachingAssignmentRepository.searchAssignmentsForTeacher(
+                        teacherId,
+                        (keyword != null && !keyword.isBlank()) ? keyword.trim() : null,
+                        status,
+                        yearFilter,
+                        pageable
+                );
+
+        return assignmentPage.map(this::toListItemResponse);
     }
 
     //  MAPPING DTO
@@ -324,6 +396,8 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
                 .semester(semester)
                 .schedule(schedule)
                 .status(a.getStatus())
+                .failureReason(a.getFailureReason())
+                .notes(a.getNotes())
                 .build();
     }
 

@@ -37,6 +37,7 @@ const AddTeacher = () => {
   const editingId = searchParams.get('id');
   const mode = searchParams.get('mode');
   const isEditMode = mode === 'edit' && !!editingId;
+  const formSectionWidth = isEditMode ? '1400px' : '1200px';
 
   const [formData, setFormData] = useState({
     username:'',
@@ -372,7 +373,10 @@ const AddTeacher = () => {
 
   return (
     <MainLayout>
-      <div className="page-admin-add-teacher">
+      <div
+        className="page-admin-add-teacher page-align-with-form"
+        style={{ '--page-section-width': formSectionWidth }}
+      >
         <div className="content-header">
           <div className="content-title">
             <button className="back-button" onClick={() => navigate('/manage-teacher')}>
@@ -382,7 +386,10 @@ const AddTeacher = () => {
           </div>
         </div>
 
-        <div className="form-container" style={isEditMode ? { display: 'flex', gap: '30px', maxWidth: '1400px', margin: '0 auto' } : {}}>
+        <div
+          className="form-container"
+          style={isEditMode ? { display: 'flex', gap: '30px' } : undefined}
+        >
           <div className={isEditMode ? 'edit-profile-main' : ''} style={isEditMode ? { flex: 1 } : {}}>
             <form onSubmit={handleSubmit} noValidate>
               <div className="row">
@@ -862,4 +869,3 @@ const AddTeacher = () => {
 };
 
 export default AddTeacher;
-

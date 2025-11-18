@@ -40,6 +40,10 @@ const AdminManageSubjectEdit = () => {
   const [imageFile, setImageFile] = useState(null);       // file mới chọn
   const [imageRemoved, setImageRemoved] = useState(false);// đánh dấu user muốn xóa ảnh
 
+  const formSectionWidth = '1400px';
+  const showImageRemoveButton =
+    Boolean(imagePreview) || Boolean(imageFile) || (!imageRemoved && Boolean(formData.imageFileId));
+
   const showToast = useCallback((title, message, type) => {
     setToast({ show: true, title, message, type });
     setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
@@ -146,8 +150,11 @@ const AdminManageSubjectEdit = () => {
   const handleClearImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    setImageRemoved(true); // user muốn xóa ảnh
-    // không cần sửa formData.imageFileId ở đây, xử lý khi SAVE
+    if (formData.imageFileId) {
+      setImageRemoved(true); // user muốn xóa ảnh hiện tại
+    } else {
+      setImageRemoved(false);
+    }
   };
 
   // ================== ẢNH: CHỌN ẢNH MỚI ==================
@@ -155,6 +162,7 @@ const AdminManageSubjectEdit = () => {
     const file = e.target.files?.[0] || null;
     if (!file) {
       setImageFile(null);
+      setImagePreview(null);
       return;
     }
 
@@ -235,6 +243,11 @@ const AdminManageSubjectEdit = () => {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleSave();
+  };
+
   // ================== RENDER ==================
   if (loading) {
     return <Loading fullscreen={true} message="Đang tải dữ liệu môn học..." />;
@@ -243,6 +256,33 @@ const AdminManageSubjectEdit = () => {
   if (!formData.id) {
     return (
       <MainLayout>
+        <div
+          className="page-admin-add-subject page-align-with-form"
+          style={{ '--page-section-width': formSectionWidth }}
+        >
+          <div className="content-header">
+            <div className="content-title">
+              <button className="back-button" onClick={() => navigate(-1)}>
+                <i className="bi bi-arrow-left"></i>
+              </button>
+              <h1 className="page-title">Sửa môn học</h1>
+            </div>
+          </div>
+          <div className="empty-state">
+            <i className="bi bi-exclamation-circle"></i>
+            <p>Không tìm thấy môn học</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div
+        className="page-admin-add-subject page-align-with-form"
+        style={{ '--page-section-width': formSectionWidth }}
+      >
         <div className="content-header">
           <div className="content-title">
             <button className="back-button" onClick={() => navigate(-1)}>
@@ -251,204 +291,204 @@ const AdminManageSubjectEdit = () => {
             <h1 className="page-title">Sửa môn học</h1>
           </div>
         </div>
-        <div className="empty-state">
-          <i className="bi bi-exclamation-circle"></i>
-          <p>Không tìm thấy môn học</p>
-        </div>
-      </MainLayout>
-    );
-  }
 
-  return (
-    <MainLayout>
-      {/* Header */}
-      <div className="content-header">
-        <div className="content-title">
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <i className="bi bi-arrow-left"></i>
-          </button>
-          <h1 className="page-title">
-            Sửa môn học
-          </h1>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="edit-profile-container">
-        <div className="edit-profile-content">
-          {/* Form bên trái */}
-          <div className="edit-profile-main">
-            <div className="form-section">
-              <h3 className="section-title">THÔNG TIN MÔN HỌC</h3>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Mã môn học</label>
-                  <input
-                    type="text"
-                    name="subjectCode"
-                    className="form-control"
-                    value={formData.subjectCode}
-                    disabled // không cho đổi mã cho an toàn
-                  />
+        <div className="form-container">
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="row gy-4 align-items-start">
+              <div className="col-12 col-xl-8">
+                <div className="row">
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">Mã môn học</label>
+                      <input
+                        type="text"
+                        name="subjectCode"
+                        className="form-control"
+                        value={formData.subjectCode}
+                        disabled
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="form-group">
+                      <label className="form-label">Tên môn học</label>
+                      <input
+                        type="text"
+                        name="subjectName"
+                        className="form-control"
+                        value={formData.subjectName}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
                 </div>
+
+                <div className="row">
+                  <div className="col-md-4">
+                    <div className="form-group">
+                      <label className="form-label">Số tín chỉ</label>
+                      <input
+                        type="number"
+                        name="credit"
+                        className="form-control"
+                        value={formData.credit}
+                        onChange={handleInputChange}
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="form-group">
+                      <label className="form-label">Hệ thống</label>
+                      <select
+                        name="system"
+                        className="form-control"
+                        value={formData.system || ''}
+                        onChange={handleSystemChange}
+                      >
+                        <option value="">Chọn hệ thống</option>
+
+                        <option value="ACN_PRO_OV7096">ACN Pro OV 7096</option>
+                        <option value="ARENA_OV6899">Skill Arena OV 6899</option>
+                        <option value="APTECH_OV7091">Skill Aptech OV 7091</option>
+                        <option value="APTECH_OV7195">Skill Aptech OV 7195</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="col-md-4">
+                    <div className="form-group">
+                      <label className="form-label">Trạng thái</label>
+                      <select
+                        className="form-control"
+                        value={formData.isActive ? 'active' : 'inactive'}
+                        onChange={handleStatusChange}
+                      >
+                        <option value="active">Hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="form-group">
-                  <label className="form-label">Tên môn học</label>
-                  <input
-                    type="text"
-                    name="subjectName"
+                  <label className="form-label">Mô tả</label>
+                  <textarea
+                    name="description"
                     className="form-control"
-                    value={formData.subjectName}
+                    rows="4"
+                    value={formData.description}
                     onChange={handleInputChange}
                   />
                 </div>
               </div>
 
-              <div className="form-row">
+              <div className="col-12 col-xl-4">
                 <div className="form-group">
-                  <label className="form-label">Số tín chỉ</label>
-                  <input
-                    type="number"
-                    name="credit"
-                    className="form-control"
-                    value={formData.credit}
-                    onChange={handleInputChange}
-                    min="0"
-                  />
+                  <label className="form-label">Ảnh môn học</label>
+                  <div className="image-upload-section">
+                    <div
+                      className="image-placeholder"
+                      style={{
+                        width: '100%',
+                        height: '260px',
+                        border: '1px dashed #ccc',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        backgroundColor: '#fafafa',
+                      }}
+                    >
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt={formData.subjectName || formData.subjectCode}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => {
+                            console.error('Failed to load subject image:', imagePreview);
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <i className="bi bi-book" style={{ fontSize: '48px', color: '#bbb' }}></i>
+                      )}
+                    </div>
+
+                    <div className="image-upload-actions">
+                      <label
+                        htmlFor="subject-image-upload-edit"
+                        className="btn btn-outline-primary"
+                      >
+                        <i className="bi bi-cloud-upload"></i> Chọn ảnh
+                      </label>
+
+                      {showImageRemoveButton && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger"
+                          onClick={handleClearImage}
+                        >
+                          <i className="bi bi-trash"></i> Xóa ảnh
+                        </button>
+                      )}
+                    </div>
+
+                    <input
+                      id="subject-image-upload-edit"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleImageChange}
+                    />
+
+                    {!formData.imageFileId && !imagePreview && (
+                      <p
+                        style={{
+                          marginTop: '8px',
+                          fontSize: '12px',
+                          color: '#666',
+                        }}
+                      >
+                        Hiện chưa có ảnh. Chọn một ảnh để tải lên cho môn học này.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Hệ thống</label>
-                  <select
-                    name="system"
-                    className="form-control"
-                    value={formData.system || ''}
-                    onChange={handleSystemChange}
-                  >
-                    <option value="">Chọn hệ thống</option>
-
-                    <option value="ACN_PRO_OV7096">ACN Pro OV 7096</option>
-                    <option value="ARENA_OV6899">Skill Arena OV 6899</option>
-                    <option value="APTECH_OV7091">Skill Aptech OV 7091</option>
-                    <option value="APTECH_OV7195">Skill Aptech OV 7195</option>
-                  </select>
-
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Trạng thái</label>
-                  <select
-                    className="form-control"
-                    value={formData.isActive ? 'active' : 'inactive'}
-                    onChange={handleStatusChange}
-                  >
-                    <option value="active">Hoạt động</option>
-                    <option value="inactive">Không hoạt động</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Mô tả</label>
-                <textarea
-                  name="description"
-                  className="form-control"
-                  rows="4"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                />
               </div>
             </div>
 
-            <div className="save-button-container">
+            <div className="form-actions">
               <button
-                className="btn-save"
-                onClick={handleSave}
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => navigate(-1)}
                 disabled={saving}
               >
-                {saving ? 'Saving...' : 'SAVE'}
+                <i className="bi bi-x-circle"></i>
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={saving}
+              >
+                <i className="bi bi-check-circle"></i>
+                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
-          </div>
-
-          {/* Cột phải: Ảnh môn học */}
-          <div className="edit-profile-sidebar">
-            <div className="image-upload-section">
-              <h3 className="section-title">ẢNH MÔN HỌC</h3>
-              <div className="image-placeholder profile-picture-placeholder">
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt={formData.subjectName || formData.subjectCode}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                    }}
-                    onError={(e) => {
-                      console.error('Failed to load subject image:', imagePreview);
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <i className="bi bi-book" style={{ fontSize: '40px' }}></i>
-                )}
-              </div>
-
-              {/* Nút chọn ảnh & xoá ảnh giống Add */}
-              <div className="image-upload-actions">
-                <label
-                  htmlFor="subject-image-upload-edit"
-                  className="btn btn-primary"
-                >
-                  <i className="bi bi-cloud-upload"></i> Chọn ảnh
-                </label>
-
-                {(formData.imageFileId || imagePreview) && (
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={handleClearImage}
-                  >
-                    <i className="bi bi-x-circle"></i> Xóa ảnh
-                  </button>
-                )}
-              </div>
-
-              <input
-                id="subject-image-upload-edit"
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleImageChange}
-              />
-
-              {!formData.imageFileId && !imagePreview && (
-                <p
-                  style={{
-                    marginTop: '8px',
-                    fontSize: '12px',
-                    color: '#666',
-                  }}
-                >
-                  Hiện chưa có ảnh. Chọn một ảnh để tải lên cho môn học này.
-                </p>
-              )}
-            </div>
-          </div>
+          </form>
         </div>
-      </div>
 
-      {toast.show && (
-        <Toast
-          title={toast.title}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-        />
-      )}
+        {toast.show && (
+          <Toast
+            title={toast.title}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+          />
+        )}
+      </div>
     </MainLayout>
   );
 };

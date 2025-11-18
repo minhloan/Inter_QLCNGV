@@ -1,17 +1,60 @@
 package com.example.teacherservice.repository;
 
+import com.example.teacherservice.enums.AssignmentStatus;
+import com.example.teacherservice.enums.Quarter;
 import com.example.teacherservice.model.TeachingAssignment;
 import com.example.teacherservice.model.User;
-import com.example.teacherservice.model.Subject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface TeachingAssignmentRepository extends JpaRepository<TeachingAssignment, String> {
-//    Optional<TeachingAssignment> findByTeacherAndSubjectAndYearAndQuarter(
-//            User teacher, Subject subject, Integer year, Integer quarter);
-//    List<TeachingAssignment> findByTeacher(User teacher);
-//    List<TeachingAssignment> findBySubject(Subject subject);
+    List<TeachingAssignment> findByTeacher(User teacher);
+
+    @Query("""
+            SELECT ta FROM TeachingAssignment ta
+            JOIN ta.teacher t
+            JOIN ta.scheduleClass sc
+            JOIN sc.subject s
+            WHERE (
+                    :keyword IS NULL OR :keyword = '' OR
+                    LOWER(t.username) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+                    LOWER(t.teacherCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+                    LOWER(s.subjectName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+                    LOWER(sc.classCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  )
+              AND (:status IS NULL OR ta.status = :status)
+              AND (:year IS NULL OR sc.year = :year)
+              AND (:quarter IS NULL OR sc.quarter = :quarter)
+            """)
+    Page<TeachingAssignment> searchAssignments(@Param("keyword") String keyword,
+                                               @Param("status") AssignmentStatus status,
+                                               @Param("year") Integer year,
+                                               @Param("quarter") Quarter quarter,
+                                               Pageable pageable);
+
+    @Query("""
+            SELECT ta FROM TeachingAssignment ta
+            JOIN ta.teacher t
+            JOIN ta.scheduleClass sc
+            JOIN sc.subject s
+            WHERE t.id = :teacherId
+              AND (
+                    :keyword IS NULL OR :keyword = '' OR
+                    LOWER(s.subjectName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+                    LOWER(sc.classCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  )
+              AND (:status IS NULL OR ta.status = :status)
+              AND (:year IS NULL OR sc.year = :year)
+            """)
+    Page<TeachingAssignment> searchAssignmentsForTeacher(@Param("teacherId") String teacherId,
+                                                         @Param("keyword") String keyword,
+                                                         @Param("status") AssignmentStatus status,
+                                                         @Param("year") Integer year,
+                                                         Pageable pageable);
 }
 

@@ -1,19 +1,21 @@
 package com.example.teacherservice.service.trial;
 
-import com.example.teacherservice.dto.trial.TrialTeachingDto;
 import com.example.teacherservice.dto.trial.TrialAttendeeDto;
 import com.example.teacherservice.dto.trial.TrialEvaluationDto;
+import com.example.teacherservice.dto.trial.TrialTeachingDto;
+import com.example.teacherservice.enums.NotificationType;
 import com.example.teacherservice.enums.TrialStatus;
 import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.model.TrialEvaluation;
 import com.example.teacherservice.model.TrialTeaching;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.User;
-import com.example.teacherservice.repository.TrialTeachingRepository;
-import com.example.teacherservice.repository.TrialEvaluationRepository;
 import com.example.teacherservice.repository.SubjectRepository;
+import com.example.teacherservice.repository.TrialEvaluationRepository;
+import com.example.teacherservice.repository.TrialTeachingRepository;
 import com.example.teacherservice.repository.UserRepository;
 import com.example.teacherservice.request.trial.TrialTeachingRequest;
+import com.example.teacherservice.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +32,10 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
 
     private final TrialTeachingRepository trialTeachingRepository;
     private final TrialEvaluationRepository trialEvaluationRepository;
-    private final TrialAttendeeService trialAttendeeService;
     private final UserRepository userRepository;
     private final SubjectRepository subjectRepository;
+    private final TrialAttendeeService trialAttendeeService;
+    private final NotificationService notificationService;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -61,6 +64,9 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
         }
 
         TrialTeaching saved = trialTeachingRepository.save(trial);
+
+        notifyTeacherTrialCreated(saved);
+
         return toDto(saved);
     }
 
@@ -71,6 +77,9 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
 
         trial.setStatus(status);
         TrialTeaching updated = trialTeachingRepository.save(trial);
+
+        notifyTeacherStatusUpdate(updated);
+
         return toDto(updated);
     }
 
@@ -142,5 +151,79 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .attendees(attendees)
                 .evaluation(evaluationDto)
                 .build();
+    }
+
+    private void notifyTeacherStatusUpdate(TrialTeaching trial) {
+        if (trial.getTeacher() == null) {
+            return;
+        }
+
+        String title = trial.getStatus() == TrialStatus.REVIEWED
+                ? "Đăng ký giảng thử đã được duyệt"
+                : "Đăng ký giảng thử được cập nhật";
+        String statusMessage = trial.getStatus() == TrialStatus.REVIEWED
+                ? "đã được duyệt"
+                : "đã được cập nhật";
+
+        StringBuilder messageBuilder = new StringBuilder("Đăng ký giảng thử");
+        String subjectLabel = resolveSubjectLabel(trial);
+        if (subjectLabel != null && !subjectLabel.isBlank()) {
+            messageBuilder.append(" môn ").append(subjectLabel);
+        }
+        if (trial.getTeachingDate() != null) {
+            messageBuilder.append(" vào ngày ").append(trial.getTeachingDate());
+        }
+        if (trial.getTeachingTime() != null && !trial.getTeachingTime().isBlank()) {
+            messageBuilder.append(" lúc ").append(trial.getTeachingTime());
+        }
+        messageBuilder.append(" ").append(statusMessage).append(".");
+
+        notificationService.createAndSend(
+                trial.getTeacher().getId(),
+                title,
+                messageBuilder.toString().trim(),
+                NotificationType.TRIAL_NOTIFICATION,
+                "TrialTeaching",
+                trial.getId()
+        );
+    }
+
+    private String resolveSubjectLabel(TrialTeaching trial) {
+        if (trial.getSubject() == null) {
+            return null;
+        }
+        if (trial.getSubject().getSubjectName() != null
+                && !trial.getSubject().getSubjectName().isBlank()) {
+            return trial.getSubject().getSubjectName();
+        }
+        return trial.getSubject().getSubjectCode();
+    }
+
+    private void notifyTeacherTrialCreated(TrialTeaching trial) {
+        if (trial.getTeacher() == null) {
+            return;
+        }
+
+        StringBuilder messageBuilder = new StringBuilder("Bạn có lịch giảng thử mới");
+        String subjectLabel = resolveSubjectLabel(trial);
+        if (subjectLabel != null && !subjectLabel.isBlank()) {
+            messageBuilder.append(" môn ").append(subjectLabel);
+        }
+        if (trial.getTeachingDate() != null) {
+            messageBuilder.append(" vào ngày ").append(trial.getTeachingDate());
+        }
+        if (trial.getTeachingTime() != null && !trial.getTeachingTime().isBlank()) {
+            messageBuilder.append(" lúc ").append(trial.getTeachingTime());
+        }
+        messageBuilder.append(".");
+
+        notificationService.createAndSend(
+                trial.getTeacher().getId(),
+                "Lịch giảng thử mới",
+                messageBuilder.toString().trim(),
+                NotificationType.TRIAL_NOTIFICATION,
+                "TrialTeaching",
+                trial.getId()
+        );
     }
 }

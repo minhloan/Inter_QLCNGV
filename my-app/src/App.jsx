@@ -29,6 +29,7 @@ import TeacherTrialTeaching from './pages/teacher/TeacherTrialTeaching';
 import TeacherEvidence from './pages/teacher/TeacherEvidence';
 import TeacherTeachingAssignment from './pages/teacher/TeacherTeachingAssignment';
 import TeacherPersonalReports from './pages/teacher/TeacherPersonalReports';
+import TeacherTeachingAssignmentDetail from "./pages/teacher/TeacherTeachingAssignmentDetail";
 import Notifications from './pages/Notifications';
 
 import './assets/styles/Common.css';
@@ -283,6 +284,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
             <TeacherTeachingAssignment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher-teaching-assignment-detail/:id"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <TeacherTeachingAssignmentDetail />
           </ProtectedRoute>
         }
       />

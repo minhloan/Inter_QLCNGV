@@ -18,8 +18,25 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").setAllowedOriginPatterns("*");
-        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+        // Register STOMP endpoint for WebSocket connection
+        // CORS is configured here using setAllowedOriginPatterns
+        // This is the ONLY place where CORS headers should be added for WebSocket
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns(
+                        "http://localhost:5173",
+                        "http://shopee-fake.id.vn",
+                        "http://www.shopee-fake.id.vn"
+                )
+                .withSockJS(); // Fallback for browsers that don't support WebSocket
+
+        // Also support raw WebSocket without SockJS (for native WebSocket support)
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns(
+                        "http://localhost:5173",
+                        "http://shopee-fake.id.vn",
+                        "http://www.shopee-fake.id.vn"
+                );
+        // Note: No withSockJS() here - this is for native WebSocket connections
     }
 
     @Override
@@ -34,3 +51,4 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registration.interceptors(webSocketJwtInterceptor);
     }
 }
+

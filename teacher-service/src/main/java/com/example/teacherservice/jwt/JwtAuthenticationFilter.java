@@ -27,20 +27,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        String path = request.getRequestURI();
         if ("true".equals(request.getHeader("X-Internal-Call"))) {
             filterChain.doFilter(request, response);
             return;
         }
 
         // Bỏ qua JWT filter cho các endpoint public
-        String path = request.getRequestURI();
         if (path.contains("/auth/login") || 
             path.contains("/auth/register") || 
             path.contains("/auth/forgotPassword") ||
             path.contains("/auth/verifyOtp") ||
             path.contains("/auth/updatePassword") ||
             path.contains("/auth/refresh") ||
-            path.contains("/auth/logout")) {
+            path.contains("/auth/logout") ||
+            path.startsWith("/ws")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -67,7 +68,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }  catch (Exception e) {
             // Các lỗi khác - vẫn cho qua nhưng không set authentication
-            System.out.println("JWT Filter Error: " + e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

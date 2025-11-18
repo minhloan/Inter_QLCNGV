@@ -215,7 +215,7 @@ const EditProfile = () => {
   };
 
   const handleVerifyEmail = () => {
-    showToast('Thông báo', 'Email verification link has been sent to your email', 'info');
+    showToast('Thông báo', 'Liên kết xác minh đã được gửi tới email của bạn', 'info');
   };
 
   const handleImageChange = (e) => {
@@ -342,16 +342,50 @@ const EditProfile = () => {
   return (
     <MainLayout>
       <div className="edit-profile-container">
+        <div
+          className="edit-profile-header"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '24px'
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn-light back-button"
+            onClick={() => navigate(-1)}
+            aria-label="Quay lại"
+            style={{
+              borderRadius: '10px',
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #ddd',
+              boxShadow: '0 3px 8px rgba(0,0,0,0.06)'
+            }}
+          >
+            <i className="bi bi-arrow-left"></i>
+          </button>
+          <h1
+            className="page-title"
+            style={{ margin: 0, fontSize: '28px', fontWeight: 700 }}
+          >
+            Hồ sơ cá nhân
+          </h1>
+        </div>
         <div className="edit-profile-content">
           <div className="edit-profile-main">
             {/*<h2 className="student-id-title">Teacher Id: {formData.studentId}</h2>*/}
 
             {/* Basic Information */}
             <div className="form-section">
-              <h3 className="section-title">BASIC INFORMATION</h3>
+              <h3 className="section-title">THÔNG TIN CƠ BẢN</h3>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">First Name</label>
+                  <label className="form-label">Tên</label>
                   <input
                     type="text"
                     name="firstName"
@@ -361,7 +395,7 @@ const EditProfile = () => {
                   />
                 </div>
                   <div className="form-group">
-                      <label className="form-label">Last Name</label>
+                      <label className="form-label">Họ</label>
                       <input
                           type="text"
                           name="lastName"
@@ -373,7 +407,7 @@ const EditProfile = () => {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                      <label className="form-label">Full Name</label>
+                      <label className="form-label">Họ và tên</label>
                       <input
                           type="text"
                           name="username"
@@ -383,7 +417,7 @@ const EditProfile = () => {
                       />
                   </div>
                 <div className="form-group">
-                  <label className="form-label">DOB (DD/MM/YYYY)</label>
+                  <label className="form-label">Ngày sinh (DD/MM/YYYY)</label>
                   <input
                     type="date"
                     name="dob"
@@ -396,7 +430,7 @@ const EditProfile = () => {
               </div>
                 <div className="form-row">
                     <div className="form-group">
-                        <label className="form-label">Phone</label>
+                        <label className="form-label">Điện thoại</label>
                         <div 
                           className="input-group"
                           style={{ 
@@ -482,7 +516,7 @@ const EditProfile = () => {
 
             {/* Contact Information */}
             <div className="form-section">
-              <h3 className="section-title">CONTACT INFORMATION</h3>
+              <h3 className="section-title">THÔNG TIN LIÊN HỆ</h3>
               <div className="form-group">
                 <label className="form-label">Email</label>
                 <div className="email-input-wrapper">
@@ -503,7 +537,7 @@ const EditProfile = () => {
                     className="verify-email-link"
                     onClick={handleVerifyEmail}
                   >
-                    Verify Email
+                    Xác minh email
                   </button>
                 )}
               </div>
@@ -570,7 +604,7 @@ const EditProfile = () => {
               </div>
             </div>
               <div className="form-section">
-                  <h3 className="section-title">Trình độ học vấn</h3>
+                  <h3 className="section-title">TRÌNH ĐỘ HỌC VẤN</h3>
                   <div className="form-row">
                       <div className="form-group">
                           <label className="form-label">Trình độ học vấn</label>
@@ -599,16 +633,16 @@ const EditProfile = () => {
 
               {/* About Me */}
             <div className="form-section">
-              <h3 className="section-title">ABOUT ME</h3>
+              <h3 className="section-title">GIỚI THIỆU</h3>
               <div className="form-group bio-group">
-                <label className="form-label">Bio</label>
+                <label className="form-label">Giới thiệu</label>
                 <div className="bio-wrapper">
                   <textarea
                     name="bio"
                     className="form-control bio-textarea"
                     value={formData.bio}
                     onChange={handleBioChange}
-                    placeholder="Bio"
+                    placeholder="Giới thiệu"
                     rows="4"
                   />
                   <div className="char-count">{formData.bio.length}/50</div>
@@ -618,12 +652,12 @@ const EditProfile = () => {
 
             {/* Skills */}
             <div className="form-section">
-              <h3 className="section-title">Skills</h3>
+              <h3 className="section-title">KỸ NĂNG</h3>
               <div className="form-group">
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Type your skill and press Enter (Upto 3 skills)"
+                  placeholder="Nhập kỹ năng và nhấn Enter (tối đa 3 kỹ năng)"
                   value={newSkill}
                   onChange={(e) => setNewSkill(e.target.value)}
                   onKeyPress={handleAddSkill}
@@ -655,7 +689,7 @@ const EditProfile = () => {
                 onClick={handleSave}
                 disabled={loading}
               >
-                {loading ? 'Saving...' : 'SAVE'}
+                {loading ? 'Đang lưu...' : 'LƯU'}
               </button>
             </div>
           </div>
@@ -664,7 +698,7 @@ const EditProfile = () => {
           <div className="edit-profile-sidebar">
             {/* Profile Picture */}
             <div className="image-upload-section">
-              <h3 className="section-title">PROFILE PICTURE</h3>
+              <h3 className="section-title">ẢNH ĐẠI DIỆN</h3>
               <div className="image-placeholder profile-picture-placeholder">
                 {profileImage ? (
                   <img 
@@ -683,7 +717,7 @@ const EditProfile = () => {
               </div>
               <label htmlFor="profile-image-upload" className="btn-upload" style={{ cursor: 'pointer' }}>
                 <i className="bi bi-cloud-upload"></i>
-                UPLOAD
+                TẢI LÊN
               </label>
               <input
                 id="profile-image-upload"

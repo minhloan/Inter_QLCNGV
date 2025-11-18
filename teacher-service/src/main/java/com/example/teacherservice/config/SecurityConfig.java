@@ -17,9 +17,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.lang.NonNull;
 
 @Configuration
 @EnableWebSecurity
@@ -33,7 +30,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            // CORS for /ws/** is handled by WebSocketCorsFilter (runs before Spring Security)
+            // CORS for other endpoints is handled by Gateway
             .authorizeHttpRequests(auth -> auth
+                // Explicitly allow WebSocket endpoints (SockJS info, handshake, etc.)
+                .requestMatchers("/ws/**").permitAll()
                 .anyRequest().permitAll()
             )
             .sessionManagement(session -> session
@@ -42,6 +43,8 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        // CORS for WebSocket is handled by WebSocketConfig.setAllowedOriginPatterns()
+        // No need for additional CORS filter to avoid duplicate headers
         return http.build();
     }
 
@@ -61,19 +64,5 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(@NonNull CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOriginPatterns("*")
-                        .allowedMethods("GET","POST","PUT","PATCH","DELETE","OPTIONS")
-                        .allowedHeaders("*")
-                        .allowCredentials(true);
-            }
-        };
     }
 }

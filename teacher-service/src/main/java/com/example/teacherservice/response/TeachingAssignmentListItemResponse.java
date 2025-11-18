@@ -29,4 +29,8 @@ public class TeachingAssignmentListItemResponse {
 
     // ASSIGNED / COMPLETED / NOT_COMPLETED / FAILED
     private AssignmentStatus status;
+
+     // Thông tin thời gian & ghi chú (phục vụ màn hình giáo viên)
+     private String failureReason;
+     private String notes;
 }

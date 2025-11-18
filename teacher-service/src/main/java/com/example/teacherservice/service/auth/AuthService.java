@@ -143,6 +143,9 @@ public class AuthService {
             String verifiedKey = OTP_VERIFIED_PREFIX + email;
             redisTemplate.delete(verifiedKey);
         }
+
+
+
         return ok;
     }
 

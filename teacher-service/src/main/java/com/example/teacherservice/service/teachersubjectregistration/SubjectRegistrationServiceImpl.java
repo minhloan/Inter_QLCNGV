@@ -1,6 +1,7 @@
 package com.example.teacherservice.service.teachersubjectregistration;
 
 import com.example.teacherservice.dto.teachersubjectregistration.SubjectRegistrationsDto;
+import com.example.teacherservice.enums.NotificationType;
 import com.example.teacherservice.enums.RegistrationStatus;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectRegistration;
@@ -9,6 +10,8 @@ import com.example.teacherservice.repository.SubjectRegistrationRepository;
 import com.example.teacherservice.repository.SubjectRepository;
 import com.example.teacherservice.repository.UserRepository;
 import com.example.teacherservice.request.teachersubjectregistration.SubjectRegistrationFilterRequest;
+import com.example.teacherservice.service.auditlog.AuditLogService;
+import com.example.teacherservice.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +31,8 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
     private final SubjectRegistrationRepository subjectRegistrationRepository;
     private final UserRepository userRepository;
     private final SubjectRepository SubjectRepository;
-
+    private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
 
     @Override
     public List<SubjectRegistrationsDto> getAllRegistrations() {
@@ -61,7 +65,6 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 .orElseThrow(() -> new RuntimeException("SubjectRegistration not found"));
         return toDto(reg);
     }
-
 
 
     private SubjectRegistrationsDto toDto(SubjectRegistration e) {
@@ -126,6 +129,36 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
         // Lưu vào DB
         SubjectRegistration saved = subjectRegistrationRepository.save(registration);
+
+        String subjectLabel = subjectId.getSubjectName() != null && !subjectId.getSubjectName().isBlank()
+                ? subjectId.getSubjectName()
+                : subjectId.getSubjectCode();
+        String title = "Đăng ký môn học thành công";
+        StringBuilder messageBuilder = new StringBuilder("Bạn đã đăng ký ");
+        if (subjectLabel != null) {
+            messageBuilder.append("môn ").append(subjectLabel).append(" ");
+        } else {
+            messageBuilder.append("môn học ");
+        }
+        if (dto.getQuarter() != null) {
+            messageBuilder.append("cho học kỳ ").append(dto.getQuarter()).append(" ");
+        }
+        if (dto.getYear() != null) {
+            messageBuilder.append("năm học ").append(dto.getYear()).append(" ");
+        }
+        notificationService.createAndSend(
+                teacher.getId(),
+                title,
+                messageBuilder.toString().trim(),
+                NotificationType.SUBJECT_NOTIFICATION,
+                "SubjectRegistration",
+                saved.getId()
+        );
+
+        auditLogService.writeAndBroadcast(teacher.getId(),
+                "LOGOUT", "USER", subjectId.getId(),
+                "{\"method\":\"CREATE_REGISTER_SUBJECT\"}"
+        );
 
         // Trả về DTO sau khi lưu
         return toDto(saved);

@@ -10,6 +10,7 @@ import { getUserInfo } from '../../api/auth';
 
 const TrialTeachingAdd = () => {
     const navigate = useNavigate();
+    const formSectionWidth = '1200px';
     const [formData, setFormData] = useState({
         teacherId: '',
         subjectId: '',
@@ -108,7 +109,10 @@ const TrialTeachingAdd = () => {
 
     return (
         <MainLayout>
-            <div className="page-admin-add-teacher">
+            <div
+                className="page-admin-add-teacher page-align-with-form"
+                style={{ '--page-section-width': formSectionWidth }}
+            >
                 {/* Header giống ManageSubjectAdd */}
                 <div className="content-header">
                     <div className="content-title">
@@ -119,11 +123,11 @@ const TrialTeachingAdd = () => {
                     </div>
                 </div>
 
-                <div className="form-container" style={{ maxWidth: '900px', margin: '0 auto' }}>
-                    <form onSubmit={handleSubmit}>
-                        <div className="row">
+                <div className="form-container">
+                    <form onSubmit={handleSubmit} noValidate>
+                        <div className="row gy-4">
                             <div className="col-md-6">
-                                <div className="form-group mb-3">
+                                <div className="form-group mb-0">
                                     <label className="form-label">Giảng viên <span className="text-danger">*</span></label>
                                     <select
                                         className="form-select"
@@ -141,7 +145,7 @@ const TrialTeachingAdd = () => {
                             </div>
 
                             <div className="col-md-6">
-                                <div className="form-group mb-3">
+                                <div className="form-group mb-0">
                                     <label className="form-label">Môn học <span className="text-danger">*</span></label>
                                     <input
                                         type="text"
@@ -165,21 +169,21 @@ const TrialTeachingAdd = () => {
                             </div>
                         </div>
 
-                        <div className="row">
+                        <div className="row gy-4 mt-1">
                             <div className="col-md-4">
-                                <div className="form-group mb-3">
+                                <div className="form-group mb-0">
                                     <label className="form-label">Ngày giảng <span className="text-danger">*</span></label>
                                     <input type="date" className="form-control" name="teachingDate" value={formData.teachingDate} onChange={handleChange} />
                                 </div>
                             </div>
                             <div className="col-md-4">
-                                <div className="form-group mb-3">
+                                <div className="form-group mb-0">
                                     <label className="form-label">Giờ giảng</label>
                                     <input type="time" className="form-control" name="teachingTime" value={formData.teachingTime} onChange={handleChange} />
                                 </div>
                             </div>
                             <div className="col-md-4">
-                                <div className="form-group mb-3">
+                                <div className="form-group mb-0">
                                     <label className="form-label">Địa điểm</label>
                                     <input type="text" className="form-control" name="location" value={formData.location} onChange={handleChange} />
                                 </div>
