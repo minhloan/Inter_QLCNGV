@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import SharedHeader from '../components/Layout/SharedHeader';
+import Header from '../components/Layout/Header';
 import '../assets/styles/ModuleSelection.css';
 
 const ModuleSelection = () => {
@@ -46,7 +46,7 @@ const ModuleSelection = () => {
 
   return (
     <div className="module-selection-page">
-      <SharedHeader />
+      <Header />
       
       <div className="main-content">
         <div className="container">

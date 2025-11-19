@@ -9,6 +9,7 @@ import useUserProfileMedia from '../../hooks/useUserProfileMedia';
 const Header = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [imageErrors, setImageErrors] = useState({ profile: false, dropdown: false, mobile: false });
   const dropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const mobileToggleRef = useRef(null);
@@ -16,8 +17,24 @@ const Header = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { profileImage, coverImage } = useUserProfileMedia(user?.userId);
+  
+  const hasValidProfileImage = profileImage && typeof profileImage === 'string' && profileImage.trim() !== '';
+  const hasValidCoverImage = coverImage && typeof coverImage === 'string' && coverImage.trim() !== '';
+  
+  // Reset image errors when profileImage changes
+  useEffect(() => {
+    setImageErrors({ profile: false, dropdown: false, mobile: false });
+  }, [profileImage]);
+  
+  useEffect(() => {
+    console.log('[Header] user:', user);
+    console.log('[Header] user?.userId:', user?.userId);
+    console.log('[Header] coverImage:', coverImage);
+    console.log('[Header] profileImage:', profileImage);
+    console.log('[Header] hasValidProfileImage:', hasValidProfileImage);
+    console.log('[Header] hasValidCoverImage:', hasValidCoverImage);
+  }, [user, coverImage, profileImage, hasValidProfileImage, hasValidCoverImage]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -84,6 +101,9 @@ const Header = () => {
   const displayName = user?.username  || 'USER';
   const displayEmail = user?.userData?.email || user?.email || '';
   const menuItems = getMenuItems(user?.role);
+  
+  // Determine logo link based on location
+  const logoLink = location.pathname === '/module-selection' ? '/module-selection' : '/';
 
   return (
     <div className="top-header">
@@ -95,7 +115,7 @@ const Header = () => {
             style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%', padding: '2px', backgroundColor: '#fff' }} 
           />
         </div>
-        <Link to="/" className="logo-text">Aptech CanTho</Link>
+        <Link to={logoLink} className="logo-text">Aptech CanTho</Link>
       </div>
       <div className="header-actions">
         <NotificationDropdown />
@@ -105,20 +125,35 @@ const Header = () => {
           style={{ position: 'relative' }}
           onClick={() => setShowDropdown(!showDropdown)}
         >
-          {profileImage ? (
-            <img src={profileImage} alt="Ảnh đại diện" className="avatar-circle" />
+          {hasValidProfileImage && !imageErrors.profile ? (
+            <img 
+              src={profileImage} 
+              alt="Ảnh đại diện" 
+              className="avatar-circle"
+              onError={() => {
+                console.error('[Header] Failed to load profile image:', profileImage);
+                setImageErrors(prev => ({ ...prev, profile: true }));
+              }}
+            />
           ) : (
             <i className="bi bi-person"></i>
           )}
           {showDropdown && (
             <div className="user-dropdown">
               <div
-                className={`user-dropdown-header ${coverImage ? 'has-cover' : ''}`}
-                style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
+                className={`user-dropdown-header ${hasValidCoverImage ? 'has-cover' : ''}`}
+                style={hasValidCoverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
               >
                 <div className="user-avatar-large">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Ảnh đại diện" />
+                  {hasValidProfileImage && !imageErrors.dropdown ? (
+                    <img 
+                      src={profileImage} 
+                      alt="Ảnh đại diện"
+                      onError={() => {
+                        console.error('[Header] Failed to load profile image in dropdown:', profileImage);
+                        setImageErrors(prev => ({ ...prev, dropdown: true }));
+                      }}
+                    />
                   ) : (
                     <i className="bi bi-person"></i>
                   )}
@@ -188,12 +223,19 @@ const Header = () => {
         </div>
 
         <div
-          className={`mobile-user-info ${coverImage ? 'has-cover' : ''}`}
-          style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
+          className={`mobile-user-info ${hasValidCoverImage ? 'has-cover' : ''}`}
+          style={hasValidCoverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
         >
           <div className="mobile-user-avatar">
-            {profileImage ? (
-              <img src={profileImage} alt="Ảnh đại diện" />
+            {hasValidProfileImage && !imageErrors.mobile ? (
+              <img 
+                src={profileImage} 
+                alt="Ảnh đại diện"
+                onError={() => {
+                  console.error('[Header] Failed to load profile image in mobile menu:', profileImage);
+                  setImageErrors(prev => ({ ...prev, mobile: true }));
+                }}
+              />
             ) : (
               <i className="bi bi-person"></i>
             )}

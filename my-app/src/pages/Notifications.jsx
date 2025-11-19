@@ -159,6 +159,7 @@ const Notifications = () => {
             </button>
             <h1 className="page-title">Thông báo</h1>
           </div>
+          <div></div>
         </div>
 
         {/* Mark All Read Button */}
