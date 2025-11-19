@@ -136,8 +136,16 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
     
     @ExceptionHandler(Exception.class)
     public final ResponseEntity<?> handleAllException(Exception ex) {
+        System.out.println("Exception caught: " + ex.getClass().getName());
+        System.out.println("Exception message: " + ex.getMessage());
+        ex.printStackTrace();
+        
         Map<String, String> errors = new HashMap<>();
-        errors.put("error", ex.getMessage());
+        String message = ex.getMessage();
+        if (message == null || message.isEmpty()) {
+            message = "An unexpected error occurred: " + ex.getClass().getSimpleName();
+        }
+        errors.put("error", message);
         return new ResponseEntity<>(errors, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

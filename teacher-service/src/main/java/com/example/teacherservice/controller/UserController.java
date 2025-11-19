@@ -107,8 +107,21 @@ public class UserController {
     @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<UserAdminDto> updateUserById(
             @Valid @RequestPart("request") UserUpdateRequest request,
-            @RequestPart(value = "file", required = false) MultipartFile file) {
-        return ResponseEntity.ok(userService.convertUserToUserAdminDto(userService.updateUserById(request, file)));
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart(value = "coverFile", required = false) MultipartFile coverFile) {
+        try {
+            System.out.println("Update request received - ID: " + (request != null ? request.getId() : "null"));
+            System.out.println("UserDetails: " + (request != null && request.getUserDetails() != null ? "present" : "null"));
+            System.out.println("File (profile): " + (file != null ? file.getOriginalFilename() : "null"));
+            System.out.println("CoverFile: " + (coverFile != null ? coverFile.getOriginalFilename() : "null"));
+            
+            User updatedUser = userService.updateUserById(request, file, coverFile);
+            return ResponseEntity.ok(userService.convertUserToUserAdminDto(updatedUser));
+        } catch (Exception e) {
+            System.out.println("Error in updateUserById controller: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @DeleteMapping("/deleteUserById/{id}")

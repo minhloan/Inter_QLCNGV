@@ -75,6 +75,10 @@ export const updateUserById = async (userData) => {
     formData.append("file", userData.file);
   }
 
+  if (userData.coverFile) {
+    formData.append("coverFile", userData.coverFile);
+  }
+
   const response = await api.put("/update", formData, {
     headers: {
       "Content-Type": "multipart/form-data"

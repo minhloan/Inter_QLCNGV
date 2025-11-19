@@ -43,6 +43,7 @@ import AdminManageSubjectDetail from "./pages/admin/AdminManageSubjectDetail.jsx
 import AdminManageSubjectEdit from "./pages/admin/AdminManageSubjectEdit.jsx";
 import TeachingAssignmentAdd from "./pages/admin/TeachingAssignmentManagementAdd.jsx";
 import TeachingAssignmentDetail from "./pages/admin/TeachingAssignmentDetail.jsx";
+import TeacherTrialTeachingDetail from "./pages/teacher/TeacherTrialTeachingDetail.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -115,6 +116,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+        <Route
+            path="/teacher-trial-teaching-detail/:id"
+            element={
+                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+                    <TeacherTrialTeachingDetail />
+                </ProtectedRoute>
+            }
+        />
         <Route
             path="/manage-subject-detail/:id"
             element={

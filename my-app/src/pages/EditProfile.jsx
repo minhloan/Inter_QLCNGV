@@ -37,8 +37,10 @@ const EditProfile = () => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
+  const [profileCoverImage, setProfileCoverImage] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
-  
+  const [coverImageFile, setCoverImageFile] = useState(null);
+
   // Form state
   const [formData, setFormData] = useState({
     id: '',
@@ -106,7 +108,7 @@ const EditProfile = () => {
         }
 
         const data = await getCurrentUserInfo();
-        
+
         const parsedPhone = (() => {
           if (!data.phoneNumber) {
             return { code: '+84', number: '' };
@@ -117,7 +119,7 @@ const EditProfile = () => {
           }
           return { code: '+84', number: data.phoneNumber.replace(/\D/g, '') };
         })();
-        
+
         setFormData({
           id: data.id || '',
           studentId: data.id || '',
@@ -139,21 +141,28 @@ const EditProfile = () => {
           skills: data.skills || []
         });
 
-        if (data.imageUrl) {
-          if (data.imageUrl.startsWith('http')) {
-            setProfileImage(data.imageUrl);
-          } else {
-            try {
-              const blobUrl = await getFile(data.imageUrl);
-              setProfileImage(blobUrl);
-            } catch (error) {
-              if (error.response?.status !== 404) {
-                console.error('Error loading profile image:', error);
+          if (data.imageUrl || data.imageCoverUrl) {
+              if (data.imageUrl.startsWith('http')) {
+                  setProfileImage(data.imageUrl);
+                  setProfileCoverImage(data.imageCoverUrl);
+              } else {
+                  try {
+                      const blobUrl = await getFile(data.imageUrl);
+                      const coverImageUrl = data.imageCoverUrl
+                          ? await getFile(data.imageCoverUrl)
+                          : null;
+
+                      setProfileImage(blobUrl);
+                      setProfileCoverImage(coverImageUrl);
+                  } catch (error) {
+                      if (error.response?.status !== 404) {
+                          console.error('Error loading profile image:', error);
+                      }
+                      setProfileImage(null);
+                      setProfileCoverImage(null);
+                  }
               }
-              setProfileImage(null);
-            }
           }
-        }
       } catch (error) {
         console.error('Error loading user data:', error);
         showToast('Lỗi', error.response?.data?.message || 'Không thể tải thông tin người dùng', 'danger');
@@ -173,6 +182,14 @@ const EditProfile = () => {
     };
   }, [profileImage]);
 
+  useEffect(() => {
+        return () => {
+            if (profileCoverImage && profileCoverImage.startsWith('blob:')) {
+                URL.revokeObjectURL(profileCoverImage);
+            }
+        };
+  }, [profileCoverImage]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -180,6 +197,8 @@ const EditProfile = () => {
       [name]: value
     }));
   };
+
+
 
   const handlePhoneChange = (e) => {
     // Chỉ cho phép nhập số
@@ -218,29 +237,41 @@ const EditProfile = () => {
     showToast('Thông báo', 'Liên kết xác minh đã được gửi tới email của bạn', 'info');
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProfileImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setProfileImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleCoverImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setCoverImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileCoverImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
   const handleSave = async () => {
     try {
       setLoading(true);
-      
+
       if (!formData.id) {
         showToast('Lỗi', 'Không tìm thấy ID người dùng', 'danger');
         return;
       }
 
       const fullPhoneNumber = formData.phoneNumber.trim()
-        ? `${formData.countryCode}${formData.phoneNumber.trim()}` 
+        ? `${formData.countryCode}${formData.phoneNumber.trim()}`
         : null;
 
       const updateData = {
@@ -259,16 +290,15 @@ const EditProfile = () => {
         aboutMe: formData.bio,
         qualification: formData.qualification,
         skills: formData.skills,
-        file: profileImageFile
+        file: profileImageFile,
+        coverFile: coverImageFile
       };
 
       await updateUserById(updateData);
       showToast('Thành công', 'Cập nhật thông tin thành công', 'success');
-      
+
       const data = await getCurrentUserInfo();
-      console.log('User data after update:', data);
-      console.log('imageUrl from API:', data.imageUrl);
-      
+
       const parsedPhone = (() => {
         if (!data.phoneNumber) {
           return { code: '+84', number: '' };
@@ -279,7 +309,7 @@ const EditProfile = () => {
         }
         return { code: '+84', number: data.phoneNumber.replace(/\D/g, '') };
       })();
-      
+
       setFormData(prev => ({
         ...prev,
         bio: data.aboutMe || prev.bio,
@@ -288,7 +318,8 @@ const EditProfile = () => {
         countryCode: parsedPhone.code,
         phoneNumber: parsedPhone.number
       }));
-      
+
+      // Update profile image
       if (data.imageUrl) {
         if (data.imageUrl.startsWith('http')) {
           console.log('Setting profile image URL:', data.imageUrl);
@@ -316,6 +347,37 @@ const EditProfile = () => {
         } else {
           setProfileImage(null);
           setProfileImageFile(null);
+        }
+      }
+
+      // Update cover image
+      if (data.imageCoverUrl) {
+        if (data.imageCoverUrl.startsWith('http')) {
+          console.log('Setting cover image URL:', data.imageCoverUrl);
+          setProfileCoverImage(data.imageCoverUrl);
+          setCoverImageFile(null);
+        } else {
+          try {
+            const blobUrl = await getFile(data.imageCoverUrl);
+            console.log('Setting cover image blob URL:', blobUrl);
+            setProfileCoverImage(blobUrl);
+            setCoverImageFile(null);
+          } catch (error) {
+            console.error('Error loading cover image after update:', error);
+            if (profileCoverImage?.startsWith('data:')) {
+              console.warn('Failed to load cover image from server, keeping preview');
+            } else {
+              setProfileCoverImage(null);
+              setCoverImageFile(null);
+            }
+          }
+        }
+      } else {
+        if (profileCoverImage?.startsWith('data:')) {
+          console.warn('No imageCoverUrl from server, keeping preview');
+        } else {
+          setProfileCoverImage(null);
+          setCoverImageFile(null);
         }
       }
     } catch (error) {
@@ -431,9 +493,9 @@ const EditProfile = () => {
                 <div className="form-row">
                     <div className="form-group">
                         <label className="form-label">Điện thoại</label>
-                        <div 
+                        <div
                           className="input-group"
-                          style={{ 
+                          style={{
                             display: 'flex',
                             border: '1px solid #ced4da',
                             borderRadius: '0.375rem',
@@ -441,7 +503,7 @@ const EditProfile = () => {
                             transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
                           }}
                         >
-                          <div 
+                          <div
                             style={{
                               position: 'relative',
                               display: 'flex',
@@ -455,7 +517,7 @@ const EditProfile = () => {
                           >
                             <select
                               className="form-select"
-                              style={{ 
+                              style={{
                                 border: 'none',
                                 backgroundColor: 'transparent',
                                 padding: '0.375rem 24px 0.375rem 4px',
@@ -477,8 +539,8 @@ const EditProfile = () => {
                                 </option>
                               ))}
                             </select>
-                            <span 
-                              style={{ 
+                            <span
+                              style={{
                                 position: 'absolute',
                                 right: '10px',
                                 fontSize: '10px',
@@ -498,7 +560,7 @@ const EditProfile = () => {
                             onChange={handlePhoneChange}
                             placeholder="Nhập số điện thoại (8-15 chữ số)"
                             maxLength={15}
-                            style={{ 
+                            style={{
                               border: 'none',
                               borderLeft: 'none',
                               flex: 1,
@@ -532,8 +594,8 @@ const EditProfile = () => {
                   )}
                 </div>
                 {!formData.emailVerified && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="verify-email-link"
                     onClick={handleVerifyEmail}
                   >
@@ -684,8 +746,8 @@ const EditProfile = () => {
 
             {/* Save Button */}
             <div className="save-button-container">
-              <button 
-                className="btn-save" 
+              <button
+                className="btn-save"
                 onClick={handleSave}
                 disabled={loading}
               >
@@ -701,9 +763,9 @@ const EditProfile = () => {
               <h3 className="section-title">ẢNH ĐẠI DIỆN</h3>
               <div className="image-placeholder profile-picture-placeholder">
                 {profileImage ? (
-                  <img 
-                    src={profileImage} 
-                    alt="Profile" 
+                  <img
+                    src={profileImage}
+                    alt="Profile"
                     style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
                     onError={(e) => {
                       console.error('Failed to load image:', profileImage);
@@ -727,6 +789,41 @@ const EditProfile = () => {
                 onChange={handleImageChange}
               />
             </div>
+              <div className="image-upload-section">
+                  <h3 className="section-title">ẢNH NỀN</h3>
+                  <div className="image-placeholder cover-image-placeholder">
+                      {profileCoverImage ? (
+                          <img
+                              src={profileCoverImage}
+                              alt="Cover"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                              onError={(e) => {
+                                  console.error('Failed to load cover image:', profileCoverImage);
+                                  e.target.style.display = 'none';
+                                  setProfileCoverImage(null);
+                              }}
+                          />
+                      ) : (
+                          <span>1920 x 1080</span>
+                      )}
+                  </div>
+
+                  <label
+                      htmlFor="cover-image-upload"
+                      className="btn-upload"
+                      style={{ cursor: 'pointer' }}
+                  >
+                      <i className="bi bi-cloud-upload"></i>
+                      UPLOAD
+                  </label>
+                  <input
+                      id="cover-image-upload"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleCoverImageChange}
+                  />
+              </div>
           </div>
         </div>
       </div>

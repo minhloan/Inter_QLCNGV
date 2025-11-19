@@ -34,6 +34,7 @@ public class UserDetails {
     private String house_number;
     private String imageUrl;
     private String qualification;
+    private String imageCoverUrl;
     @ElementCollection
     @Builder.Default
     private List<String> skills = new ArrayList<>();

@@ -134,24 +134,45 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User updateUserById(UserUpdateRequest request, MultipartFile file) {
-        User toUpdate = findUserById(request.getId());
-        validateUniqueFields(toUpdate, request);
-        request.setUserDetails(updateUserDetails(toUpdate.getUserDetails(), request.getUserDetails(), file));
-        modelMapper.map(request, toUpdate);
-
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            toUpdate.setPassword(passwordEncoder.encode(request.getPassword()));
-        }
-
-        if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            try {
-                toUpdate.setActive(Active.valueOf(request.getStatus().toUpperCase()));
-            } catch (IllegalArgumentException ex) {
-                // keep existing status if provided value is invalid
+    public User updateUserById(UserUpdateRequest request, MultipartFile file, MultipartFile coverFile) {
+        try {
+            if (request == null || request.getId() == null || request.getId().isBlank()) {
+                throw new IllegalArgumentException("User ID is required");
             }
+            
+            User toUpdate = findUserById(request.getId());
+            validateUniqueFields(toUpdate, request);
+            
+            // Update userDetails first (handles file upload and mapping)
+            UserDetails updatedUserDetails = updateUserDetails(toUpdate.getUserDetails(), request.getUserDetails(), file, coverFile);
+            toUpdate.setUserDetails(updatedUserDetails);
+            
+            // Map other fields from request to user (excluding userDetails to avoid overwriting)
+            if (request.getEmail() != null && !request.getEmail().isBlank()) {
+                toUpdate.setEmail(request.getEmail());
+            }
+            if (request.getUsername() != null && !request.getUsername().isBlank()) {
+                toUpdate.setUsername(request.getUsername());
+            }
+
+            if (request.getPassword() != null && !request.getPassword().isBlank()) {
+                toUpdate.setPassword(passwordEncoder.encode(request.getPassword()));
+            }
+
+            if (request.getStatus() != null && !request.getStatus().isBlank()) {
+                try {
+                    toUpdate.setActive(Active.valueOf(request.getStatus().toUpperCase()));
+                } catch (IllegalArgumentException ex) {
+                    // keep existing status if provided value is invalid
+                    System.out.println("Invalid status value: " + request.getStatus());
+                }
+            }
+            return userRepository.save(toUpdate);
+        } catch (Exception e) {
+            System.out.println("Error in updateUserById: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
-        return userRepository.save(toUpdate);
     }
 
     @Override
@@ -180,19 +201,112 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDetails updateUserDetails(UserDetails toUpdate, UserDetails request, MultipartFile file) {
+    public UserDetails updateUserDetails(UserDetails toUpdate, UserDetails request, MultipartFile file, MultipartFile coverFile) {
         toUpdate = (toUpdate == null) ? new UserDetails() : toUpdate;
 
+        // Handle profile picture upload (file)
         if (file != null && !file.isEmpty()) {
-            String profilePicture = fileService.uploadImageToFileSystem(file);
-            if (profilePicture != null) {
-                // nếu muốn xóa ảnh cũ, cần kiểm tra null trước
-                fileService.deleteImageFromFileSystem(toUpdate.getImageUrl());
-                toUpdate.setImageUrl(profilePicture);
+            try {
+                System.out.println("Uploading profile picture: " + file.getOriginalFilename() + ", size: " + file.getSize() + ", type: " + file.getContentType());
+                String profilePicture = fileService.uploadImageToFileSystem(file);
+                System.out.println("Profile picture uploaded successfully, ID: " + profilePicture);
+                
+                if (profilePicture != null) {
+                    // Delete old profile picture if exists
+                    if (toUpdate.getImageUrl() != null && !toUpdate.getImageUrl().isBlank()) {
+                        try {
+                            fileService.deleteImageFromFileSystem(toUpdate.getImageUrl());
+                            System.out.println("Deleted old profile picture: " + toUpdate.getImageUrl());
+                        } catch (Exception e) {
+                            // Log error but don't fail the update
+                            System.out.println("Error deleting old profile picture: " + e.getMessage());
+                        }
+                    }
+                    toUpdate.setImageUrl(profilePicture);
+                }
+            } catch (Exception e) {
+                System.out.println("Error uploading profile picture: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Error uploading profile picture: " + e.getMessage(), e);
             }
         }
 
-        modelMapper.map(request, toUpdate);
+        // Handle cover image upload (coverFile)
+        if (coverFile != null && !coverFile.isEmpty()) {
+            try {
+                System.out.println("Uploading cover image: " + coverFile.getOriginalFilename() + ", size: " + coverFile.getSize() + ", type: " + coverFile.getContentType());
+                String coverImage = fileService.uploadImageToFileSystem(coverFile);
+                System.out.println("Cover image uploaded successfully, ID: " + coverImage);
+                
+                if (coverImage != null) {
+                    // Delete old cover image if exists
+                    if (toUpdate.getImageCoverUrl() != null && !toUpdate.getImageCoverUrl().isBlank()) {
+                        try {
+                            fileService.deleteImageFromFileSystem(toUpdate.getImageCoverUrl());
+                            System.out.println("Deleted old cover image: " + toUpdate.getImageCoverUrl());
+                        } catch (Exception e) {
+                            // Log error but don't fail the update
+                            System.out.println("Error deleting old cover image: " + e.getMessage());
+                        }
+                    }
+                    toUpdate.setImageCoverUrl(coverImage);
+                }
+            } catch (Exception e) {
+                System.out.println("Error uploading cover image: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Error uploading cover image: " + e.getMessage(), e);
+            }
+        }
+
+        // Only map if request is not null
+        if (request != null) {
+            try {
+                // Map fields manually to avoid issues with nested objects
+                if (request.getFirstName() != null) {
+                    toUpdate.setFirstName(request.getFirstName());
+                }
+                if (request.getLastName() != null) {
+                    toUpdate.setLastName(request.getLastName());
+                }
+                if (request.getPhoneNumber() != null) {
+                    toUpdate.setPhoneNumber(request.getPhoneNumber());
+                }
+                if (request.getGender() != null) {
+                    toUpdate.setGender(request.getGender());
+                }
+                if (request.getAboutMe() != null) {
+                    toUpdate.setAboutMe(request.getAboutMe());
+                }
+                if (request.getBirthDate() != null) {
+                    toUpdate.setBirthDate(request.getBirthDate());
+                }
+                if (request.getCountry() != null) {
+                    toUpdate.setCountry(request.getCountry());
+                }
+                if (request.getProvince() != null) {
+                    toUpdate.setProvince(request.getProvince());
+                }
+                if (request.getDistrict() != null) {
+                    toUpdate.setDistrict(request.getDistrict());
+                }
+                if (request.getWard() != null) {
+                    toUpdate.setWard(request.getWard());
+                }
+                if (request.getHouse_number() != null) {
+                    toUpdate.setHouse_number(request.getHouse_number());
+                }
+                if (request.getQualification() != null) {
+                    toUpdate.setQualification(request.getQualification());
+                }
+                if (request.getSkills() != null) {
+                    toUpdate.setSkills(request.getSkills());
+                }
+            } catch (Exception e) {
+                System.out.println("Error mapping UserDetails: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Error updating user details: " + e.getMessage(), e);
+            }
+        }
         return toUpdate;
     }
 
@@ -236,6 +350,7 @@ public class UserServiceImpl implements UserService {
             dto.setAboutMe(userDetails.getAboutMe());
             dto.setBirthDate(String.valueOf(userDetails.getBirthDate()));
             dto.setImageUrl(userDetails.getImageUrl());
+            dto.setImageCoverUrl(userDetails.getImageCoverUrl());
             dto.setQualification(userDetails.getQualification());
             dto.setSkills(userDetails.getSkills() != null ? new ArrayList<>(userDetails.getSkills()) : new ArrayList<>());
             dto.setCountry(userDetails.getCountry());
@@ -289,6 +404,7 @@ public class UserServiceImpl implements UserService {
                 dto.setBirthDate(null);
             }
             dto.setImageUrl(userDetails.getImageUrl());
+            dto.setImageCoverUrl(userDetails.getImageCoverUrl());
             dto.setCountry(userDetails.getCountry());
             dto.setProvince(userDetails.getProvince());
             dto.setDistrict(userDetails.getDistrict());

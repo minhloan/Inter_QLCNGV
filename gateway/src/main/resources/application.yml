@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: api-gateway
+  codec:
+    max-in-memory-size: 10MB
   cloud:
     gateway:
       default-filters:
@@ -18,6 +20,8 @@ spring:
           httpclient:
             connect-timeout: 60000
             response-timeout: 60s
+            max-header-size: 10KB
+            max-in-memory-size: 10MB
       globalcors:
         corsConfigurations:
           # CORS for REST API routes

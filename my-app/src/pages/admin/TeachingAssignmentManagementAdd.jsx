@@ -52,12 +52,6 @@ const TeachingAssignmentAdd = () => {
         { dayOfWeek: "", startTime: "", endTime: "" },
     ]);
 
-    useEffect(() => {
-        // load lần đầu: không filter keyword
-        loadTeachers("");
-        loadSubjects("");
-    }, []);
-
     // ========== LOAD DATA ==========
     const loadTeachers = async (keyword = "") => {
         try {
@@ -89,6 +83,33 @@ const TeachingAssignmentAdd = () => {
             setLoading(false);
         }
     };
+
+    // Lần đầu vào trang: gọi load với keyword rỗng
+    useEffect(() => {
+        loadTeachers("");
+        loadSubjects("");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Auto search giáo viên khi gõ keyword (debounce)
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            loadTeachers(teacherKeyword.trim());
+        }, 400); // 0.4s sau khi dừng gõ
+
+        return () => clearTimeout(timeoutId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [teacherKeyword]);
+
+    // Auto search môn học khi gõ keyword (debounce)
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            loadSubjects(subjectKeyword.trim());
+        }, 400);
+
+        return () => clearTimeout(timeoutId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subjectKeyword]);
 
     // ========== COMMON ==========
     const showToast = (title, message, type) => {
@@ -131,7 +152,11 @@ const TeachingAssignmentAdd = () => {
             !form.year ||
             !form.quarter
         ) {
-            showToast("Thông báo", "Vui lòng điền đầy đủ các trường bắt buộc", "danger");
+            showToast(
+                "Thông báo",
+                "Vui lòng điền đầy đủ các trường bắt buộc",
+                "danger"
+            );
             return;
         }
 
@@ -194,7 +219,10 @@ const TeachingAssignmentAdd = () => {
                     "Phân công giảng dạy đã được tạo thành công!",
                     "success"
                 );
-                setTimeout(() => navigate("/teaching-assignment-management"), 800);
+                setTimeout(
+                    () => navigate("/teaching-assignment-management"),
+                    800
+                );
             }
         } catch (err) {
             console.error(err);
@@ -224,7 +252,9 @@ const TeachingAssignmentAdd = () => {
                     <div className="content-title">
                         <button
                             className="back-button"
-                            onClick={() => navigate("/teaching-assignment-management")}
+                            onClick={() =>
+                                navigate("/teaching-assignment-management")
+                            }
                             aria-label="back"
                         >
                             <i className="bi bi-arrow-left"></i>
@@ -237,69 +267,47 @@ const TeachingAssignmentAdd = () => {
                     <div style={{ ...cardStyle, padding: 28 }}>
                         <form onSubmit={handleSubmit} noValidate>
                             <div className="row gy-4">
-                                {/* SEARCH GIÁO VIÊN */}
+                                {/* Giáo viên + Search */}
                                 <div className="col-md-6 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Tìm giáo viên
-                                    </label>
-                                    <div className="input-group">
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Nhập tên, email, mã giáo viên..."
-                                            value={teacherKeyword}
-                                            onChange={(e) => setTeacherKeyword(e.target.value)}
-                                            style={{ ...inputRadius }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-secondary"
-                                            onClick={() => loadTeachers(teacherKeyword)}
-                                            style={{ borderRadius: 10, marginLeft: 8 }}
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Giáo viên{" "}
+                                        <span
+                                            style={{ color: "#e74c3c" }}
                                         >
-                                            <i className="bi bi-search"></i> Tìm
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* SEARCH MÔN HỌC */}
-                                <div className="col-md-6 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Tìm môn học
+                                            *
+                                        </span>
                                     </label>
-                                    <div className="input-group">
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Nhập tên hoặc mã môn học..."
-                                            value={subjectKeyword}
-                                            onChange={(e) => setSubjectKeyword(e.target.value)}
-                                            style={{ ...inputRadius }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-outline-secondary"
-                                            onClick={() => loadSubjects(subjectKeyword)}
-                                            style={{ borderRadius: 10, marginLeft: 8 }}
-                                        >
-                                            <i className="bi bi-search"></i> Tìm
-                                        </button>
-                                    </div>
-                                </div>
 
-                                {/* Giáo viên */}
-                                <div className="col-md-6 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Giáo viên <span style={{ color: "#e74c3c" }}>*</span>
-                                    </label>
+                                    {/* Input search nằm trên đầu select */}
+                                    <input
+                                        type="text"
+                                        className="form-control mb-2"
+                                        placeholder="Tìm theo tên, email, mã giáo viên..."
+                                        value={teacherKeyword}
+                                        onChange={(e) =>
+                                            setTeacherKeyword(e.target.value)
+                                        }
+                                        style={{ ...inputRadius }}
+                                    />
+
                                     <select
                                         name="teacherId"
                                         className="form-select"
                                         value={form.teacherId}
                                         onChange={handleChangeForm}
-                                        style={{ ...inputRadius, paddingTop: 10 }}
+                                        style={{
+                                            ...inputRadius,
+                                            paddingTop: 10,
+                                        }}
                                     >
-                                        <option value="">Chọn giáo viên</option>
+                                        <option value="">
+                                            Chọn giáo viên
+                                        </option>
                                         {teachers.map((t) => {
                                             const displayName =
                                                 t.username ||
@@ -308,37 +316,84 @@ const TeachingAssignmentAdd = () => {
                                                 t.email ||
                                                 "Không tên";
                                             const teacherCode =
-                                                t.teacherCode || t.code || t.id?.slice(0, 8) || "";
+                                                t.teacherCode ||
+                                                t.code ||
+                                                t.id?.slice(0, 8) ||
+                                                "";
                                             return (
-                                                <option key={t.id} value={t.id}>
+                                                <option
+                                                    key={t.id}
+                                                    value={t.id}
+                                                >
                                                     {displayName}
-                                                    {teacherCode ? ` — ${teacherCode}` : ""}
+                                                    {teacherCode
+                                                        ? ` — ${teacherCode}`
+                                                        : ""}
                                                 </option>
                                             );
                                         })}
                                     </select>
                                 </div>
 
-                                {/* Môn học */}
+                                {/* Môn học + Search */}
                                 <div className="col-md-6 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Môn học <span style={{ color: "#e74c3c" }}>*</span>
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Môn học{" "}
+                                        <span
+                                            style={{ color: "#e74c3c" }}
+                                        >
+                                            *
+                                        </span>
                                     </label>
+
+                                    {/* Input search nằm trên đầu select */}
+                                    <input
+                                        type="text"
+                                        className="form-control mb-2"
+                                        placeholder="Tìm theo tên hoặc mã môn học..."
+                                        value={subjectKeyword}
+                                        onChange={(e) =>
+                                            setSubjectKeyword(e.target.value)
+                                        }
+                                        style={{ ...inputRadius }}
+                                    />
+
                                     <select
                                         name="subjectId"
                                         className="form-select"
                                         value={form.subjectId}
                                         onChange={handleChangeForm}
-                                        style={{ ...inputRadius, paddingTop: 10 }}
+                                        style={{
+                                            ...inputRadius,
+                                            paddingTop: 10,
+                                        }}
                                     >
-                                        <option value="">Chọn môn học</option>
+                                        <option value="">
+                                            Chọn môn học
+                                        </option>
                                         {subjects.map((s) => {
-                                            const subjectName = s.subjectName || s.name || "Không tên";
+                                            const subjectName =
+                                                s.subjectName ||
+                                                s.name ||
+                                                "Không tên";
                                             const subjectCode =
-                                                s.subjectCode || s.code || s.id?.slice(0, 8) || "";
+                                                s.subjectCode ||
+                                                s.code ||
+                                                s.id?.slice(0, 8) ||
+                                                "";
                                             return (
-                                                <option key={s.id} value={s.id}>
-                                                    {subjectCode ? `${subjectCode} - ` : ""}
+                                                <option
+                                                    key={s.id}
+                                                    value={s.id}
+                                                >
+                                                    {subjectCode
+                                                        ? `${subjectCode} - `
+                                                        : ""}
                                                     {subjectName}
                                                 </option>
                                             );
@@ -348,8 +403,18 @@ const TeachingAssignmentAdd = () => {
 
                                 {/* Mã lớp */}
                                 <div className="col-md-6 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Mã lớp <span style={{ color: "#e74c3c" }}>*</span>
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Mã lớp{" "}
+                                        <span
+                                            style={{ color: "#e74c3c" }}
+                                        >
+                                            *
+                                        </span>
                                     </label>
                                     <input
                                         type="text"
@@ -364,8 +429,18 @@ const TeachingAssignmentAdd = () => {
 
                                 {/* Năm */}
                                 <div className="col-md-3 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Năm <span style={{ color: "#e74c3c" }}>*</span>
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Năm{" "}
+                                        <span
+                                            style={{ color: "#e74c3c" }}
+                                        >
+                                            *
+                                        </span>
                                     </label>
                                     <input
                                         type="number"
@@ -382,19 +457,37 @@ const TeachingAssignmentAdd = () => {
 
                                 {/* Quý */}
                                 <div className="col-md-3 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
-                                        Quý <span style={{ color: "#e74c3c" }}>*</span>
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Quý{" "}
+                                        <span
+                                            style={{ color: "#e74c3c" }}
+                                        >
+                                            *
+                                        </span>
                                     </label>
                                     <select
                                         name="quarter"
                                         className="form-select"
                                         value={form.quarter}
                                         onChange={handleChangeForm}
-                                        style={{ ...inputRadius, paddingTop: 10 }}
+                                        style={{
+                                            ...inputRadius,
+                                            paddingTop: 10,
+                                        }}
                                     >
-                                        <option value="">Chọn quý</option>
+                                        <option value="">
+                                            Chọn quý
+                                        </option>
                                         {[1, 2, 3, 4].map((q) => (
-                                            <option key={q} value={q}>
+                                            <option
+                                                key={q}
+                                                value={q}
+                                            >
                                                 Quý {q}
                                             </option>
                                         ))}
@@ -403,7 +496,12 @@ const TeachingAssignmentAdd = () => {
 
                                 {/* Phòng học */}
                                 <div className="col-md-6 mb-3">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
                                         Phòng học
                                     </label>
                                     <input
@@ -419,7 +517,12 @@ const TeachingAssignmentAdd = () => {
 
                                 {/* Ghi chú */}
                                 <div className="col-12 mb-4">
-                                    <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                    <label
+                                        style={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
                                         Ghi chú
                                     </label>
                                     <textarea
@@ -435,7 +538,12 @@ const TeachingAssignmentAdd = () => {
 
                                 {/* BUỔI HỌC */}
                                 <div className="col-12 mb-2 d-flex justify-content-between align-items-center">
-                                    <h5 style={{ fontWeight: 700, marginBottom: 12 }}>
+                                    <h5
+                                        style={{
+                                            fontWeight: 700,
+                                            marginBottom: 12,
+                                        }}
+                                    >
                                         Buổi học
                                     </h5>
                                     <button
@@ -444,34 +552,65 @@ const TeachingAssignmentAdd = () => {
                                         onClick={handleAddSlot}
                                         style={{ borderRadius: 10 }}
                                     >
-                                        <i className="bi bi-plus-circle me-1"></i> Thêm buổi học
+                                        <i className="bi bi-plus-circle me-1"></i>{" "}
+                                        Thêm buổi học
                                     </button>
                                 </div>
 
                                 {slots.map((slot, index) => (
-                                    <div className="col-12 mb-3" key={index}>
+                                    <div
+                                        className="col-12 mb-3"
+                                        key={index}
+                                    >
                                         <div className="row gx-3 align-items-end">
                                             <div className="col-md-4 mb-2">
-                                                <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                                <label
+                                                    style={{
+                                                        fontSize: 14,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
                                                     Buổi {index + 1} - Thứ
                                                 </label>
                                                 <select
                                                     className="form-select"
                                                     value={slot.dayOfWeek}
                                                     onChange={(e) =>
-                                                        handleChangeSlot(index, "dayOfWeek", e.target.value)
+                                                        handleChangeSlot(
+                                                            index,
+                                                            "dayOfWeek",
+                                                            e.target.value
+                                                        )
                                                     }
-                                                    style={{ ...inputRadius, paddingTop: 10 }}
+                                                    style={{
+                                                        ...inputRadius,
+                                                        paddingTop: 10,
+                                                    }}
                                                 >
-                                                    {dayOfWeekOptions.map((opt) => (
-                                                        <option key={opt.value || "none"} value={opt.value}>
-                                                            {opt.label}
-                                                        </option>
-                                                    ))}
+                                                    {dayOfWeekOptions.map(
+                                                        (opt) => (
+                                                            <option
+                                                                key={
+                                                                    opt.value ||
+                                                                    "none"
+                                                                }
+                                                                value={
+                                                                    opt.value
+                                                                }
+                                                            >
+                                                                {opt.label}
+                                                            </option>
+                                                        )
+                                                    )}
                                                 </select>
                                             </div>
                                             <div className="col-md-3 mb-2">
-                                                <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                                <label
+                                                    style={{
+                                                        fontSize: 14,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
                                                     Giờ bắt đầu
                                                 </label>
                                                 <input
@@ -479,13 +618,22 @@ const TeachingAssignmentAdd = () => {
                                                     className="form-control"
                                                     value={slot.startTime}
                                                     onChange={(e) =>
-                                                        handleChangeSlot(index, "startTime", e.target.value)
+                                                        handleChangeSlot(
+                                                            index,
+                                                            "startTime",
+                                                            e.target.value
+                                                        )
                                                     }
                                                     style={{ ...inputRadius }}
                                                 />
                                             </div>
                                             <div className="col-md-3 mb-2">
-                                                <label style={{ fontSize: 14, fontWeight: 600 }}>
+                                                <label
+                                                    style={{
+                                                        fontSize: 14,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
                                                     Giờ kết thúc
                                                 </label>
                                                 <input
@@ -493,21 +641,32 @@ const TeachingAssignmentAdd = () => {
                                                     className="form-control"
                                                     value={slot.endTime}
                                                     onChange={(e) =>
-                                                        handleChangeSlot(index, "endTime", e.target.value)
+                                                        handleChangeSlot(
+                                                            index,
+                                                            "endTime",
+                                                            e.target.value
+                                                        )
                                                     }
                                                     style={{ ...inputRadius }}
                                                 />
                                             </div>
                                             <div className="col-md-2 mb-2 d-flex flex-column">
                                                 <small className="text-muted mb-1">
-                                                    Chỉ tính nếu chọn đủ Thứ + giờ
+                                                    Chỉ tính nếu chọn đủ Thứ +
+                                                    giờ
                                                 </small>
                                                 {slots.length > 1 && (
                                                     <button
                                                         type="button"
                                                         className="btn btn-outline-danger btn-sm"
-                                                        onClick={() => handleRemoveSlot(index)}
-                                                        style={{ borderRadius: 10 }}
+                                                        onClick={() =>
+                                                            handleRemoveSlot(
+                                                                index
+                                                            )
+                                                        }
+                                                        style={{
+                                                            borderRadius: 10,
+                                                        }}
                                                     >
                                                         <i className="bi bi-trash"></i>
                                                     </button>
@@ -530,7 +689,11 @@ const TeachingAssignmentAdd = () => {
                                 <button
                                     type="button"
                                     className="btn btn-light"
-                                    onClick={() => navigate("/teaching-assignment-management")}
+                                    onClick={() =>
+                                        navigate(
+                                            "/teaching-assignment-management"
+                                        )
+                                    }
                                     style={{
                                         borderRadius: 10,
                                         padding: "10px 20px",
@@ -547,13 +710,16 @@ const TeachingAssignmentAdd = () => {
                                     style={{
                                         borderRadius: 10,
                                         padding: "10px 26px",
-                                        background: "linear-gradient(90deg,#ff8a00,#ff6a00)",
+                                        background:
+                                            "linear-gradient(90deg,#ff8a00,#ff6a00)",
                                         color: "#fff",
-                                        boxShadow: "0 6px 18px rgba(255,105,0,0.18)",
+                                        boxShadow:
+                                            "0 6px 18px rgba(255,105,0,0.18)",
                                         fontWeight: 700,
                                     }}
                                 >
-                                    <i className="bi bi-check-circle me-2"></i>LƯU
+                                    <i className="bi bi-check-circle me-2"></i>
+                                    LƯU
                                 </button>
                             </div>
                         </form>

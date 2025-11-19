@@ -102,16 +102,16 @@ const TeacherSubjectRegistration = () => {
                     quarterNumber = rawQuarter.toUpperCase().replace("QUY", "");
                 }
 
-                // ---- chuẩn hoá status ----
                 const status = (item.status || "").toString().trim().toUpperCase();
 
                 return {
                     id: item.id,
+                    subjectId: item.subjectId,              // 👈 THÊM DÒNG NÀY
                     subject_code: item.subjectCode ?? "N/A",
                     subject_name: item.subjectName ?? "N/A",
                     year: item.year ?? null,
-                    quarter: quarterNumber, // "1" | "2" | "3" | "4"
-                    status, // REGISTERED | COMPLETED | NOT_COMPLETED
+                    quarter: quarterNumber,
+                    status,
                     reason_for_carry_over: item.reasonForCarryOver ?? "-",
                     registration_date: formattedDate,
                 };
@@ -177,6 +177,27 @@ const TeacherSubjectRegistration = () => {
 
     // ===================== REGISTER =====================
     const handleRegister = async (subjectId, year, quarter) => {
+        // ✅ 1) Check trùng môn trong cùng 1 năm
+        const isDuplicated = registrations.some((reg) => {
+            if (!reg.subjectId || reg.year == null) return false;
+            return (
+                reg.subjectId.toString() === subjectId.toString() &&
+                Number(reg.year) === Number(year)
+                // Nếu muốn bỏ qua môn bị TỪ CHỐI thì thêm:
+                // && (reg.status || "").toUpperCase() !== "NOT_COMPLETED"
+            );
+        });
+
+        if (isDuplicated) {
+            showToast(
+                "Lỗi",
+                `Bạn đã đăng ký môn này trong năm ${year}, không thể đăng ký trùng.`,
+                "danger"
+            );
+            return; // ⛔ Không gọi API nữa
+        }
+
+        // ✅ 2) Nếu không trùng thì mới gọi API
         try {
             setLoading(true);
 
@@ -202,6 +223,7 @@ const TeacherSubjectRegistration = () => {
             setLoading(false);
         }
     };
+
 
     // ===================== UI HELPERS =====================
     const showToast = (title, message, type) => {
@@ -238,6 +260,26 @@ const TeacherSubjectRegistration = () => {
         return combined.includes(keyword);
     });
 
+    // ===================== VALIDATION THỐNG KÊ (4 MÔN/NĂM, 1 MÔN/QUÝ) =====================
+    // Năm dùng để kiểm tra: nếu user chọn năm lọc thì lấy năm đó, nếu không thì dùng năm hiện tại
+    const validationYear = yearFilter || currentYear;
+
+    // Chỉ tính các đăng ký của năm đó và không bị TỪ CHỐI
+    const regsForValidationYear = registrations.filter(
+        (reg) =>
+            Number(reg.year) === Number(validationYear) &&
+            (reg.status || "").toUpperCase() !== "NOT_COMPLETED"
+    );
+
+    const totalSubjectsInYear = regsForValidationYear.length;
+
+    // Những quý chưa có môn nào (1..4)
+    const missingQuarters = [1, 2, 3, 4].filter(
+        (q) => !regsForValidationYear.some(
+            (reg) => String(reg.quarter) === String(q)
+        )
+    );
+
     if (loading) {
         return <Loading fullscreen={true} message="Đang tải dữ liệu..." />;
     }
@@ -257,11 +299,11 @@ const TeacherSubjectRegistration = () => {
                     <button
                         className="btn btn-primary"
                         onClick={() => {
-                            // mỗi lần mở modal, reset giá trị mặc định cho đăng ký
+                            // Reset khi mở modal
                             setRegisterYear(currentYear);
                             setRegisterQuarter("");
                             setSelectedSubject("");
-                            setSubjectSearchTerm(""); // reset ô tìm kiếm
+                            setSubjectSearchTerm("");
                             setShowRegisterModal(true);
                         }}
                     >
@@ -464,12 +506,30 @@ const TeacherSubjectRegistration = () => {
                     </div>
                 </div>
 
-                {/* INFO BOX */}
-                <div className="alert alert-info" style={{ marginBottom: "20px" }}>
-                    <i className="bi bi-info-circle me-2"></i>
-                    Tối thiểu 4 môn/năm và 1 môn/quý. Môn chưa hoàn thành có thể được dời
-                    sang năm khác.
-                </div>
+                {/* 🔥 CẢNH BÁO THEO QUY ĐỊNH */}
+                {totalSubjectsInYear < 4 && (
+                    <div className="alert alert-warning" style={{ marginBottom: "8px" }}>
+                        <i className="bi bi-exclamation-triangle me-2"></i>
+                        Năm <strong>{validationYear}</strong> bạn mới đăng ký{" "}
+                        <strong>{totalSubjectsInYear}</strong> môn. Yêu cầu tối thiểu{" "}
+                        <strong>4 môn / năm</strong>.
+                    </div>
+                )}
+
+                {missingQuarters.length > 0 && (
+                    <div className="alert alert-warning" style={{ marginBottom: "20px" }}>
+                        <i className="bi bi-exclamation-triangle me-2"></i>
+                        Năm <strong>{validationYear}</strong>, các quý sau{" "}
+                        <strong>chưa có môn nào đăng ký</strong>:{" "}
+                        {missingQuarters.map((q, idx) => (
+                            <span key={q}>
+                Quý {q}
+                                {idx !== missingQuarters.length - 1 && ", "}
+              </span>
+                        ))}
+                        .
+                    </div>
+                )}
 
                 {/* REGISTER MODAL */}
                 {showRegisterModal && (
@@ -557,10 +617,10 @@ const TeacherSubjectRegistration = () => {
                                     onChange={(e) => setRegisterQuarter(e.target.value)}
                                 >
                                     <option value="">-- Chọn quý --</option>
-                                    <option value="1">Quý 1</option>
-                                    <option value="2">Quý 2</option>
-                                    <option value="3">Quý 3</option>
-                                    <option value="4">Quý 4</option>
+                                    <option value="0">Quý 1</option>
+                                    <option value="1">Quý 2</option>
+                                    <option value="2">Quý 3</option>
+                                    <option value="3">Quý 4</option>
                                 </select>
                             </div>
 

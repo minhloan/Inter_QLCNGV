@@ -22,20 +22,59 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public String uploadImageToFileSystem(MultipartFile file) {
-        String uuid = UUID.randomUUID().toString();
-        String filePath = FOLDER_PATH + "/" + uuid;
-        try{
-            file.transferTo(new java.io.File(filePath));
-        } catch (IOException e) {
+        if (file == null || file.isEmpty()) {
             throw GenericErrorResponse.builder()
-                    .message("Unable to save file to storage")
+                    .message("File is null or empty")
+                    .httpStatus(HttpStatus.BAD_REQUEST)
+                    .build();
+        }
+
+        String uuid = UUID.randomUUID().toString();
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        
+        // Extract extension from original filename
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        } else {
+            // Try to determine extension from content type
+            String contentType = file.getContentType();
+            if (contentType != null) {
+                if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                    extension = ".jpg";
+                } else if (contentType.contains("png")) {
+                    extension = ".png";
+                } else if (contentType.contains("gif")) {
+                    extension = ".gif";
+                } else if (contentType.contains("webp")) {
+                    extension = ".webp";
+                } else {
+                    extension = ".bin"; // Default extension
+                }
+            } else {
+                extension = ".bin";
+            }
+        }
+        
+        java.nio.file.Path filePath = java.nio.file.Paths.get(FOLDER_PATH, uuid + extension);
+        
+        try {
+            // Ensure parent directory exists
+            Files.createDirectories(filePath.getParent());
+            file.transferTo(filePath.toFile());
+        } catch (IOException e) {
+            System.err.println("Error saving file to: " + filePath);
+            System.err.println("Error message: " + e.getMessage());
+            e.printStackTrace();
+            throw GenericErrorResponse.builder()
+                    .message("Unable to save file to storage: " + e.getMessage())
                     .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
                     .build();
         }
 
         File fileEntity = File.builder()
                 .type(file.getContentType())
-                .filePath(filePath)
+                .filePath(filePath.toString())
                 .build();
         fileRepository.save(fileEntity);
         return fileEntity.getId();
@@ -56,14 +95,25 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public void deleteImageFromFileSystem(String id) {
-        java.io.File file = new java.io.File(findFileById(id).getFilePath());
-        boolean deleted = file.delete();
-        if (deleted) fileRepository.deleteById(id);
-        else
-            throw GenericErrorResponse.builder()
-                    .message("unable to delete file from storage")
-                    .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .build();
+        if (id == null || id.isBlank()) {
+            return; // Skip deletion if id is null or blank
+        }
+        try {
+            File fileEntity = findFileById(id);
+            java.io.File file = new java.io.File(fileEntity.getFilePath());
+            boolean deleted = file.delete();
+            if (deleted) {
+                fileRepository.deleteById(id);
+            } else {
+                throw GenericErrorResponse.builder()
+                        .message("unable to delete file from storage")
+                        .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .build();
+            }
+        } catch (Exception e) {
+            // If file not found or other error, just log and continue
+            // Don't throw exception to avoid breaking the update process
+        }
     }
 
     @Override
@@ -77,14 +127,32 @@ public class FileServiceImpl implements FileService {
     @PostConstruct
     public void init() {
         String currentPath = System.getProperty("user.dir");
-        FOLDER_PATH = currentPath + "/teacher-service/src/main/resources/attachments";
+        // Use Paths.get() for cross-platform compatibility
+        java.nio.file.Path folderPath = java.nio.file.Paths.get(currentPath, "teacher-service", "src", "main", "resources", "attachments");
+        FOLDER_PATH = folderPath.toString();
+        
+        System.out.println("Initializing file storage at: " + FOLDER_PATH);
+        System.out.println("Current working directory: " + currentPath);
 
         try {
-            java.nio.file.Path path = java.nio.file.Paths.get(FOLDER_PATH);
-            if (!Files.exists(path)) {
-                Files.createDirectories(path);
+            if (!Files.exists(folderPath)) {
+                System.out.println("Creating directory: " + FOLDER_PATH);
+                Files.createDirectories(folderPath);
+                System.out.println("Directory created successfully");
+            } else {
+                System.out.println("Directory already exists");
+            }
+            
+            // Verify write permissions
+            java.io.File testFile = new java.io.File(FOLDER_PATH);
+            if (!testFile.canWrite()) {
+                System.err.println("WARNING: No write permission for directory: " + FOLDER_PATH);
+            } else {
+                System.out.println("Directory has write permission");
             }
         } catch (IOException e) {
+            System.err.println("Error creating directories: " + e.getMessage());
+            e.printStackTrace();
             throw GenericErrorResponse.builder()
                     .message("unable to create directories: " + e.getMessage())
                     .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)

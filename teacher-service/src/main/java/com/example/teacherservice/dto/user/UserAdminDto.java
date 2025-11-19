@@ -16,6 +16,7 @@ public class UserAdminDto {
     private String aboutMe;
     private String birthDate;
     private String imageUrl;
+    private String imageCoverUrl;
     private String active;
     private String roleName;
     private String country;

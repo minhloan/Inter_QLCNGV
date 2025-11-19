@@ -17,12 +17,12 @@ public interface UserService {
     User getUserById(String id);
     User getUserByEmail(String email);
     User getUserByUsername(String username);
-    User updateUserById(UserUpdateRequest request, MultipartFile file);
+    User updateUserById(UserUpdateRequest request, MultipartFile file, MultipartFile coverFile);
     void deleteUserById(String id);
     User findUserById(String id);
     User findUserByUsername(String username);
     User findUserByEmail(String email);
-    UserDetails updateUserDetails(UserDetails toUpdate,UserDetails request, MultipartFile file);
+    UserDetails updateUserDetails(UserDetails toUpdate,UserDetails request, MultipartFile file, MultipartFile coverFile);
     void updatePasswordByEmail(String email, String rawPassword);
     Page<User> getAllUsers(Integer pageNo, Integer pageSize);
     Page<User> searchUsers(String keyword, Integer pageNo, Integer pageSize);
