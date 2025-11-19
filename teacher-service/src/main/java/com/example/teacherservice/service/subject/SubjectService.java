@@ -1,7 +1,6 @@
 package com.example.teacherservice.service.subject;
 
 import com.example.teacherservice.dto.subject.SubjectDto;
-import com.example.teacherservice.enums.SubjectSystem;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.request.subject.SubjectCreateRequest;
 import com.example.teacherservice.request.subject.SubjectUpdateRequest;
@@ -12,7 +11,7 @@ public interface SubjectService {
     List<SubjectDto> getAll();
     List<SubjectDto> getAllSubjectsByTrial();
     List<SubjectDto> searchSubjects(String keyword);
-
+    SubjectDto toDto(Subject subject);
     Subject saveSubject(SubjectCreateRequest request);
 
     Subject getSubjectById(String id);
@@ -21,12 +20,11 @@ public interface SubjectService {
 
     Subject updateSubject(SubjectUpdateRequest request);
 
-    void deleteSubjectById(String id);   // soft delete = isActive = false
+    void deleteSubjectById(String id);
 
-    // KHÔNG PHÂN TRANG NỮA
     List<Subject> getAllSubjects();
 
     List<Subject> searchSubjects(String keyword,
-                                 SubjectSystem system,
+                                 String systemId,
                                  Boolean isActive);
 }

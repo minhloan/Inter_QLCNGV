@@ -159,7 +159,7 @@ const Login = () => {
           {/* Video Player */}
           <div className="video-container">
             <div className="video-wrapper">
-              <div className="video-placeholder">
+              {/* <div className="video-placeholder">
                 <div className="video-content">
                   <div className="video-header">
                     <div className="video-logo">
@@ -188,7 +188,14 @@ const Login = () => {
                     <button className="control-btn"><i className="bi bi-three-dots"></i></button>
                   </div>
                 </div>
-              </div>
+              </div> */}
+              <iframe
+                src="https://www.youtube.com/embed/xt00gVE1i5E?autoplay=1&rel=0"
+                title="Hướng dẫn đăng nhập"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
           </div>
           

@@ -23,17 +23,16 @@ public class SubjectController {
     @GetMapping("/search")
     public ResponseEntity<List<Subject>> searchSubjects(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) SubjectSystem system,
+            @RequestParam(required = false) String systemId,
             @RequestParam(required = false) Boolean isActive
     ) {
-        List<Subject> subjects = subjectService.searchSubjects(keyword, system, isActive);
+        List<Subject> subjects = subjectService.searchSubjects(keyword, systemId, isActive);
         return ResponseEntity.ok(subjects);
     }
 
-    @GetMapping("/getAll")
-    public ResponseEntity<List<Subject>> getAllSubject() {
-        List<Subject> subjects = subjectService.getAllSubjects();
-        return ResponseEntity.ok(subjects);
+    @GetMapping("/getAllRaw") // raw entity
+    public ResponseEntity<List<Subject>> getAllSubjectRaw() {
+        return ResponseEntity.ok(subjectService.getAllSubjects());
     }
 
     @PostMapping("/save")
@@ -43,9 +42,10 @@ public class SubjectController {
     }
 
     @GetMapping("/getById/{id}")
-    public ResponseEntity<Subject> getSubjectById(@PathVariable String id) {
+    public ResponseEntity<SubjectDto> getSubjectById(@PathVariable String id) {
         Subject subject = subjectService.getSubjectById(id);
-        return ResponseEntity.ok(subject);
+        SubjectDto dto = subjectService.toDto(subject);
+        return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/update")

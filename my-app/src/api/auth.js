@@ -4,6 +4,41 @@ import createApiInstance from "./createApiInstance.js";
 const API_URL = "/v1/teacher/auth";
 const api = createApiInstance(API_URL);
 
+const normalizeBase64 = (segment) => {
+    const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = base64.length % 4 === 0 ? 0 : 4 - (base64.length % 4);
+    return base64 + '='.repeat(padding);
+};
+
+const decodePayload = () => {
+    const token = getToken();
+    if (!token) return null;
+
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    try {
+        const decodedBinary = atob(normalizeBase64(parts[1]));
+        let jsonString;
+
+        if (typeof TextDecoder !== 'undefined') {
+            const bytes = Uint8Array.from(decodedBinary, (char) => char.charCodeAt(0));
+            jsonString = new TextDecoder().decode(bytes);
+        } else {
+            jsonString = decodeURIComponent(
+                Array.from(decodedBinary)
+                    .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+                    .join('')
+            );
+        }
+
+        return JSON.parse(jsonString);
+    } catch (error) {
+        console.error("Error decoding token payload:", error);
+        return null;
+    }
+};
+
 export const login = async (data) => {
     const response = await api.post("/login", data);
     const accessToken = response.data.access || response.data.token;
@@ -117,12 +152,10 @@ export const logout = async () => {
 };
 
 export const getUserRole = () => {
-    const token = getToken();
-    if (!token) return [];
+    const payload = decodePayload();
+    if (!payload) return [];
 
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-
         let roles = [];
         if (Array.isArray(payload.roles)) {
             roles = payload.roles;
@@ -139,7 +172,7 @@ export const getUserRole = () => {
                 .map(r => r.startsWith('ROLE_') ? r : `ROLE_${r.toUpperCase()}`)
         )];
     } catch (error) {
-        console.error("Error decoding token:", error);
+        console.error("Error parsing roles:", error);
         return [];
     }
 };
@@ -179,21 +212,15 @@ export const getPrimaryRole = () => {
  * Lấy thông tin user từ token (email, userId)
  */
 export const getUserInfo = () => {
-    const token = getToken();
-    if (!token) return null;
+    const payload = decodePayload();
+    if (!payload) return null;
 
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return {
-            email: payload.sub || payload.email,
-            username: payload.username,
-            userId: payload.userId,
-            roles: getUserRole()
-        };
-    } catch (error) {
-        console.error("Error decoding token:", error);
-        return null;
-    }
+    return {
+        email: payload.sub || payload.email,
+        username: payload.username,
+        userId: payload.userId,
+        roles: getUserRole()
+    };
 };
 
 // Forgot Password API

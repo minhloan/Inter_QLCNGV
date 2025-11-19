@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
+import { getTeacherAptechExams, downloadCertificate } from '../../api/aptechExam';
 
 const TeacherAptechExam = () => {
   const navigate = useNavigate();
@@ -25,141 +26,9 @@ const TeacherAptechExam = () => {
   const loadExams = async () => {
     try {
       setLoading(true);
-      // Demo data - replace with actual API call
-      const demoExams = [
-        {
-          id: 1,
-          session_id: 1,
-          subject_id: 1,
-          subject_name: 'Elementary Programming in C-INTL',
-          exam_date: '2024-02-15',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 85,
-          result: 'PASS',
-          certificate_file_id: 1,
-          certificate_path: '/certificates/cert_001.pdf',
-          can_retake: false,
-          retake_condition: null
-        },
-        {
-          id: 2,
-          session_id: 2,
-          subject_id: 2,
-          subject_name: 'Intelligent Data Management with SQL Server',
-          exam_date: '2024-02-16',
-          exam_time: '14:00',
-          room: 'Phòng 102',
-          attempt: 1,
-          score: 72,
-          result: 'PASS',
-          certificate_file_id: 2,
-          certificate_path: '/certificates/cert_002.pdf',
-          can_retake: false,
-          retake_condition: null
-        },
-        {
-          id: 3,
-          session_id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          exam_date: '2024-02-17',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 65,
-          result: 'FAIL',
-          certificate_file_id: null,
-          certificate_path: null,
-          can_retake: true,
-          retake_condition: 'Có thể thi lại sau 30 ngày'
-        },
-        {
-          id: 3,
-          session_id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          exam_date: '2024-02-17',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 65,
-          result: 'FAIL',
-          certificate_file_id: null,
-          certificate_path: null,
-          can_retake: true,
-          retake_condition: 'Có thể thi lại sau 30 ngày'
-        },
-        {
-          id: 3,
-          session_id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          exam_date: '2024-02-17',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 65,
-          result: 'FAIL',
-          certificate_file_id: null,
-          certificate_path: null,
-          can_retake: true,
-          retake_condition: 'Có thể thi lại sau 30 ngày'
-        },
-        {
-          id: 3,
-          session_id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          exam_date: '2024-02-17',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 65,
-          result: 'FAIL',
-          certificate_file_id: null,
-          certificate_path: null,
-          can_retake: true,
-          retake_condition: 'Có thể thi lại sau 30 ngày'
-        },
-        {
-          id: 3,
-          session_id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          exam_date: '2024-02-17',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 65,
-          result: 'FAIL',
-          certificate_file_id: null,
-          certificate_path: null,
-          can_retake: true,
-          retake_condition: 'Có thể thi lại sau 30 ngày'
-        },
-        {
-          id: 3,
-          session_id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          exam_date: '2024-02-17',
-          exam_time: '09:00',
-          room: 'Phòng 101',
-          attempt: 1,
-          score: 65,
-          result: 'FAIL',
-          certificate_file_id: null,
-          certificate_path: null,
-          can_retake: true,
-          retake_condition: 'Có thể thi lại sau 30 ngày'
-        },
-
-      ];
-      
-      setExams(demoExams);
-      setFilteredExams(demoExams);
+      const data = await getTeacherAptechExams();
+      setExams(data);
+      setFilteredExams(data);
     } catch (error) {
       showToast('Lỗi', 'Không thể tải danh sách kỳ thi', 'danger');
     } finally {
@@ -178,14 +47,19 @@ const TeacherAptechExam = () => {
     setCurrentPage(1);
   };
 
-  const downloadCertificate = (examId) => {
-    const exam = exams.find(e => e.id === examId);
-    if (exam && exam.certificate_path) {
-      showToast('Thành công', 'Đang tải chứng chỉ...', 'info');
-      // Simulate download
-      console.log(`Downloading certificate: ${exam.certificate_path}`);
-    } else {
-      showToast('Lỗi', 'Không tìm thấy chứng chỉ', 'danger');
+  const handleDownloadCertificate = async (examId) => {
+    try {
+      const response = await downloadCertificate(examId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `certificate_${examId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast('Thành công', 'Chứng chỉ đã được tải xuống', 'success');
+    } catch (error) {
+      showToast('Lỗi', 'Không thể tải chứng chỉ', 'danger');
     }
   };
 
@@ -221,6 +95,11 @@ const TeacherAptechExam = () => {
             </button>
             <h1 className="page-title">Kỳ thi Aptech</h1>
           </div>
+
+          <button className="btn btn-primary" onClick={() => navigate('/teacher/aptech-exam-add')}>
+            <i className="bi bi-plus-circle"></i>
+            Đăng ký thi
+          </button>
         </div>
 
         <div className="filter-table-wrapper">
@@ -279,14 +158,14 @@ const TeacherAptechExam = () => {
                     pageExams.map((exam, index) => (
                       <tr key={exam.id} className="fade-in">
                         <td>{startIndex + index + 1}</td>
-                        <td>{exam.subject_name || 'N/A'}</td>
-                        <td>{exam.exam_date || 'N/A'}</td>
-                        <td>{exam.exam_time || 'N/A'}</td>
+                        <td>{exam.subjectName || 'N/A'}</td>
+                        <td>{exam.examDate || 'N/A'}</td>
+                        <td>{exam.examTime || 'N/A'}</td>
                         <td>{exam.room || 'N/A'}</td>
                         <td>{exam.attempt || 1}</td>
                         <td>
                           {exam.score !== null && exam.score !== undefined ? (
-                            <span className={exam.score >= 70 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                            <span className={exam.score >= 80 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
                               {exam.score}
                             </span>
                           ) : (
@@ -296,24 +175,55 @@ const TeacherAptechExam = () => {
                         <td>{getResultBadge(exam.result)}</td>
                         <td className="text-center">
                           <div className="action-buttons">
-                            {exam.result === 'PASS' && exam.certificate_path && (
-                              <button
-                                className="btn btn-sm btn-success btn-action"
-                                onClick={() => downloadCertificate(exam.id)}
-                                title="Tải chứng chỉ"
-                              >
-                                <i className="bi bi-download"></i>
-                              </button>
-                            )}
-                            {exam.can_retake && (
+                            {exam.score == null ? (
                               <button
                                 className="btn btn-sm btn-warning btn-action"
-                                onClick={() => showToast('Thông tin', exam.retake_condition || 'Có thể thi lại', 'info')}
-                                title="Điều kiện thi lại"
+                                onClick={() => showToast('Thông tin', 'Bài thi chưa chấm điểm', 'info')}
+                                title="Chưa chấm điểm"
                               >
-                                <i className="bi bi-info-circle"></i>
+                                <i className="bi bi-exclamation-circle"></i>
                               </button>
-                            )}
+                            ) : (exam.score < 80) ? (
+                              <button
+                                className="btn btn-sm btn-warning btn-action"
+                                onClick={() => showToast('Thông tin', 'Có thể đăng ký thi lại', 'info')}
+                                title="Có thể đăng ký thi lại"
+                              >
+                                <i className="bi bi-exclamation-triangle"></i>
+                              </button>
+                            ) : (exam.score >= 80) ? (
+                              exam.aptechStatus === 'PENDING' ? (
+                                <button
+                                  className="btn btn-sm btn-warning btn-action"
+                                  onClick={() => showToast('Thông tin', 'Chứng chỉ bài thi chưa được phê duyệt', 'warning')}
+                                  title="Chờ phê duyệt chứng chỉ"
+                                >
+                                  <i className="bi bi-hourglass-split"></i>
+                                </button>
+                              ) : exam.aptechStatus === 'REJECTED' ? (
+                                <button
+                                  className="btn btn-sm btn-danger btn-action"
+                                  onClick={() => showToast('Lỗi', 'Bài thi bị từ chối cấp chứng chỉ', 'danger')}
+                                  title="Bị từ chối cấp chứng chỉ"
+                                >
+                                  <i className="bi bi-x-circle"></i>
+                                </button>
+                              ) : exam.aptechStatus === 'APPROVED' ? (
+                                <button
+                                  className="btn btn-sm btn-success btn-action"
+                                  onClick={() => {
+                                    if (exam.certificateFileId) {
+                                      handleDownloadCertificate(exam.id);
+                                    } else {
+                                      showToast('Lỗi', 'Chưa có chứng chỉ để tải về', 'danger');
+                                    }
+                                  }}
+                                  title="Tải chứng chỉ"
+                                >
+                                  <i className="bi bi-download"></i>
+                                </button>
+                              ) : null
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -377,4 +287,3 @@ const TeacherAptechExam = () => {
 };
 
 export default TeacherAptechExam;
-

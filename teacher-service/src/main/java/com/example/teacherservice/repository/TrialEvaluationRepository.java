@@ -12,5 +12,8 @@ import java.util.Optional;
 public interface TrialEvaluationRepository extends JpaRepository<TrialEvaluation, String> {
     Optional<TrialEvaluation> findByTrial(TrialTeaching trial);
     Optional<TrialEvaluation> findByTrial_Id(String trialId);
+
+    boolean existsByTrial_Teacher_IdAndTrial_Subject_IdAndConclusion
+            (String trialTeacherId, String trialSubjectId, TrialConclusion conclusion);
 }
 

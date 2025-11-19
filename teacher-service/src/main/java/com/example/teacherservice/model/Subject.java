@@ -1,6 +1,5 @@
 package com.example.teacherservice.model;
 
-import com.example.teacherservice.enums.SubjectSystem;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -8,9 +7,9 @@ import lombok.*;
 
 @Entity
 @Table(name = "subjects", indexes = {
-    @Index(name = "idx_subject_name", columnList = "subject_name"),
-    @Index(name = "idx_system", columnList = "system"),
-    @Index(name = "idx_is_active", columnList = "is_active")
+        @Index(name = "idx_subject_name", columnList = "subject_name"),
+        @Index(name = "idx_system_id", columnList = "system_id"),
+        @Index(name = "idx_is_active", columnList = "is_active")
 })
 @Getter
 @Setter
@@ -31,8 +30,9 @@ public class Subject extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "system")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "system_id")
+    @JsonIgnore
     private SubjectSystem system;
 
     @Column(name = "is_active", nullable = false)
@@ -40,7 +40,7 @@ public class Subject extends BaseEntity {
     private Boolean isActive = true;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "image_subject") // FK tới bảng file
+    @JoinColumn(name = "image_subject")
     @JsonIgnore
     private File image_subject;
 

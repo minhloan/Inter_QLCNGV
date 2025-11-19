@@ -5,12 +5,15 @@ import DeleteModal from '../../components/Teacher/DeleteModal';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { getAllSubjects, deleteSubject } from '../../api/subject';
+import { listActiveSystems } from '../../api/subjectSystem';
 import { getFile } from '../../api/file';
 
 const AdminManageSubject = () => {
     const navigate = useNavigate();
 
     const [allSubjects, setAllSubjects] = useState([]);
+    const [systemOptions, setSystemOptions] = useState([]);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [systemFilter, setSystemFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
@@ -20,45 +23,54 @@ const AdminManageSubject = () => {
     const [deleteSubjectItem, setDeleteSubjectItem] = useState(null);
 
     const [loading, setLoading] = useState(false);
-    const [toast, setToast] = useState({
-        show: false,
-        title: '',
-        message: '',
-        type: 'info',
-    });
+    const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
     const [hasLoaded, setHasLoaded] = useState(false);
 
     const [subjectImages, setSubjectImages] = useState({});
 
-    // PAGINATION
-    const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 9;
+    const [currentPage, setCurrentPage] = useState(1);
 
     const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
-        setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
+        setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     }, []);
 
-    // MAP RESPONSE
     const mapSubjectResponse = (response) => {
-        const mappedSubjects = (response || []).map((subject) => ({
-            id: subject.id,
-            subjectCode: subject.subjectCode,
-            subjectName: subject.subjectName,
-            credit: subject.credit,
-            system: subject.system,
-            isActive: subject.isActive,
-            status: subject.isActive ? 'active' : 'inactive',
-            imageFileId:
-                subject.imageFileId ||
-                subject.image_subject?.id ||
-                null,
+        const mappedSubjects = (response || []).map((s) => ({
+            id: s.id,
+            subjectCode: s.subjectCode,
+            subjectName: s.subjectName,
+            credit: s.credit,
+
+            // ⭐ FIX QUAN TRỌNG — ĐỌC ĐÚNG system
+            systemId: s.systemId || s.system?.id || "",
+            systemName: s.systemName || s.system?.systemName || "Unknown system",
+
+            isActive: s.isActive,
+            status: s.isActive ? "active" : "inactive",
+
+            // ⭐ FIX image
+            imageFileId: s.imageFileId || s.image_subject?.id || null
         }));
 
         setAllSubjects(mappedSubjects);
     };
 
-    // LOAD ALL SUBJECTS
+    // ⭐ LOAD ALL SYSTEMS
+    useEffect(() => {
+        const loadSystems = async () => {
+            try {
+                const res = await listActiveSystems();
+                setSystemOptions(res);
+            } catch (err) {
+                console.error("Error loading systems:", err);
+            }
+        };
+        loadSystems();
+    }, []);
+
+    // ⭐ LOAD ALL SUBJECTS
     const loadSubjects = useCallback(async () => {
         try {
             setLoading(true);
@@ -68,73 +80,61 @@ const AdminManageSubject = () => {
         } catch (error) {
             console.error('Error loading subjects:', error);
             showToast('Lỗi', 'Không thể tải danh sách môn học', 'danger');
-            setAllSubjects([]);
         } finally {
             setLoading(false);
         }
     }, [showToast]);
 
-    // LOAD IMAGES
+    useEffect(() => {
+        if (!hasLoaded) loadSubjects();
+    }, [hasLoaded, loadSubjects]);
+
+    // ⭐ LOAD IMAGES
     useEffect(() => {
         const fetchImages = async () => {
-            if (!allSubjects || allSubjects.length === 0) {
-                setSubjectImages({});
-                return;
-            }
-
             const newImages = {};
 
             await Promise.all(
-                allSubjects.map(async (sub) => {
-                    if (!sub.imageFileId) return;
+                allSubjects.map(async (s) => {
+                    if (!s.imageFileId) return;
                     try {
-                        const blobUrl = await getFile(sub.imageFileId);
-                        newImages[sub.id] = blobUrl;
-                    } catch (error) {
-                        if (error.response?.status !== 404) {
-                            console.error('Error loading subject image:', error);
-                        }
-                    }
+                        const url = await getFile(s.imageFileId);
+                        newImages[s.id] = url;
+                    } catch {}
                 })
             );
 
             setSubjectImages(newImages);
         };
 
-        fetchImages();
+        if (allSubjects.length > 0) fetchImages();
     }, [allSubjects]);
 
-    // LOAD ONCE
-    useEffect(() => {
-        if (!hasLoaded) {
-            loadSubjects();
-        }
-    }, [hasLoaded, loadSubjects]);
-
-    // FILTER + SORT
+    // ⭐ FILTER + SORT
     const filteredSubjects = useMemo(() => {
-        if (allSubjects.length === 0) return [];
-
         let filtered = [...allSubjects];
 
-        if (systemFilter) filtered = filtered.filter((sub) => sub.system === systemFilter);
-        if (statusFilter) filtered = filtered.filter((sub) => sub.status === statusFilter);
+        if (systemFilter)
+            filtered = filtered.filter((s) => s.systemId === systemFilter);
+
+        if (statusFilter)
+            filtered = filtered.filter((s) => s.status === statusFilter);
 
         if (searchTerm.trim()) {
             const kw = searchTerm.trim().toLowerCase();
             filtered = filtered.filter(
-                (sub) =>
-                    (sub.subjectCode || '').toLowerCase().includes(kw) ||
-                    (sub.subjectName || '').toLowerCase().includes(kw)
+                (s) =>
+                    s.subjectCode?.toLowerCase().includes(kw) ||
+                    s.subjectName?.toLowerCase().includes(kw)
             );
         }
 
         filtered.sort((a, b) => {
             switch (sortBy) {
-                case 'code_asc': return (a.subjectCode || '').localeCompare(b.subjectCode || '');
-                case 'code_desc': return (b.subjectCode || '').localeCompare(a.subjectCode || '');
-                case 'name_asc': return (a.subjectName || '').localeCompare(b.subjectName || '');
-                case 'name_desc': return (b.subjectName || '').localeCompare(a.subjectName || '');
+                case 'code_asc': return a.subjectCode.localeCompare(b.subjectCode);
+                case 'code_desc': return b.subjectCode.localeCompare(a.subjectCode);
+                case 'name_asc': return a.subjectName.localeCompare(b.subjectName);
+                case 'name_desc': return b.subjectName.localeCompare(a.subjectName);
                 default: return 0;
             }
         });
@@ -142,28 +142,18 @@ const AdminManageSubject = () => {
         return filtered;
     }, [allSubjects, systemFilter, statusFilter, searchTerm, sortBy]);
 
-    // RESET PAGE WHEN FILTER CHANGES
-    useEffect(() => setCurrentPage(1), [
-        systemFilter,
-        statusFilter,
-        searchTerm,
-        sortBy
-    ]);
-
-    // PAGINATED SUBJECTS
     const totalPages = Math.ceil(filteredSubjects.length / pageSize);
+    const pageSubjects = filteredSubjects.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+    );
 
-    const pageSubjects = useMemo(() => {
-        const start = (currentPage - 1) * pageSize;
-        return filteredSubjects.slice(start, start + pageSize);
-    }, [filteredSubjects, currentPage]);
-
-    // ACTIONS
     const handleAdd = () => navigate('/manage-subject-add');
-    const handleEdit = (subject) => navigate(`/manage-subject-edit/${subject.id}`);
+    const handleGoToSystems = () => navigate('/manage-subject-systems');
+    const handleEdit = (s) => navigate(`/manage-subject-edit/${s.id}`);
 
-    const handleDelete = (subject) => {
-        setDeleteSubjectItem(subject);
+    const handleDelete = (s) => {
+        setDeleteSubjectItem(s);
         setShowDeleteModal(true);
     };
 
@@ -173,17 +163,12 @@ const AdminManageSubject = () => {
         try {
             setLoading(true);
             await deleteSubject(deleteSubjectItem.id);
-            showToast('Thành công', 'Xóa môn học thành công', 'success');
+            showToast("Thành công", "Xóa môn học thành công", "success");
             setShowDeleteModal(false);
             setDeleteSubjectItem(null);
-            await loadSubjects();
-        } catch (error) {
-            console.error('Error deleting subject:', error);
-            showToast(
-                'Lỗi',
-                error.response?.data?.message || 'Không thể xóa môn học',
-                'danger'
-            );
+            loadSubjects();
+        } catch (err) {
+            showToast("Lỗi", "Không thể xóa môn học", "danger");
         } finally {
             setLoading(false);
         }
@@ -196,65 +181,58 @@ const AdminManageSubject = () => {
         setSortBy('code_asc');
     };
 
-    const getGradientForSubject = (subject) => {
-        const colors = [
-            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
-            'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-            'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
-            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        ];
-        if (!subject.subjectCode) return colors[0];
-        const index = subject.subjectCode.split('').reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length;
-        return colors[index];
-    };
-
     return (
         <MainLayout>
             <div className="page-admin-subject">
-            <div className="content-header">
-                <div className="content-title">
-                    <button className="back-button" onClick={() => navigate(-1)}>
-                        <i className="bi bi-arrow-left"></i>
-                    </button>
-                    <h1 className="page-title">
-                        Admin Courses ({filteredSubjects.length})
-                    </h1>
+                {/* HEADER */}
+                <div className="content-header">
+                    <div className="content-title">
+                        <button className="back-button" onClick={() => navigate(-1)}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h1 className="page-title">Quản lý Môn học</h1>
+                    </div>
+                    <div className="content-actions">
+                        <button onClick={handleGoToSystems} className="btn btn-outline-primary me-2">
+                            <i className="bi bi-diagram-3"></i> Trang Hệ Đào Tạo
+                        </button>
+                        <button onClick={handleAdd} className="btn btn-primary">
+                            <i className="bi bi-plus-circle"></i> Thêm Môn Học
+                        </button>
+                    </div>
                 </div>
-                <button onClick={handleAdd} className="btn btn-primary">
-                    <i className="bi bi-plus-circle"></i>
-                    Thêm Môn Học
-                </button>
-            </div>
-            </div>
+                <p className="page-subtitle subject-count">
+                    Tổng số môn học: {filteredSubjects.length}
+                </p>
 
-            {loading && <Loading fullscreen={true} message="Đang tải danh sách môn học..." />}
+                {loading && <Loading fullscreen={true} message="Đang tải..." />}
 
-            {hasLoaded && !loading && (
-                <>
-                    {/* FILTER SECTION */}
+                <div className="filter-table-wrapper">
+                    {/* FILTERS */}
                     <div className="filter-section">
                         <div className="filter-row">
 
                             {/* SYSTEM FILTER */}
                             <div className="filter-group">
-                                <label className="filter-label">Select System</label>
+                                <label className="filter-label">Hệ đào tạo</label>
                                 <select
                                     className="filter-select"
                                     value={systemFilter}
                                     onChange={(e) => setSystemFilter(e.target.value)}
                                 >
                                     <option value="">Tất cả hệ thống</option>
-                                    <option value="ACN_PRO_OV7096">ACN Pro OV 7096</option>
-                                    <option value="ARENA_OV6899">Skill Arena OV 6899</option>
-                                    <option value="APTECH_OV7091">Skill Aptech OV 7091</option>
-                                    <option value="APTECH_OV7195">Skill Aptech OV 7195</option>
+
+                                    {systemOptions.map((sys) => (
+                                        <option key={sys.id} value={sys.id}>
+                                            {sys.systemName}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
                             {/* STATUS FILTER */}
                             <div className="filter-group">
-                                <label className="filter-label">Status</label>
+                                <label className="filter-label">Trạng thái</label>
                                 <select
                                     className="filter-select"
                                     value={statusFilter}
@@ -268,13 +246,13 @@ const AdminManageSubject = () => {
 
                             {/* SEARCH */}
                             <div className="filter-group">
-                                <label className="filter-label">Search</label>
+                                <label className="filter-label">Tìm kiếm</label>
                                 <div className="search-input-group">
                                     <i className="bi bi-search"></i>
                                     <input
                                         type="text"
                                         className="filter-input"
-                                        placeholder="Search by code or name..."
+                                        placeholder="Tìm kiếm theo mã hoặc tên..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
@@ -283,25 +261,15 @@ const AdminManageSubject = () => {
 
                             {/* RESET */}
                             <div className="filter-group">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={handleReset}
-                                    style={{ width: '100%' }}
-                                >
-                                    <i className="bi bi-arrow-clockwise"></i>
-                                    Reset
+                                <button className="btn btn-secondary w-100" onClick={handleReset}>
+                                    <i className="bi bi-arrow-clockwise"></i> Reset
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* COURSES GRID */}
-                    {pageSubjects.length === 0 ? (
-                        <div className="empty-state">
-                            <i className="bi bi-inbox"></i>
-                            <p>No courses found</p>
-                        </div>
-                    ) : (
+                    <div className="table-container">
+                        {/* COURSES GRID */}
                         <div className="courses-grid">
                             {pageSubjects.map((subject) => {
                                 const imageUrl = subjectImages[subject.id];
@@ -310,48 +278,28 @@ const AdminManageSubject = () => {
                                     <div
                                         key={subject.id}
                                         className="course-card"
-                                        onClick={() => navigate(`/manage-subject-detail/${subject.id}`)}
-                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => handleEdit(subject)}
                                     >
-                                        <div
-                                            className="course-image"
-                                            style={{
-                                                background: imageUrl ? 'transparent' : getGradientForSubject(subject),
-                                            }}
-                                        >
-                                            {imageUrl && (
-                                                <img
-                                                    src={imageUrl}
-                                                    alt={subject.subjectName || subject.subjectCode}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        objectFit: 'cover',
-                                                        borderRadius: '8px',
-                                                    }}
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                    }}
-                                                />
+                                        {/* IMAGE */}
+                                        <div className="course-image">
+                                            {imageUrl ? (
+                                                <img src={imageUrl} alt="img" />
+                                            ) : (
+                                                <div className="placeholder"></div>
                                             )}
                                         </div>
 
+                                        {/* BODY */}
                                         <div className="course-card-body">
-                                            <h3 className="course-title">
-                                                {subject.subjectName || 'Unnamed Subject'}
-                                            </h3>
-                                            <p className="course-subtitle">
-                                                {subject.subjectCode || 'N/A'} •{' '}
-                                                {subject.credit != null
-                                                    ? `${subject.credit} tín chỉ`
-                                                    : 'No credit info'}{' '}
-                                                • {subject.system || 'Unknown system'}
+                                            <h3>{subject.subjectName}</h3>
+                                            <p>
+                                                {subject.subjectCode} • {subject.credit} tín chỉ •{" "}
+                                                {subject.systemName}
                                             </p>
 
-                                            {/* ACTION BUTTONS */}
-                                            <div className="action-buttons" style={{ marginTop: '8px' }}>
+                                            <div className="action-buttons">
                                                 <button
-                                                    className="btn btn-sm btn-primary btn-action"
+                                                    className="btn btn-sm btn-primary"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleEdit(subject);
@@ -361,7 +309,7 @@ const AdminManageSubject = () => {
                                                 </button>
 
                                                 <button
-                                                    className="btn btn-sm btn-danger btn-action"
+                                                    className="btn btn-sm btn-danger"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDelete(subject);
@@ -375,79 +323,61 @@ const AdminManageSubject = () => {
                                 );
                             })}
                         </div>
-                    )}
 
-                    {/* PAGINATION */}
-                    {totalPages > 1 && (
-                        <nav aria-label="Page navigation" className="mt-4 mb-4">
-                            <ul className="pagination justify-content-center">
+                        {/* PAGINATION */}
+                        {totalPages > 1 && (
+                            <nav className="mt-4 mb-2">
+                                <ul className="pagination justify-content-center">
+                                    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                                        <button className="page-link" onClick={() => setCurrentPage(p => p - 1)}>
+                                            <i className="bi bi-chevron-left"></i>
+                                        </button>
+                                    </li>
 
-                                {/* Previous */}
-                                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                                    <button
-                                        className="page-link"
-                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <i className="bi bi-chevron-left"></i>
-                                    </button>
-                                </li>
+                                    {Array.from({ length: totalPages }, (_, i) => (
+                                        <li
+                                            key={i}
+                                            className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                                        >
+                                            <button className="page-link" onClick={() => setCurrentPage(i + 1)}>
+                                                {i + 1}
+                                            </button>
+                                        </li>
+                                    ))}
 
-                                {/* PAGE NUMBERS */}
-                                {[...Array(totalPages)].map((_, i) => {
-                                    const page = i + 1;
-                                    if (
-                                        page === 1 ||
-                                        page === totalPages ||
-                                        (page >= currentPage - 2 && page <= currentPage + 2)
-                                    ) {
-                                        return (
-                                            <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                                                <button className="page-link" onClick={() => setCurrentPage(page)}>
-                                                    {page}
-                                                </button>
-                                            </li>
-                                        );
-                                    }
-                                    return null;
-                                })}
+                                    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                                        <button className="page-link" onClick={() => setCurrentPage(p => p + 1)}>
+                                            <i className="bi bi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        )}
+                    </div>
+                </div>
 
-                                {/* Next */}
-                                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                                    <button
-                                        className="page-link"
-                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        <i className="bi bi-chevron-right"></i>
-                                    </button>
-                                </li>
+                {/* DELETE MODAL */}
+                {showDeleteModal && (
+                    <DeleteModal
+                        teacher={deleteSubjectItem}
+                        onConfirm={confirmDelete}
+                        onClose={() => {
+                            setShowDeleteModal(false);
+                            setDeleteSubjectItem(null);
+                        }}
+                    />
+                )}
 
-                            </ul>
-                        </nav>
-                    )}
-                </>
-            )}
-
-            {showDeleteModal && deleteSubjectItem && (
-                <DeleteModal
-                    teacher={deleteSubjectItem}
-                    onConfirm={confirmDelete}
-                    onClose={() => {
-                        setShowDeleteModal(false);
-                        setDeleteSubjectItem(null);
-                    }}
-                />
-            )}
-
-            {toast.show && (
-                <Toast
-                    title={toast.title}
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-                />
-            )}
+                {/* TOAST */}
+                {toast.show && (
+                    <Toast
+                        title={toast.title}
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+                    />
+                )}
+            </div>
         </MainLayout>
     );
 };

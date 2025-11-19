@@ -1,6 +1,5 @@
 package com.example.teacherservice.request.subject;
 
-import com.example.teacherservice.enums.SubjectSystem;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -16,7 +15,7 @@ public class SubjectUpdateRequest {
 
     private String description;
 
-    private SubjectSystem system;
+    private String systemId;
 
     private Boolean isActive;
 

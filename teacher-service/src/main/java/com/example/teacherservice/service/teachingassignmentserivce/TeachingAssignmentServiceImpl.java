@@ -43,25 +43,28 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         List<String> missing = new ArrayList<>();
 
         // 1. Đăng ký môn COMPLETED
-        if (!subjectRegistrationRepository
-                .existsByTeacher_IdAndSubject_IdAndStatus(
-                        teacherId, subjectId, RegistrationStatus.COMPLETED)) {
-            missing.add("Chưa hoàn thành đăng ký môn.");
-        }
+        addMissingConditionIfFalse(
+                hasCompletedSubjectRegistration(teacherId, subjectId),
+                "Chưa hoàn thành đăng ký môn.",
+                missing);
 
         // 2. Thi Aptech PASS
-        if (!aptechExamRepository
-                .existsByTeacher_IdAndSubject_IdAndResult(
-                        teacherId, subjectId, ExamResult.PASS)) {
-            missing.add("Chưa có kết quả thi Aptech PASS.");
-        }
+        addMissingConditionIfFalse(
+                hasAptechPass(teacherId, subjectId),
+                "Chưa có kết quả thi Aptech PASS.",
+                missing);
 
-        // 3. Minh chứng VERIFIED
-        if (!evidenceRepository
-                .existsByTeacher_IdAndSubject_IdAndStatus(
-                        teacherId, subjectId, EvidenceStatus.VERIFIED)) {
-            missing.add("Chưa có minh chứng được VERIFY.");
-        }
+        // 3. Giảng thử PASS
+        addMissingConditionIfFalse(
+                hasTrialPass(teacherId, subjectId),
+                "Chưa có kết quả giảng thử PASS.",
+                missing);
+
+        // 4. Minh chứng VERIFIED
+        addMissingConditionIfFalse(
+                hasVerifiedEvidence(teacherId, subjectId),
+                "Chưa có minh chứng được VERIFY.",
+                missing);
 
         return TeachingEligibilityResponse.builder()
                 .eligible(missing.isEmpty())
@@ -82,79 +85,98 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     @Override
     public TeachingAssignmentDetailResponse createAssignment(TeachingAssignmentCreateRequest request,
                                                              String assignedByUserId) {
-        // 1. Lấy teacher
-        User teacher = userRepository.findById(request.getTeacherId())
-                .orElseThrow(() -> new IllegalArgumentException("Giáo viên không tồn tại"));
-        System.out.println("Teacher" +  teacher.getId());
+        User teacher = findTeacher(request.getTeacherId());
+        Subject subject = findSubject(request.getSubjectId());
 
-        // 2. Lấy subject
-        Subject subject = subjectRepository.findById(request.getSubjectId())
-                .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại"));
+        ScheduleClass scheduleClass = buildScheduleClassEntity(subject, request);
+        scheduleClass = scheduleClassRepository.save(scheduleClass);
 
-        // 3. Tạo ScheduleClass từ request
-        ScheduleClass sc = new ScheduleClass();
-        sc.setClassCode(request.getClassCode());
-        sc.setSubject(subject);
-        sc.setYear(request.getYear());
-        sc.setQuarter(convertQuarter(request.getQuarter()));   // 1..4 -> QUY1..4
-        sc.setLocation(request.getLocation());
-        sc.setNotes(request.getNotes());
+        User assignedBy = resolveAssignedBy(assignedByUserId);
 
-        // 3.1. Tạo list slots từ request
-        List<ScheduleSlot> slotEntities = buildSlotsFromRequest(sc, request.getSlots());
-        sc.setSlots(slotEntities);
-
-        // lưu class + slots
-        sc = scheduleClassRepository.save(sc);
-
-        // 4. Người phân công
-        User assignedBy = null;
-        if (assignedByUserId != null) {
-            assignedBy = userRepository.findById(assignedByUserId)
-                    .orElseThrow(() -> new IllegalArgumentException("Người phân công không tồn tại"));
-        }
-        System.out.println("Manage" + assignedByUserId);
-
-        // 5. Check eligibility
-        String subjectId = subject.getId();
         TeachingEligibilityResponse eligibilityResponse =
-                checkEligibility(teacher.getId(), subjectId);
+                checkEligibility(teacher.getId(), subject.getId());
 
-        TeachingAssignment.TeachingAssignmentBuilder builder = TeachingAssignment.builder()
-                .teacher(teacher)
-                .scheduleClass(sc)
-                .assignedBy(assignedBy)
-                .assignedAt(LocalDateTime.now())
-                .notes(request.getNotes());
-
-        TeachingAssignment assignment;
-        if (eligibilityResponse.isEligible()) {
-            assignment = builder
-                    .status(AssignmentStatus.ASSIGNED)
-                    .build();
-        } else {
-            String reason = String.join("\n", eligibilityResponse.getMissingConditions());
-            assignment = builder
-                    .status(AssignmentStatus.FAILED)
-                    .failureReason(reason)
-                    .completedAt(LocalDateTime.now())
-                    .build();
-        }
+        TeachingAssignment assignment = buildAssignmentEntity(
+                teacher,
+                scheduleClass,
+                assignedBy,
+                request.getNotes(),
+                eligibilityResponse
+        );
 
         TeachingAssignment saved = teachingAssignmentRepository.save(assignment);
 
-        // 6. Nếu FAILED thì gửi noti cho giáo viên
         if (saved.getStatus() == AssignmentStatus.FAILED) {
-            sendFailedAssignmentNotification(teacher, sc, eligibilityResponse, saved);
+            sendFailedAssignmentNotification(teacher, scheduleClass, eligibilityResponse, saved);
         }
 
-        // 7. Trả detail response
         return toDetailResponse(saved);
     }
 
     /**
      * Nhận list slots từ FE, tạo list ScheduleSlot
      */
+    private User findTeacher(String teacherId) {
+        return userRepository.findById(teacherId)
+                .orElseThrow(() -> new IllegalArgumentException("Giáo viên không tồn tại"));
+    }
+
+    private Subject findSubject(String subjectId) {
+        return subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại"));
+    }
+
+    private User resolveAssignedBy(String assignedByUserId) {
+        if (assignedByUserId == null || assignedByUserId.isBlank()) {
+            return null;
+        }
+        return userRepository.findById(assignedByUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Người phân công không tồn tại"));
+    }
+
+    private ScheduleClass buildScheduleClassEntity(Subject subject, TeachingAssignmentCreateRequest request) {
+        ScheduleClass scheduleClass = new ScheduleClass();
+        scheduleClass.setClassCode(request.getClassCode());
+        scheduleClass.setSubject(subject);
+        scheduleClass.setYear(request.getYear());
+        scheduleClass.setQuarter(convertQuarter(request.getQuarter()));
+        scheduleClass.setLocation(request.getLocation());
+        scheduleClass.setNotes(request.getNotes());
+
+        List<ScheduleSlot> slotEntities = buildSlotsFromRequest(scheduleClass, request.getSlots());
+        scheduleClass.setSlots(slotEntities);
+
+        return scheduleClass;
+    }
+
+    private TeachingAssignment buildAssignmentEntity(
+            User teacher,
+            ScheduleClass scheduleClass,
+            User assignedBy,
+            String notes,
+            TeachingEligibilityResponse eligibilityResponse
+    ) {
+        TeachingAssignment.TeachingAssignmentBuilder builder = TeachingAssignment.builder()
+                .teacher(teacher)
+                .scheduleClass(scheduleClass)
+                .assignedBy(assignedBy)
+                .assignedAt(LocalDateTime.now())
+                .notes(notes);
+
+        if (eligibilityResponse.isEligible()) {
+            return builder
+                    .status(AssignmentStatus.ASSIGNED)
+                    .build();
+        }
+
+        String reason = String.join("\n", eligibilityResponse.getMissingConditions());
+        return builder
+                .status(AssignmentStatus.FAILED)
+                .failureReason(reason)
+                .completedAt(LocalDateTime.now())
+                .build();
+    }
+
     private List<ScheduleSlot> buildSlotsFromRequest(ScheduleClass sc, List<ScheduleSlotRequest> slots) {
         if (slots == null) return Collections.emptyList();
 
@@ -171,6 +193,42 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
                     return slot;
                 })
                 .collect(Collectors.toList());
+    }
+
+    private void addMissingConditionIfFalse(boolean condition, String message, List<String> missing) {
+        if (!condition) {
+            missing.add(message);
+        }
+    }
+
+    private boolean hasCompletedSubjectRegistration(String teacherId, String subjectId) {
+        return subjectRegistrationRepository
+                .existsByTeacher_IdAndSubject_IdAndStatus(
+                        teacherId, subjectId, RegistrationStatus.COMPLETED);
+    }
+
+    private boolean hasAptechPass(String teacherId, String subjectId) {
+        return aptechExamRepository
+                .existsByTeacher_IdAndSubject_IdAndResult(
+                        teacherId, subjectId, ExamResult.PASS);
+    }
+
+    private boolean hasTrialPass(String teacherId, String subjectId) {
+        return trialEvaluationRepository
+                .existsByTrial_Teacher_IdAndTrial_Subject_IdAndConclusion(
+                        teacherId, subjectId, TrialConclusion.PASS);
+    }
+
+    private boolean hasVerifiedEvidence(String teacherId, String subjectId) {
+        return evidenceRepository
+                .existsByTeacher_IdAndSubject_IdAndStatus(
+                        teacherId, subjectId, EvidenceStatus.VERIFIED);
+    }
+
+    private Pageable buildAssignmentPageable(Integer page, Integer size) {
+        int pageNumber = (page == null || page < 0) ? 0 : page;
+        int pageSize = (size == null || size <= 0) ? 10 : size;
+        return PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
     }
 
     // UPDATE STATUS
@@ -290,10 +348,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
     // LIST / SEARCH
     @Override
     public Page<TeachingAssignmentListItemResponse> getAllAssignments(Integer page, Integer size) {
-        int pageNumber = (page == null || page < 0) ? 0 : page;
-        int pageSize = (size == null || size <= 0) ? 10 : size;
-
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
+        Pageable pageable = buildAssignmentPageable(page, size);
 
         Page<TeachingAssignment> assignmentPage = teachingAssignmentRepository.findAll(pageable);
 
@@ -308,10 +363,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
             Integer page,
             Integer size
     ) {
-        int pageNumber = (page == null || page < 0) ? 0 : page;
-        int pageSize = (size == null || size <= 0) ? 10 : size;
-
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
+        Pageable pageable = buildAssignmentPageable(page, size);
 
         Integer yearFilter = null;
         Quarter quarterFilter = null;
@@ -334,7 +386,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
         boolean hasSemester = yearFilter != null;
 
         if (!hasKeyword && !hasStatus && !hasSemester) {
-            return getAllAssignments(pageNumber, pageSize);
+            return getAllAssignments(page, size);
         }
 
         Page<TeachingAssignment> assignmentPage =
@@ -357,10 +409,7 @@ public class TeachingAssignmentServiceImpl implements TeachingAssignmentService 
             Integer page,
             Integer size
     ) {
-        int pageNumber = (page == null || page < 0) ? 0 : page;
-        int pageSize = (size == null || size <= 0) ? 10 : size;
-
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "assignedAt"));
+        Pageable pageable = buildAssignmentPageable(page, size);
 
         Integer yearFilter = (year == null || year <= 0) ? null : year;
 

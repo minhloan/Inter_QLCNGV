@@ -73,6 +73,9 @@ body {
     display: flex;
     align-items: center;
     gap: 20px;
+    margin-left: auto;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
 
 .mobile-menu-toggle {
@@ -184,6 +187,27 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.mobile-user-info.has-cover {
+    color: white;
+    background-size: cover;
+    background-position: center;
+    border: none;
+}
+
+.mobile-user-info.has-cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.mobile-user-info.has-cover > * {
+    position: relative;
+    z-index: 1;
 }
 
 .mobile-user-avatar {
@@ -196,6 +220,14 @@ body {
     justify-content: center;
     font-size: 20px;
     color: var(--text-dark);
+    overflow: hidden;
+}
+
+.mobile-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
 }
 
 .mobile-user-name {
@@ -207,6 +239,14 @@ body {
 .mobile-user-email {
     font-size: 13px;
     color: var(--text-muted);
+}
+
+.mobile-user-info.has-cover .mobile-user-name {
+    color: white;
+}
+
+.mobile-user-info.has-cover .mobile-user-email {
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .mobile-nav-links {
@@ -293,6 +333,14 @@ body {
     pointer-events: none;
 }
 
+.header-icon.user-icon img,
+.avatar-circle {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
 .user-icon {
     background-color: #e0e0e0;
 }
@@ -312,9 +360,23 @@ body {
 
 .user-dropdown-header {
     background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    background-size: cover;
+    background-position: center;
     padding: 30px 20px 40px;
     position: relative;
     text-align: center;
+}
+
+.user-dropdown-header.has-cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.user-dropdown-header > * {
+    position: relative;
+    z-index: 1;
 }
 
 .user-avatar-large {
@@ -329,6 +391,14 @@ body {
     margin: 0 auto;
     position: relative;
     z-index: 2;
+    overflow: hidden;
+}
+
+.user-avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
 }
 
 .user-avatar-large i {
@@ -1250,6 +1320,21 @@ body {
     min-width: 0;
 }
 
+.content-title-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.content-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .back-button {
     width: 40px;
     height: 40px;
@@ -1300,6 +1385,24 @@ body {
     writing-mode: horizontal-tb;
     text-orientation: mixed;
     white-space: normal;
+}
+
+.page-subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+    font-weight: 500;
+}
+
+.page-admin-subject .subject-count {
+    margin: 0 0 20px 55px;
+    color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .page-admin-subject .subject-count {
+        margin-left: 0;
+    }
 }
 
 /* Course Cards Grid */
@@ -2489,6 +2592,7 @@ body {
     .top-header {
         padding: 12px 16px;
         gap: 10px;
+        align-items: center;
     }
 
     .logo-text {
@@ -2496,7 +2600,9 @@ body {
     }
 
     .header-actions {
-        display: none;
+        display: flex;
+        gap: 12px;
+        margin-left: auto;
     }
 
     .mobile-menu-toggle {

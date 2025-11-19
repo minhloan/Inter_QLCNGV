@@ -20,6 +20,10 @@ import EvidenceManagement from './pages/admin/EvidenceManagement';
 import TeachingAssignmentManagement from './pages/admin/TeachingAssignmentManagement';
 import ReportingExport from './pages/admin/ReportingExport';
 import AuditLogManagement from './pages/admin/AuditLogManagement';
+import AdminManageSubjectSystem from "./pages/admin/AdminManageSubjectSystem.jsx";
+import AdminManageSubjectSystemAdd from "./pages/admin/AdminManageSubjectSystemAdd.jsx";
+import AdminManageSubjectSystemEdit from "./pages/admin/AdminManageSubjectSystemEdit.jsx";
+
 
 // Teacher pages
 import EditProfile from './pages/EditProfile';
@@ -44,6 +48,8 @@ import AdminManageSubjectEdit from "./pages/admin/AdminManageSubjectEdit.jsx";
 import TeachingAssignmentAdd from "./pages/admin/TeachingAssignmentManagementAdd.jsx";
 import TeachingAssignmentDetail from "./pages/admin/TeachingAssignmentDetail.jsx";
 import TeacherTrialTeachingDetail from "./pages/teacher/TeacherTrialTeachingDetail.jsx";
+import AptechExamDetail from "./pages/admin/AptechExamDetail.jsx";
+import AptechExamAdd from "./pages/teacher/AptechExamAdd.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -160,14 +166,22 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/aptech-exam-management"
-        element={
-          <ProtectedRoute requiredRole="Manage-Leader">
-            <AptechExamManagement />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+            path="/aptech-exam-management"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AptechExamManagement />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/aptech-exam-detail/:id"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AptechExamDetail />
+                </ProtectedRoute>
+            }
+        />
       <Route
         path="/trial-teaching-management"
         element={
@@ -206,6 +220,33 @@ function AppRoutes() {
             element={
                 <ProtectedRoute requiredRole="Manage-Leader">
                     <TeachingAssignmentDetail />
+                </ProtectedRoute>
+            }
+        />
+
+        <Route
+            path="/manage-subject-systems"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminManageSubjectSystem />
+                </ProtectedRoute>
+            }
+        />
+
+        <Route
+            path="/manage-subject-system-add"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminManageSubjectSystemAdd />
+                </ProtectedRoute>
+            }
+        />
+
+        <Route
+            path="/manage-subject-system-edit/:id"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminManageSubjectSystemEdit />
                 </ProtectedRoute>
             }
         />
@@ -264,14 +305,22 @@ function AppRoutes() {
             path="/subject-registration-detail/:id"
             element={<SubjectRegistrationDetail />}
         />
-      <Route
-        path="/teacher-aptech-exam"
-        element={
-          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
-            <TeacherAptechExam />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+            path="/teacher-aptech-exam"
+            element={
+                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+                    <TeacherAptechExam />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/teacher/aptech-exam-add"
+            element={
+                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+                    <AptechExamAdd />
+                </ProtectedRoute>
+            }
+        />
       <Route
         path="/teacher-trial-teaching"
         element={

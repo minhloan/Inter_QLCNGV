@@ -1,20 +1,30 @@
 package com.example.teacherservice.repository;
 
-import com.example.teacherservice.enums.SubjectSystem;
 import com.example.teacherservice.model.Subject;
-import feign.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface SubjectRepository extends JpaRepository<Subject, String> {
+
+    @EntityGraph(attributePaths = {"system"})
+    List<Subject> findAll();
+
     Optional<Subject> findBySubjectCode(String subjectCode);
+
     boolean existsBySubjectCode(String subjectCode);
-    List<Subject> findBySubjectNameContainingIgnoreCase(String subjectName);
+
     boolean existsBySubjectCodeIgnoreCase(String subjectCode);
-    // Tìm danh sách theo keyword (KHÔNG phân trang)
+
+    // ⭐ Kiểm tra system đang được Subject sử dụng
+    boolean existsBySystem_Id(String systemId);
+
+    List<Subject> findBySubjectNameContainingIgnoreCase(String subjectName);
+
     @Query("""
            select s from Subject s
            where lower(s.subjectCode) like lower(concat('%', :keyword, '%'))
@@ -22,18 +32,15 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
            """)
     List<Subject> searchByKeyword(@Param("keyword") String keyword);
 
-    // Search + filter (KHÔNG phân trang)
     @Query("""
-           select s from Subject s
-           where (:keyword is null or :keyword = '' 
-                  or lower(s.subjectCode) like lower(concat('%', :keyword, '%'))
-                  or lower(s.subjectName) like lower(concat('%', :keyword, '%')))
-             and (:system is null or s.system = :system)
-             and (:isActive is null or s.isActive = :isActive)
-           """)
+       select s from Subject s
+       where (:keyword is null or :keyword = '' 
+              or lower(s.subjectCode) like lower(concat('%', :keyword, '%'))
+              or lower(s.subjectName) like lower(concat('%', :keyword, '%')))
+         and (:systemId is null or s.system.id = :systemId)
+         and (:isActive is null or s.isActive = :isActive)
+       """)
     List<Subject> searchWithFilters(@Param("keyword") String keyword,
-                                    @Param("system") SubjectSystem system,
+                                    @Param("systemId") String systemId,
                                     @Param("isActive") Boolean isActive);
-
 }
-

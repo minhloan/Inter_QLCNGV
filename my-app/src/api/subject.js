@@ -9,6 +9,11 @@ export const listAllSubjects = async () => {
     return res.data;
 };
 
+export const getAllSubjects = async () => {
+    const res = await api.get("");
+    return res.data;
+};
+
 export const searchSubjectsByTrial = async (keyword) => {
     try {
         const response = await api.get(`/searchByTrial`, { params: { q: keyword } });
@@ -35,7 +40,7 @@ export const saveSubject = async (subjectData) => {
         subjectName: subjectData.subjectName,
         credit: subjectData.credit,
         description: subjectData.description || null,
-        system: subjectData.system,
+        systemId: subjectData.systemId,
         isActive: subjectData.isActive,
         imageFileId: subjectData.imageFileId || null
     };
@@ -44,16 +49,12 @@ export const saveSubject = async (subjectData) => {
     return response.data;
 };
 
-export const getAllSubjects = async () => {
-    const response = await api.get("/getAll");
-    return response.data;
-};
 
 export const searchSubjects = async ({ keyword = "", system, isActive } = {}) => {
     const response = await api.get("/search", {
         params: {
             keyword,
-            system,
+            systemId: system,
             isActive,
         },
     });
@@ -71,7 +72,7 @@ export const updateSubject = async (subjectData) => {
         subjectName: subjectData.subjectName || null,
         credit: subjectData.credit ?? null,
         description: subjectData.description || null,
-        system: subjectData.system || null,
+        systemId: subjectData.systemId ?? subjectData.system ?? null,
         isActive: subjectData.isActive,
 
         imageFileId: subjectData.imageFileId,

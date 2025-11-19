@@ -1,6 +1,5 @@
 package com.example.teacherservice.request.subject;
 
-import com.example.teacherservice.enums.SubjectSystem;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -19,12 +18,12 @@ public class SubjectCreateRequest {
 
     private String description;
 
-    @NotNull(message = "System is required")
-    private SubjectSystem system;   // APTECH / ARENA
+    @NotBlank(message = "SystemId is required")
+    private String systemId;
 
-    // có thể để mặc định true trong service nếu null
+    // default xử lý trong service
     private Boolean isActive;
 
-    // id file ảnh (đã upload qua /v1/teacher/file/upload)
+    // id file ảnh
     private String imageFileId;
 }

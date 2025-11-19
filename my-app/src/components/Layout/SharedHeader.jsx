@@ -5,6 +5,7 @@ import NotificationDropdown from '../Common/NotificationDropdown';
 import '../../assets/styles/Common.css';
 import logo2 from '../../assets/images/logo2.jpg';
 import { getMenuItems } from '../../utils/menuConfig';
+import useUserProfileMedia from '../../hooks/useUserProfileMedia';
 
 const SharedHeader = () => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -15,6 +16,7 @@ const SharedHeader = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { profileImage, coverImage } = useUserProfileMedia(user?.userId);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -102,12 +104,23 @@ const SharedHeader = () => {
           style={{ position: 'relative' }}
           onClick={() => setShowDropdown(!showDropdown)}
         >
-          <i className="bi bi-person"></i>
+          {profileImage ? (
+            <img src={profileImage} alt="Ảnh đại diện" className="avatar-circle" />
+          ) : (
+            <i className="bi bi-person"></i>
+          )}
           {showDropdown && (
             <div className="user-dropdown">
-              <div className="user-dropdown-header">
+              <div
+                className={`user-dropdown-header ${coverImage ? 'has-cover' : ''}`}
+                style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
+              >
                 <div className="user-avatar-large">
-                  <i className="bi bi-person"></i>
+                  {profileImage ? (
+                    <img src={profileImage} alt="Ảnh đại diện" />
+                  ) : (
+                    <i className="bi bi-person"></i>
+                  )}
                 </div>
               </div>
               <div className="user-dropdown-info">
@@ -173,9 +186,16 @@ const SharedHeader = () => {
           </button>
         </div>
 
-        <div className="mobile-user-info">
+        <div
+          className={`mobile-user-info ${coverImage ? 'has-cover' : ''}`}
+          style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
+        >
           <div className="mobile-user-avatar">
-            <i className="bi bi-person"></i>
+            {profileImage ? (
+              <img src={profileImage} alt="Ảnh đại diện" />
+            ) : (
+              <i className="bi bi-person"></i>
+            )}
           </div>
           <div>
             <div className="mobile-user-name">{displayName.toUpperCase()}</div>

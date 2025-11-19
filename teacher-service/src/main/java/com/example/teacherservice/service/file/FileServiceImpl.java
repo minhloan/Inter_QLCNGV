@@ -5,6 +5,7 @@ import com.example.teacherservice.model.File;
 import com.example.teacherservice.repository.FileRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.UUID;
+
 
 @RequiredArgsConstructor
 @Service
@@ -91,6 +93,51 @@ public class FileServiceImpl implements FileService {
                     .build();
         }
 
+    }   @Override
+    public File saveFile(MultipartFile file, String folder) {
+        String uuid = UUID.randomUUID().toString();
+        String filePath = FOLDER_PATH + "/" + folder + "/" + uuid;
+        try{
+            java.io.File directory = new java.io.File(FOLDER_PATH + "/" + folder);
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+            file.transferTo(new java.io.File(filePath));
+        } catch (IOException e) {
+            throw GenericErrorResponse.builder()
+                    .message("Unable to save file to storage")
+                    .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .build();
+        }
+
+        File fileEntity = File.builder()
+                .type(file.getContentType())
+                .filePath(filePath)
+                .originalFileName(file.getOriginalFilename())
+                .build();
+        fileRepository.save(fileEntity);
+        return fileEntity;
+    }
+
+    @Override
+    public Resource loadFileAsResource(String filePath) {
+        try {
+            java.nio.file.Path file = java.nio.file.Paths.get(filePath);
+            Resource resource = new org.springframework.core.io.UrlResource(file.toUri());
+            if (resource.exists() || resource.isReadable()) {
+                return resource;
+            } else {
+                throw GenericErrorResponse.builder()
+                        .message("Could not read file: " + filePath)
+                        .httpStatus(HttpStatus.NOT_FOUND)
+                        .build();
+            }
+        } catch (Exception e) {
+            throw GenericErrorResponse.builder()
+                    .message("Could not read file: " + e.getMessage())
+                    .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .build();
+        }
     }
 
     @Override

@@ -1,11 +1,12 @@
 package com.example.teacherservice.service.subject;
 
 import com.example.teacherservice.dto.subject.SubjectDto;
-import com.example.teacherservice.enums.SubjectSystem;
 import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.model.File;
 import com.example.teacherservice.model.Subject;
+import com.example.teacherservice.model.SubjectSystem;
 import com.example.teacherservice.repository.SubjectRepository;
+import com.example.teacherservice.repository.SubjectSystemRepository;
 import com.example.teacherservice.request.subject.SubjectCreateRequest;
 import com.example.teacherservice.request.subject.SubjectUpdateRequest;
 import com.example.teacherservice.service.file.FileService;
@@ -20,12 +21,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SubjectServiceImpl implements SubjectService {
 
+    private final SubjectRepository subjectRepository;
+    private final SubjectSystemRepository systemRepository;
     private final FileService fileService;
+
+    // =========================================================================
+    // CREATE
+    // =========================================================================
     @Override
     public Subject saveSubject(SubjectCreateRequest request) {
-        // check trùng mã môn (giống check email ở SaveUser)
+
         if (subjectRepository.existsBySubjectCodeIgnoreCase(request.getSubjectCode())) {
             throw new IllegalArgumentException("Subject code already exists");
+        }
+
+        SubjectSystem system = null;
+        if (StringUtils.hasText(request.getSystemId())) {
+            system = systemRepository.findById(request.getSystemId())
+                    .orElseThrow(() -> new NotFoundException("System not found"));
         }
 
         Subject subject = new Subject();
@@ -33,22 +46,20 @@ public class SubjectServiceImpl implements SubjectService {
         subject.setSubjectName(request.getSubjectName());
         subject.setCredit(request.getCredit());
         subject.setDescription(request.getDescription());
-        subject.setSystem(request.getSystem());
-        subject.setIsActive(
-                request.getIsActive() != null
-                        ? request.getIsActive()
-                        : true
-        );
+        subject.setSystem(system);
+        subject.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
-        // liên kết ảnh nếu có imageFileId
         if (StringUtils.hasText(request.getImageFileId())) {
-            File imageFile = fileService.findFileById(request.getImageFileId());
-            subject.setImage_subject(imageFile);
+            File img = fileService.findFileById(request.getImageFileId());
+            subject.setImage_subject(img);
         }
 
         return subjectRepository.save(subject);
     }
 
+    // =========================================================================
+    // READ
+    // =========================================================================
     @Override
     public Subject getSubjectById(String id) {
         return findSubjectById(id);
@@ -60,10 +71,12 @@ public class SubjectServiceImpl implements SubjectService {
                 .orElseThrow(() -> new NotFoundException("Subject not found"));
     }
 
-
+    // =========================================================================
+    // UPDATE
+    // =========================================================================
     @Override
     public Subject updateSubject(SubjectUpdateRequest request) {
-        // giống updateUserById: lấy ra subject và update field nào có trong request
+
         Subject toUpdate = findSubjectById(request.getId());
 
         if (StringUtils.hasText(request.getSubjectName())) {
@@ -75,23 +88,28 @@ public class SubjectServiceImpl implements SubjectService {
         if (request.getDescription() != null) {
             toUpdate.setDescription(request.getDescription());
         }
-        if (request.getSystem() != null) {
-            toUpdate.setSystem(request.getSystem());
+
+        // update system
+        if (request.getSystemId() != null) {
+            if (!request.getSystemId().isBlank()) {
+                SubjectSystem sys = systemRepository.findById(request.getSystemId())
+                        .orElseThrow(() -> new NotFoundException("System not found"));
+                toUpdate.setSystem(sys);
+            } else {
+                toUpdate.setSystem(null);
+            }
         }
+
         if (request.getIsActive() != null) {
             toUpdate.setIsActive(request.getIsActive());
         }
 
-        // xử lý ảnh:
-        // - nếu imageFileId = null -> không đụng tới ảnh
-        // - nếu imageFileId = "" (chuỗi rỗng) -> xóa ảnh
-        // - nếu imageFileId = id hợp lệ -> load File và set lại
+        // update image
         if (request.getImageFileId() != null) {
             if (!request.getImageFileId().isBlank()) {
-                File imageFile = fileService.findFileById(request.getImageFileId());
-                toUpdate.setImage_subject(imageFile);
+                File img = fileService.findFileById(request.getImageFileId());
+                toUpdate.setImage_subject(img);
             } else {
-                // chuỗi rỗng => xóa ảnh hiện tại
                 toUpdate.setImage_subject(null);
             }
         }
@@ -99,38 +117,41 @@ public class SubjectServiceImpl implements SubjectService {
         return subjectRepository.save(toUpdate);
     }
 
+    // =========================================================================
+    // DELETE (SOFT DELETE)
+    // =========================================================================
     @Override
     public void deleteSubjectById(String id) {
-        subjectRepository.deleteById(id);  // hoặc find rồi delete
+        Subject subject = findSubjectById(id);
+        subjectRepository.delete(subject);
     }
 
 
+    // =========================================================================
+    // GET ALL (RAW)
+    // =========================================================================
     @Override
     public List<Subject> getAllSubjects() {
         return subjectRepository.findAll();
     }
 
+    // =========================================================================
+    // SEARCH + FILTER
+    // =========================================================================
     @Override
-    public List<Subject> searchSubjects(String keyword,
-                                        SubjectSystem system,
-                                        Boolean isActive) {
+    public List<Subject> searchSubjects(String keyword, String systemId, Boolean isActive) {
         String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
-        return subjectRepository.searchWithFilters(kw, system, isActive);
+        return subjectRepository.searchWithFilters(kw, systemId, isActive);
     }
 
-    private final SubjectRepository subjectRepository;
 
+    // =========================================================================
+    // DTO MAPPERS
+    // =========================================================================
     @Override
     public List<SubjectDto> getAll() {
         return subjectRepository.findAll().stream()
-                .map(s -> SubjectDto.builder()
-                        .id(s.getId())
-                        .subjectCode(s.getSubjectCode())
-                        .subjectName(s.getSubjectName())
-                        .credit(s.getCredit())
-                        .system(s.getSystem())
-                        .isActive(s.getIsActive())
-                        .build())
+                .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -148,15 +169,18 @@ public class SubjectServiceImpl implements SubjectService {
                 .collect(Collectors.toList());
     }
 
-    private SubjectDto toDto(Subject subject) {
+    @Override
+    public SubjectDto toDto(Subject s) {
         return SubjectDto.builder()
-                .id(subject.getId())
-                .subjectCode(subject.getSubjectCode())
-                .subjectName(subject.getSubjectName())
-                .credit(subject.getCredit())
-                .description(subject.getDescription())
-                .system(subject.getSystem())
-                .isActive(subject.getIsActive())
+                .id(s.getId())
+                .subjectCode(s.getSubjectCode())
+                .subjectName(s.getSubjectName())
+                .credit(s.getCredit())
+                .description(s.getDescription())
+                .systemId(s.getSystem() != null ? s.getSystem().getId() : null)
+                .systemName(s.getSystem() != null ? s.getSystem().getSystemName() : null)
+                .isActive(s.getIsActive())
+                .imageFileId(s.getImage_subject() != null ? s.getImage_subject().getId() : null)
                 .build();
     }
 }

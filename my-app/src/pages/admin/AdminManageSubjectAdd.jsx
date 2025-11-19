@@ -3,7 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
+
 import { saveSubject, getSubjectById, updateSubject } from '../../api/subject';
+import { listActiveSystems } from '../../api/subjectSystem';
 import { getFile } from '../../api/file';
 import createApiInstance from '../../api/createApiInstance';
 
@@ -13,55 +15,51 @@ const AdminManageSubjectAdd = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+
     const editingId = searchParams.get('id');
     const mode = searchParams.get('mode');
     const isEditMode = mode === 'edit' && !!editingId;
-
-    const formSectionWidth = isEditMode ? '1400px' : '1200px';
 
     const [formData, setFormData] = useState({
         subjectCode: '',
         subjectName: '',
         credit: '',
         description: '',
-        system: '',
+        systemId: '',               // ⭐ CHỈ THAY system → systemId
         status: 'active'
     });
+
+    const [systemOptions, setSystemOptions] = useState([]); // ⭐ LOAD SYSTEM TỪ API
 
     const [errors, setErrors] = useState({});
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
-    const [imageFile, setImageFile] = useState(null);               // file mới chọn
-    const [imagePreview, setImagePreview] = useState(null);         // preview
-    const [existingImageFileId, setExistingImageFileId] = useState(null); // fileId hiện tại khi edit
-    const [imageRemoved, setImageRemoved] = useState(false);        // user muốn xóa ảnh
 
-    const showImageRemoveButton = Boolean(imagePreview) || (isEditMode && !!existingImageFileId);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [existingImageFileId, setExistingImageFileId] = useState(null);
+    const [imageRemoved, setImageRemoved] = useState(false);
 
+    // SHOW TOAST
     const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     }, []);
 
+    // HANDLE CHANGE
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }));
-        }
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
 
+    // VALIDATE
     const validate = () => {
         const newErrors = {};
 
-        if (!formData.subjectCode.trim()) {
-            newErrors.subjectCode = 'Vui lòng nhập mã môn học';
-        }
-
-        if (!formData.subjectName.trim()) {
-            newErrors.subjectName = 'Vui lòng nhập tên môn học';
-        }
+        if (!formData.subjectCode.trim()) newErrors.subjectCode = 'Vui lòng nhập mã môn học';
+        if (!formData.subjectName.trim()) newErrors.subjectName = 'Vui lòng nhập tên môn học';
 
         if (!formData.credit.toString().trim()) {
             newErrors.credit = 'Vui lòng nhập số tín chỉ';
@@ -69,131 +67,125 @@ const AdminManageSubjectAdd = () => {
             newErrors.credit = 'Số tín chỉ phải là số dương';
         }
 
-        if (!formData.system) {
-            newErrors.system = 'Vui lòng chọn hệ thống';
-        }
+        // ⭐ systemId
+        if (!formData.systemId) newErrors.systemId = 'Vui lòng chọn hệ thống';
 
         setErrors(newErrors);
 
-        if (Object.keys(newErrors).length > 0) {
-            return Object.keys(newErrors)[0];
-        }
+        if (Object.keys(newErrors).length > 0) return Object.keys(newErrors)[0];
         return null;
     };
 
+    // LOAD SYSTEM LIST
+    useEffect(() => {
+        const loadSystems = async () => {
+            try {
+                const list = await listActiveSystems();
+                setSystemOptions(list);
+            } catch (err) {
+                console.error("Error loading systems:", err);
+            }
+        };
+
+        loadSystems();
+    }, []);
+
+    // SCROLL TO ERROR
     const scrollToErrorField = (fieldName) => {
         setTimeout(() => {
-            const errorElement = document.getElementById(fieldName) ||
-                document.querySelector(`[name="${fieldName}"]`);
-            if (errorElement) {
-                const formGroup = errorElement.closest('.form-group');
-                const targetElement = formGroup || errorElement;
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-                if (['INPUT', 'SELECT', 'TEXTAREA'].includes(errorElement.tagName)) {
-                    errorElement.focus();
-                }
+            const el = document.getElementById(fieldName) || document.querySelector(`[name="${fieldName}"]`);
+            if (el) {
+                const group = el.closest('.form-group');
+                (group || el).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) el.focus();
             }
         }, 100);
     };
 
+    // UPLOAD IMAGE
     const uploadImage = async (file) => {
         if (!file) return null;
-        const formDataUpload = new FormData();
-        formDataUpload.append('image', file);
-        const res = await fileApi.post('/upload', formDataUpload, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        return res.data; // fileId
+        const fd = new FormData();
+        fd.append('image', file);
+        const res = await fileApi.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' }});
+        return res.data;
     };
 
+    // SUBMIT
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const firstErrorField = validate();
-        if (firstErrorField) {
-            scrollToErrorField(firstErrorField);
-            return;
-        }
+        const firstError = validate();
+        if (firstError) return scrollToErrorField(firstError);
 
         try {
             setLoading(true);
-            setLoadingMessage(isEditMode ? 'Đang cập nhật môn học...' : 'Đang lưu môn học...');
-
-            let imageFileIdToSend;
+            setLoadingMessage(isEditMode ? "Đang cập nhật môn học..." : "Đang lưu môn học...");
 
             if (isEditMode) {
-                // EDIT
-                const payload = {
+                let payload = {
                     id: editingId,
                     subjectName: formData.subjectName.trim(),
                     credit: Number(formData.credit),
-                    description: formData.description.trim() || null,
-                    system: formData.system,
-                    isActive: formData.status === 'active'
+                    description: formData.description?.trim() || null,
+
+                    // ⭐ systemId mới
+                    systemId: formData.systemId,
+
+                    isActive: formData.status === "active"
                 };
 
-                // Xử lý ảnh:
-                if (imageRemoved) {
-                    // xóa ảnh
-                    payload.imageFileId = '';
-                } else if (imageFile) {
-                    // upload ảnh mới
-                    const newFileId = await uploadImage(imageFile);
-                    payload.imageFileId = newFileId;
-                }
-                // nếu không remove, không chọn file mới => không gửi imageFileId => backend không đổi ảnh
+                // IMAGE HANDLING
+                if (imageRemoved) payload.imageFileId = "";
+                else if (imageFile) payload.imageFileId = await uploadImage(imageFile);
 
                 await updateSubject(payload);
-                showToast('Thành công', 'Cập nhật môn học thành công!', 'success');
+                showToast("Thành công", "Cập nhật môn học thành công!", "success");
+
             } else {
-                // CREATE
-                if (imageFile) {
-                    imageFileIdToSend = await uploadImage(imageFile);
-                }
+                let imgId = null;
+                if (imageFile) imgId = await uploadImage(imageFile);
 
                 const payload = {
                     subjectCode: formData.subjectCode.trim(),
                     subjectName: formData.subjectName.trim(),
                     credit: Number(formData.credit),
-                    description: formData.description.trim() || null,
-                    system: formData.system,
-                    isActive: formData.status === 'active',
-                    imageFileId: imageFileIdToSend || null
+                    description: formData.description?.trim() || null,
+
+                    // ⭐ CREATE bằng systemId
+                    systemId: formData.systemId,
+
+                    isActive: formData.status === "active",
+                    imageFileId: imgId
                 };
 
                 await saveSubject(payload);
-                showToast('Thành công', 'Môn học đã được thêm thành công!', 'success');
+                showToast("Thành công", "Môn học đã được thêm thành công!", "success");
             }
 
-            setTimeout(() => {
-                navigate('/manage-subjects');
-            }, 1500);
-        } catch (error) {
-            console.error(error);
-            const errorMessage =
-                error.response?.data?.message ||
-                error.response?.data?.error ||
-                error.message ||
-                'Không thể xử lý yêu cầu';
-            showToast('Lỗi', errorMessage, 'danger');
+            setTimeout(() => navigate("/manage-subjects"), 1500);
+        } catch (err) {
+            const msg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                err.message ||
+                "Không thể xử lý yêu cầu";
+            showToast("Lỗi", msg, "danger");
         } finally {
             setLoading(false);
-            setLoadingMessage('');
+            setLoadingMessage("");
         }
     };
 
+    // FILE CHANGE
     const handleFileChange = (e) => {
         const file = e.target.files?.[0] || null;
         setImageFile(file);
-        setImageRemoved(false); // chọn file mới => không coi là xóa
+        setImageRemoved(false);
+
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result);
-            };
+            reader.onloadend = () => setImagePreview(reader.result);
             reader.readAsDataURL(file);
         } else {
             setImagePreview(null);
@@ -203,200 +195,157 @@ const AdminManageSubjectAdd = () => {
     const handleRemoveImage = () => {
         setImageFile(null);
         setImagePreview(null);
-        if (isEditMode && existingImageFileId) {
-            setImageRemoved(true); // đánh dấu xóa ảnh hiện có
-        } else {
-            setImageRemoved(false);
-        }
+        if (isEditMode && existingImageFileId) setImageRemoved(true);
     };
 
-    // Load khi edit
+    // LOAD SUBJECT IF EDIT
     useEffect(() => {
-        const fetchSubjectDetails = async () => {
+        const loadSubject = async () => {
             if (!isEditMode) return;
 
             try {
                 setLoading(true);
-                setLoadingMessage('Đang tải thông tin môn học...');
+                setLoadingMessage("Đang tải thông tin môn học...");
+
                 const subject = await getSubjectById(editingId);
 
-                setFormData(prev => ({
-                    ...prev,
-                    subjectCode: subject.subjectCode || '',
-                    subjectName: subject.subjectName || '',
-                    credit: subject.credit ?? '',
-                    description: subject.description || '',
-                    system: subject.system || '',
-                    status: subject.isActive ? 'active' : 'inactive'
-                }));
+                setFormData({
+                    subjectCode: subject.subjectCode || "",
+                    subjectName: subject.subjectName || "",
+                    credit: subject.credit ?? "",
+                    description: subject.description || "",
 
-                const fileId = subject.image_subject?.id || null;
+                    // ⭐ NHẬN systemId
+                    systemId: subject.systemId || "",
+
+                    status: subject.isActive ? "active" : "inactive"
+                });
+
+                const fileId = subject.imageFileId || null;
                 setExistingImageFileId(fileId);
 
                 if (fileId) {
                     try {
-                        const blobUrl = await getFile(fileId);
-                        setImagePreview(blobUrl);
-                    } catch (error) {
-                        if (error.response?.status !== 404) {
-                            console.error('Error loading subject image:', error);
-                        }
+                        setImagePreview(await getFile(fileId));
+                    } catch {
                         setImagePreview(null);
                     }
-                } else {
-                    setImagePreview(null);
                 }
-            } catch (error) {
-                const message = error.response?.data?.message || 'Không thể tải thông tin môn học';
-                showToast('Lỗi', message, 'danger');
+            } catch (err) {
+                showToast("Lỗi", "Không thể tải môn học", "danger");
             } finally {
                 setLoading(false);
-                setLoadingMessage('');
+                setLoadingMessage("");
             }
         };
 
-        fetchSubjectDetails();
-    }, [editingId, isEditMode, showToast]);
-
-    // Cleanup blob URLs nếu dùng URL.createObjectURL (ở đây mình dùng base64 nên không cần, nhưng để sẵn nếu sau đổi)
-    useEffect(() => {
-        return () => {
-            if (imagePreview && imagePreview.startsWith('blob:')) {
-                URL.revokeObjectURL(imagePreview);
-            }
-        };
-    }, [imagePreview]);
+        loadSubject();
+    }, [isEditMode, editingId, showToast]);
 
     if (loading) {
-        return <Loading fullscreen={true} message={loadingMessage || 'Đang xử lý...'} />;
+        return <Loading fullscreen={true} message={loadingMessage || "Đang xử lý..."} />;
     }
 
     return (
         <MainLayout>
-            <div
-                className="page-admin-add-subject page-align-with-form"
-                style={{ '--page-section-width': formSectionWidth }}
-            >
+            <div className="page-admin-add-subject">
                 <div className="content-header">
                     <div className="content-title">
                         <button className="back-button" onClick={() => navigate('/manage-subjects')}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className="page-title">
-                            {isEditMode ? 'Cập nhật Môn học' : 'Thêm Môn học'}
-                        </h1>
+                        <div className="content-title-text">
+                            <h1 className="page-title">
+                                {isEditMode ? "Cập nhật Môn học" : "Thêm Môn học"}
+                            </h1>
+                            <p className="page-subtitle">
+                                {isEditMode ? "Chỉnh sửa thông tin môn học" : "Tạo mới môn học trong hệ thống"}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div className="form-container">
-                    <form onSubmit={handleSubmit} noValidate>
-                        <div className="row gy-4 align-items-start">
-                            <div className="col-12 col-xl-8">
-                                <div className="row">
-                                    <div className="col-md-6">
+                <form onSubmit={handleSubmit} noValidate>
+                    <div className="edit-profile-container">
+                        <div className="edit-profile-content">
+                            <div className="edit-profile-main">
+                                <div className="form-section">
+                                    <h3 className="section-title">THÔNG TIN MÔN HỌC</h3>
+
+                                    <div className="form-row">
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Mã môn học
-                                                <span className="required">*</span>
-                                            </label>
+                                            <label className="form-label">Mã môn học *</label>
                                             <input
                                                 type="text"
-                                                className={`form-control ${errors.subjectCode ? 'is-invalid' : ''}`}
                                                 id="subjectCode"
                                                 name="subjectCode"
+                                                className={`form-control ${errors.subjectCode ? "is-invalid" : ""}`}
                                                 value={formData.subjectCode}
                                                 onChange={handleChange}
                                                 placeholder="Nhập mã môn học"
-                                                disabled={isEditMode} // thường không cho đổi mã
+                                                disabled={isEditMode}
                                             />
-                                            {errors.subjectCode && (
-                                                <div className="invalid-feedback">{errors.subjectCode}</div>
-                                            )}
+                                            {errors.subjectCode && <div className="invalid-feedback">{errors.subjectCode}</div>}
                                         </div>
-                                    </div>
 
-                                    <div className="col-md-6">
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Tên môn học
-                                                <span className="required">*</span>
-                                            </label>
+                                            <label className="form-label">Tên môn học *</label>
                                             <input
                                                 type="text"
-                                                className={`form-control ${errors.subjectName ? 'is-invalid' : ''}`}
                                                 id="subjectName"
                                                 name="subjectName"
+                                                className={`form-control ${errors.subjectName ? "is-invalid" : ""}`}
                                                 value={formData.subjectName}
                                                 onChange={handleChange}
                                                 placeholder="Nhập tên môn học"
                                             />
-                                            {errors.subjectName && (
-                                                <div className="invalid-feedback">{errors.subjectName}</div>
-                                            )}
+                                            {errors.subjectName && <div className="invalid-feedback">{errors.subjectName}</div>}
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="row">
-                                    <div className="col-md-4">
+                                    <div className="form-row">
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Số tín chỉ
-                                                <span className="required">*</span>
-                                            </label>
+                                            <label className="form-label">Số tín chỉ *</label>
                                             <input
                                                 type="number"
-                                                className={`form-control ${errors.credit ? 'is-invalid' : ''}`}
                                                 id="credit"
                                                 name="credit"
+                                                className={`form-control ${errors.credit ? "is-invalid" : ""}`}
                                                 value={formData.credit}
                                                 onChange={handleChange}
                                                 placeholder="Nhập số tín chỉ"
                                                 min="1"
                                             />
-                                            {errors.credit && (
-                                                <div className="invalid-feedback">{errors.credit}</div>
-                                            )}
+                                            {errors.credit && <div className="invalid-feedback">{errors.credit}</div>}
                                         </div>
-                                    </div>
 
-                                    <div className="col-md-4">
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Hệ thống
-                                                <span className="required">*</span>
-                                            </label>
+                                            <label className="form-label">Hệ đào tạo *</label>
                                             <select
-                                                className={`form-select ${errors.system ? 'is-invalid' : ''}`}
-                                                id="system"
-                                                name="system"
-                                                value={formData.system}
+                                                id="systemId"
+                                                name="systemId"
+                                                className={`form-select ${errors.systemId ? "is-invalid" : ""}`}
+                                                value={formData.systemId}
                                                 onChange={handleChange}
                                             >
-                                                <option value="">Chọn hệ thống</option>
-
-                                                <option value="ACN_PRO_OV7096">ACN Pro OV 7096</option>
-                                                <option value="ARENA_OV6899">Skill Arena OV 6899</option>
-                                                <option value="APTECH_OV7091">Skill Aptech OV 7091</option>
-                                                <option value="APTECH_OV7195">Skill Aptech OV 7195</option>
+                                                <option value="">Chọn hệ đào tạo</option>
+                                                {systemOptions.map((sys) => (
+                                                    <option key={sys.id} value={sys.id}>
+                                                        {sys.systemName}
+                                                    </option>
+                                                ))}
                                             </select>
-
-                                            {errors.system && (
-                                                <div className="invalid-feedback">{errors.system}</div>
+                                            {errors.systemId && (
+                                                <div className="invalid-feedback">{errors.systemId}</div>
                                             )}
                                         </div>
-                                    </div>
 
-                                    <div className="col-md-4">
                                         <div className="form-group">
-                                            <label className="form-label">
-                                                Trạng thái
-                                                <span className="required">*</span>
-                                            </label>
+                                            <label className="form-label">Trạng thái *</label>
                                             <select
-                                                className="form-select"
                                                 id="status"
                                                 name="status"
+                                                className="form-select"
                                                 value={formData.status}
                                                 onChange={handleChange}
                                             >
@@ -405,108 +354,83 @@ const AdminManageSubjectAdd = () => {
                                             </select>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="form-group">
-                                    <label className="form-label">Mô tả</label>
-                                    <textarea
-                                        className="form-control"
-                                        id="description"
-                                        name="description"
-                                        rows="4"
-                                        placeholder="Nhập mô tả môn học..."
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                    ></textarea>
-                                </div>
-                            </div>
-
-                            {/* Ảnh môn học */}
-                            <div className="col-12 col-xl-4">
-                                <div className="form-group">
-                                    <label className="form-label">Ảnh môn học</label>
-                                    <div className="image-upload-section">
-                                        <div
-                                            className="image-placeholder"
-                                            style={{
-                                                width: '100%',
-                                                height: '260px',
-                                                border: '1px dashed #ccc',
-                                                borderRadius: '12px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                overflow: 'hidden',
-                                                backgroundColor: '#fafafa'
-                                            }}
-                                        >
-                                            {imagePreview ? (
-                                                <img
-                                                    src={imagePreview}
-                                                    alt="Subject preview"
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    onError={(e) => {
-                                                        console.error('Failed to load image preview');
-                                                        e.target.style.display = 'none';
-                                                        setImagePreview(null);
-                                                    }}
-                                                />
-                                            ) : (
-                                                <i className="bi bi-image" style={{ fontSize: '48px', color: '#bbb' }}></i>
-                                            )}
-                                        </div>
-                                        <div className="image-upload-actions">
-                                            <label
-                                                htmlFor="subject-image-upload"
-                                                className="btn btn-outline-primary"
-                                            >
-                                                <i className="bi bi-cloud-upload"></i> Chọn ảnh
-                                            </label>
-                                            {showImageRemoveButton && (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-outline-danger"
-                                                    onClick={handleRemoveImage}
-                                                >
-                                                    <i className="bi bi-trash"></i> Xóa ảnh
-                                                </button>
-                                            )}
-                                        </div>
-                                        <input
-                                            id="subject-image-upload"
-                                            type="file"
-                                            accept="image/*"
-                                            style={{ display: 'none' }}
-                                            onChange={handleFileChange}
+                                    <div className="form-group">
+                                        <label className="form-label">Mô tả</label>
+                                        <textarea
+                                            id="description"
+                                            name="description"
+                                            className="form-control"
+                                            rows="4"
+                                            placeholder="Nhập mô tả môn học..."
+                                            value={formData.description}
+                                            onChange={handleChange}
                                         />
-                                        <small
-                                            className="form-text text-muted"
-                                            style={{ fontSize: '12px', color: '#666', marginTop: '4px', display: 'block' }}
-                                        >
-                                            Chọn ảnh đại diện cho môn học (không bắt buộc)
-                                        </small>
                                     </div>
                                 </div>
+
+                                <div className="save-button-container">
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => navigate('/manage-subjects')}
+                                    >
+                                        <i className="bi bi-x-circle" /> Hủy
+                                    </button>
+                                    <button type="submit" className="btn-save" disabled={loading}>
+                                        {isEditMode ? "CẬP NHẬT" : "LƯU MÔN HỌC"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="edit-profile-sidebar">
+                                <div className="image-upload-section">
+                                    <h3 className="section-title">ẢNH MÔN HỌC</h3>
+
+                                    <div className="image-placeholder profile-picture-placeholder">
+                                        {imagePreview ? (
+                                            <img
+                                                src={imagePreview}
+                                                alt=""
+                                                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
+                                            />
+                                        ) : (
+                                            <i className="bi bi-book" style={{ fontSize: 40 }}></i>
+                                        )}
+                                    </div>
+
+                                    <div className="image-upload-actions">
+                                        <label htmlFor="subject-image-upload-add" className="btn btn-primary">
+                                            <i className="bi bi-cloud-upload"></i> Chọn ảnh
+                                        </label>
+
+                                        {imagePreview && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-danger"
+                                                onClick={handleRemoveImage}
+                                            >
+                                                <i className="bi bi-x-circle"></i> Xóa ảnh
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <input
+                                        id="subject-image-upload-add"
+                                        type="file"
+                                        accept="image/*"
+                                        style={{ display: "none" }}
+                                        onChange={handleFileChange}
+                                    />
+
+                                    <small className="form-text text-muted">
+                                        Ảnh không bắt buộc
+                                    </small>
+                                </div>
                             </div>
                         </div>
-
-                        <div className="form-actions">
-                            <button
-                                type="button"
-                                className="btn btn-secondary"
-                                onClick={() => navigate('/manage-subjects')}
-                                disabled={loading}
-                            >
-                                <i className="bi bi-x-circle"></i>
-                                Hủy
-                            </button>
-                            <button type="submit" className="btn btn-primary" disabled={loading}>
-                                <i className="bi bi-check-circle"></i>
-                                {loading ? 'Đang lưu...' : isEditMode ? 'Cập nhật' : 'Lưu'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
 
                 {toast.show && (
                     <Toast

@@ -28,7 +28,10 @@ public class File extends BaseEntity {
     
     @Column(name = "checksum", length = 128)
     private String checksum;
-    
+
+    @Column(name = "original_file_name", length = 255)
+    private String originalFileName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by")
     private User uploadedBy;

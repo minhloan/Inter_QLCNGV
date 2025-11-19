@@ -18,11 +18,16 @@ const dayOfWeekOptions = [
     { value: 7, label: "Thứ 7" },
 ];
 
+const MAX_TEACHER_OPTIONS = 1000;
+const MAX_SUBJECT_OPTIONS = 1000;
+
 const TeachingAssignmentAdd = () => {
     const navigate = useNavigate();
     const formSectionWidth = "1200px";
 
-    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [teacherLoading, setTeacherLoading] = useState(false);
+    const [subjectLoading, setSubjectLoading] = useState(false);
     const [toast, setToast] = useState({
         show: false,
         title: "",
@@ -32,6 +37,8 @@ const TeachingAssignmentAdd = () => {
 
     const [teachers, setTeachers] = useState([]);
     const [subjects, setSubjects] = useState([]);
+    const [teacherOverflow, setTeacherOverflow] = useState(false);
+    const [subjectOverflow, setSubjectOverflow] = useState(false);
 
     // keyword search
     const [teacherKeyword, setTeacherKeyword] = useState("");
@@ -55,32 +62,34 @@ const TeachingAssignmentAdd = () => {
     // ========== LOAD DATA ==========
     const loadTeachers = async (keyword = "") => {
         try {
-            setLoading(true);
+            setTeacherLoading(true);
             const res = await searchUsersByTeaching(keyword);
             const list = Array.isArray(res) ? res : res?.content || [];
-            setTeachers(list);
+            setTeacherOverflow(list.length > MAX_TEACHER_OPTIONS);
+            setTeachers(list.slice(0, MAX_TEACHER_OPTIONS));
         } catch (err) {
             console.error(err);
             showToast("Lỗi", "Không thể tải danh sách giáo viên", "danger");
         } finally {
-            setLoading(false);
+            setTeacherLoading(false);
         }
     };
 
     const loadSubjects = async (keyword = "") => {
         try {
-            setLoading(true);
+            setSubjectLoading(true);
             const res = await searchSubjects({
                 keyword,
                 isActive: true, // nếu muốn chỉ lấy môn đang active
             });
             const list = Array.isArray(res) ? res : [];
-            setSubjects(list);
+            setSubjectOverflow(list.length > MAX_SUBJECT_OPTIONS);
+            setSubjects(list.slice(0, MAX_SUBJECT_OPTIONS));
         } catch (err) {
             console.error(err);
             showToast("Lỗi", "Không thể tải danh sách môn học", "danger");
         } finally {
-            setLoading(false);
+            setSubjectLoading(false);
         }
     };
 
@@ -203,7 +212,7 @@ const TeachingAssignmentAdd = () => {
         };
 
         try {
-            setLoading(true);
+            setSubmitting(true);
             const res = await createTeachingAssignment(payload);
 
             if (res.status === "FAILED") {
@@ -228,7 +237,7 @@ const TeachingAssignmentAdd = () => {
             console.error(err);
             showToast("Lỗi", "Tạo phân công giảng dạy thất bại", "danger");
         } finally {
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
@@ -294,6 +303,12 @@ const TeachingAssignmentAdd = () => {
                                         }
                                         style={{ ...inputRadius }}
                                     />
+                                    {teacherLoading && (
+                                        <small className="text-muted">
+                                            Đang tìm giáo viên...
+                                        </small>
+                                    )}
+                                 
 
                                     <select
                                         name="teacherId"
@@ -362,6 +377,16 @@ const TeachingAssignmentAdd = () => {
                                         }
                                         style={{ ...inputRadius }}
                                     />
+                                    {subjectLoading && (
+                                        <small className="text-muted">
+                                            Đang tìm môn học...
+                                        </small>
+                                    )}
+                                    {subjectOverflow && !subjectLoading && (
+                                        <small className="text-muted">
+                                            {`Hiển thị tối đa ${MAX_SUBJECT_OPTIONS} kết quả, hãy nhập cụ thể hơn để thu hẹp.`}
+                                        </small>
+                                    )}
 
                                     <select
                                         name="subjectId"
@@ -727,7 +752,7 @@ const TeachingAssignmentAdd = () => {
                 </div>
             </div>
 
-            {loading && <Loading />}
+            {submitting && <Loading />}
 
             {toast.show && (
                 <Toast
