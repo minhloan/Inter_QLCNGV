@@ -682,3 +682,9 @@ if (isLoading) {
 // Hoặc inline loading
 <Loading fullscreen={false} message="Đang tải dữ liệu..." />
 
+
+
+
+Khi đăng ký thi, duyệt xong -> check Valid pass -> 
+Đăng ký thi thử 
+Thi thử -> 

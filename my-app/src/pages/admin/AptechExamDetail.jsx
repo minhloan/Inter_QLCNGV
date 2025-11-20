@@ -16,12 +16,12 @@ const AptechExamDetail = () => {
   const [score, setScore] = useState("");
   const [result, setResult] = useState("");
 
-    useEffect(() => {
-      if (exam) {
-        setScore(exam.score ?? "");
-        setResult(exam.result ?? "");
-      }
-    }, [exam]);
+  useEffect(() => {
+    if (exam) {
+      setScore(exam.score ?? "");
+      setResult(exam.result ?? "");
+    }
+  }, [exam]);
 
   const handleScoreKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -40,8 +40,6 @@ const AptechExamDetail = () => {
       showToast('Lỗi', 'Lỗi khi lưu điểm', 'danger');
     }
   };
-
-
 
   const handleScoreChange = (e) => {
     let value = e.target.value;
@@ -120,159 +118,195 @@ const AptechExamDetail = () => {
     }
   };
 
-  const getStatusBadge = (result) => {
+  const renderStatusBadge = (result) => {
+    if (!result) return null;
     const map = {
-      PASS: { label: "Đạt", class: "success" },
-      FAIL: { label: "Không đạt", class: "danger" },
-      null: { label: "Chờ thi", class: "warning" }
+      PASS: { label: "Đạt", className: "success" },
+      FAIL: { label: "Không đạt", className: "danger" },
     };
-    const status = map[result] || { label: "Chờ thi", class: "warning" };
-    return <span className={`badge badge-status ${status.class}`}>{status.label}</span>;
+    const info = map[result] || { label: result, className: "warning" };
+    return (
+      <span className={`badge badge-status ${info.className}`}>
+        <i className="bi bi-circle-fill me-1 small-dot" />
+        {info.label}
+      </span>
+    );
   };
 
-  if (loading) {
-    return <Loading fullscreen={true} message="Đang tải chi tiết kỳ thi..." />;
-  }
-
-  if (!exam) {
+  const renderAptechStatusBadge = (status) => {
+    if (!status) return null;
+    const map = {
+      APPROVED: { label: "ĐÃ DUYỆT", className: "success" },
+      REJECTED: { label: "TỪ CHỐI", className: "danger" },
+    };
+    const info = map[status] || { label: "ĐỢI DUYỆT", className: "warning" };
     return (
-      <MainLayout>
-        <div className="container-fluid">
-{/*         <div className="page-trial-teaching-detail"> */}
-          <div className="content-header d-flex justify-content-between align-items-center mb-3">
-            <div className="d-flex align-items-center gap-2">
-              <button className="back-button" onClick={() => navigate(-1)}>
-                <i className="bi bi-arrow-left"></i>
-              </button>
-              <h1 className="page-title mb-0">Chi tiết Kỳ thi Aptech</h1>
-            </div>
-          </div>
-          <div className="text-center">
-            <p>Không tìm thấy kỳ thi</p>
-          </div>
-        </div>
-      </MainLayout>
+      <span className={`badge badge-status ${info.className}`}>
+        <i className="bi bi-circle-fill me-1 small-dot" />
+        {info.label}
+      </span>
     );
-  }
+  };
 
   return (
     <MainLayout>
-      <div className="container-fluid">
-        <div className="content-header d-flex justify-content-between align-items-center mb-3">
-          <div className="d-flex align-items-center gap-2">
-            <button className="back-button" onClick={() => navigate(-1)}>
-              <i className="bi bi-arrow-left"></i>
+      <div className="page-admin-teaching-assignment-detail page-align-with-form">
+        <div className="content-header">
+          <div className="content-title">
+            <button
+              className="back-button"
+              onClick={() => navigate(-1)}
+              aria-label="Quay lại"
+            >
+              <i className="bi bi-arrow-left" />
             </button>
-            <h1 className="page-title mb-0">Chi tiết Kỳ thi Aptech</h1>
+            <div>
+              <h1 className="page-title">Chi tiết Kỳ thi Aptech</h1>
+              {exam && (
+                <div className="status-wrapper">{renderStatusBadge(exam.result)}</div>
+              )}
+            </div>
           </div>
+
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => navigate(-1)}
+          >
+            <i className="bi bi-list-ul me-2" />
+            Danh sách kỳ thi
+          </button>
         </div>
 
-        <div className="card">
-          <div className="card-body">
-              <div className="row mb-4">
-                  <div className="col-md-6">
-                      <h5>Thông tin Kỳ thi</h5>
-                      <table className="table table-borderless">
-                          <tbody>
-                              <tr><td><strong>Phiên thi:</strong></td><td>{exam.sessionId || 'N/A'}</td></tr>
-                              <tr><td><strong>Ngày thi:</strong></td><td>{exam.examDate || 'N/A'}</td></tr>
-                              <tr><td><strong>Giờ thi:</strong></td><td>{exam.examTime || 'N/A'}</td></tr>
-                              <tr><td><strong>Phòng thi:</strong></td><td>{exam.room || 'N/A'}</td></tr>
-                              <tr><td><strong>Ghi chú:</strong></td><td>{exam.note || 'N/A'}</td></tr>
-                          </tbody>
-                      </table>
+        <div className="detail-card-grid">
+          {!exam ? (
+            <div className="detail-card text-center text-muted">
+              {loading ? 'Đang tải dữ liệu kỳ thi...' : 'Không tìm thấy kỳ thi'}
+            </div>
+          ) : (
+            <>
+              <section className="detail-card">
+                <div className="detail-section-header">
+                  <h5>
+                    <i className="bi bi-calendar-event" /> Thông tin Kỳ thi
+                  </h5>
+                </div>
+                <div className="detail-section-body">
+                  <div className="info-row">
+                    <span className="label">Phiên thi</span>
+                    <span>{exam.sessionId || "—"}</span>
                   </div>
-                  <div className="col-md-6">
-                      <h5>Thông tin Giáo viên</h5>
-                        <table className="table table-borderless">
-                          <tbody>
-                              <tr><td><strong>Tên giảng viên:</strong></td><td>{exam.teacherName || 'N/A'}</td></tr>
-                              <tr><td><strong>Môn thi:</strong></td><td>{exam.subjectName || 'N/A'}</td></tr>
-                              <tr>
-                                <td className="fw-bold">Điểm</td>
-                                <td>
-                                  <input
-                                    type="number"
-                                    className="form-control"
-                                    style={{ width: "200px" }}
-                                    min="0"
-                                    max="100"
-                                    value={score}
-                                    onChange={handleScoreChange}
-                                    onKeyDown={handleScoreKeyDown}
-                                    placeholder="Nhập điểm (0-100)"
-                                  />
-                                </td>
-                              </tr>
-
-                              <tr>
-                                <td className="fw-bold">Trạng thái</td>
-                                <td>
-                                  <span
-                                    className={`badge ${
-                                      result === "PASS"
-                                        ? "bg-success"
-                                        : result === "FAIL"
-                                        ? "bg-danger"
-                                        : "bg-secondary"
-                                    }`}
-                                  >
-                                    {result || "Chưa có"}
-                                  </span>
-                                </td>
-                              </tr>
-
-                              <tr><td><strong>Hiện trạng:</strong></td><td>
-                                {exam.aptechStatus === 'APPROVED' ? (
-                                  <span className="badge bg-success">ĐÃ DUYỆT</span>
-                                ) : exam.aptechStatus === 'REJECTED' ? (
-                                  <span className="badge bg-danger">TỪ CHỐI</span>
-                                ) : (
-                                  <span className="badge bg-warning">ĐỢI DUYỆT</span>
-                                )}
-                              </td></tr>
-                          </tbody>
-                        </table>
+                  <div className="info-row">
+                    <span className="label">Ngày thi</span>
+                    <span>{exam.examDate || "—"}</span>
                   </div>
-              </div>
+                  <div className="info-row">
+                    <span className="label">Giờ thi</span>
+                    <span>{exam.examTime || "—"}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="label">Phòng thi</span>
+                    <span>{exam.room || "—"}</span>
+                  </div>
+                </div>
+              </section>
 
-              <div className="col-md-6">
-                <h5 >Tệp chứng chỉ</h5>
-                    <div className="detail-grid">
-                        <div className="detail-item">
-                            <span className="detail-value">
-                            {exam.certificateFileId ? (
-                                <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={handleDownloadCertificate}
-                                >
-                                    <i className="bi bi-download"></i> Tải xuống
-                                </button>
-                            ) : (
-                                    ' '
-                                )}
-                            </span>
-                        </div>
-                        <div className="detail-item">
-                            <span className="detail-value">
-                              <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={handleUploadCertificate}
-                                disabled={uploading}
-                                style={{ display: 'none' }}
-                                id="certificate-upload"
-                              />
-                              <label htmlFor="certificate-upload" className="btn btn-sm btn-success">
-                                    <i className="bi bi-upload"></i> {uploading ? 'Đang tải...' : 'Tải lên'}
-                              </label>
-                            </span>
-                        </div>
+              <section className="detail-card">
+                <div className="detail-section-header">
+                  <h5>
+                    <i className="bi bi-person-badge" /> Thông tin Giáo viên
+                  </h5>
+                </div>
+                <div className="detail-section-body">
+                  <div className="info-row">
+                    <span className="label">Tên giảng viên</span>
+                    <strong>{exam.teacherName || "—"}</strong>
+                  </div>
+                  <div className="info-row">
+                    <span className="label">Môn thi</span>
+                    <span>{exam.subjectName || "—"}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="label">Điểm</span>
+                    <div>
+                      <input
+                        type="number"
+                        className="form-control"
+                        style={{ width: "200px", display: "inline-block" }}
+                        min="0"
+                        max="100"
+                        value={score}
+                        onChange={handleScoreChange}
+                        onKeyDown={handleScoreKeyDown}
+                        placeholder="Nhập điểm (0-100)"
+                      />
                     </div>
-              </div>
-          </div>
+                  </div>
+                  <div className="info-row">
+                    <span className="label">Kết quả</span>
+                    <div>{renderStatusBadge(result)}</div>
+                  </div>
+                  <div className="info-row">
+                    <span className="label">Hiện trạng</span>
+                    <div>{renderAptechStatusBadge(exam.aptechStatus)}</div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="detail-card">
+                <div className="detail-section-header">
+                  <h5>
+                    <i className="bi bi-sticky" /> Ghi chú
+                  </h5>
+                </div>
+                <div className="detail-section-body note-box">
+                  {exam.note && exam.note.trim() !== ""
+                    ? exam.note
+                    : "Không có ghi chú."}
+                </div>
+              </section>
+
+              <section className="detail-card detail-card-wide">
+                <div className="detail-section-header">
+                  <h5>
+                    <i className="bi bi-file-earmark-pdf" /> Tệp chứng chỉ
+                  </h5>
+                </div>
+                <div className="detail-section-body">
+                  <div className="info-row">
+                    <span className="label">Chứng chỉ</span>
+                    <div className="d-flex gap-2">
+                      {exam.certificateFileId ? (
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={handleDownloadCertificate}
+                        >
+                          <i className="bi bi-download"></i> Tải xuống
+                        </button>
+                      ) : (
+                        <span className="text-muted">Chưa có chứng chỉ</span>
+                      )}
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleUploadCertificate}
+                        disabled={uploading}
+                        style={{ display: 'none' }}
+                        id="certificate-upload"
+                      />
+                      <label htmlFor="certificate-upload" className="btn btn-sm btn-success">
+                        <i className="bi bi-upload"></i> {uploading ? 'Đang tải...' : 'Tải lên'}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
         </div>
       </div>
+
+      {loading && <Loading />}
 
       {toast.show && (
         <Toast
