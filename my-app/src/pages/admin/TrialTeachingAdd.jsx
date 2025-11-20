@@ -4,7 +4,7 @@ import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { createTrial } from '../../api/trial';
-import { getAllUsers } from '../../api/user';
+import { getAllUsers, searchUsersByTeaching } from '../../api/user';
 import { getAllSubjectsByTrial } from '../../api/subject';
 import { getUserInfo } from '../../api/auth';
 
@@ -21,6 +21,8 @@ const TrialTeachingAdd = () => {
         aptechExamId: ''
     });
     const [teachers, setTeachers] = useState([]);
+    const [filteredTeachers, setFilteredTeachers] = useState([]);
+    const [teacherSearch, setTeacherSearch] = useState('');
     const [subjects, setSubjects] = useState([]);
     const [filteredSubjects, setFilteredSubjects] = useState([]);
     const [subjectSearch, setSubjectSearch] = useState('');
@@ -41,6 +43,23 @@ const TrialTeachingAdd = () => {
             ));
         }
     }, [subjectSearch, subjects]);
+
+    useEffect(() => {
+        const filterTeachers = async () => {
+            if (teacherSearch.trim() === '') {
+                setFilteredTeachers(teachers);
+            } else {
+                try {
+                    const result = await searchUsersByTeaching(teacherSearch);
+                    setFilteredTeachers(result || []);
+                } catch (error) {
+                    console.error('Error searching teachers:', error);
+                    setFilteredTeachers(teachers);
+                }
+            }
+        };
+        filterTeachers();
+    }, [teacherSearch, teachers]);
 
     const loadData = async () => {
         try {
@@ -129,6 +148,13 @@ const TrialTeachingAdd = () => {
                             <div className="col-md-6">
                                 <div className="form-group mb-0">
                                     <label className="form-label">Giảng viên <span className="text-danger">*</span></label>
+                                    <input
+                                        type="text"
+                                        className="form-control mb-2"
+                                        placeholder="Tìm kiếm giảng viên..."
+                                        value={teacherSearch}
+                                        onChange={e=>setTeacherSearch(e.target.value)}
+                                    />
                                     <select
                                         className="form-select"
                                         name="teacherId"
@@ -137,7 +163,7 @@ const TrialTeachingAdd = () => {
                                         disabled={currentUser?.role === 'TEACHER'}
                                     >
                                         <option value="">Chọn giảng viên</option>
-                                        {teachers.sort((a,b)=>a.username.localeCompare(b.username)).map(t => (
+                                        {filteredTeachers.sort((a,b)=>a.username.localeCompare(b.username)).map(t => (
                                             <option key={t.id} value={t.id}>{t.username} ({t.teacherCode})</option>
                                         ))}
                                     </select>

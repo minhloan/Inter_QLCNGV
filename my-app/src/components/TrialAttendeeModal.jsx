@@ -1,188 +1,184 @@
-import { useState, useEffect } from 'react';
-import { evaluateTrial, uploadTrialReport } from '../api/trial';
+import { useState } from 'react';
+import { addAttendee, removeAttendee } from '../api/trial';
 
-const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, onToast }) => {
-    const [formData, setFormData] = useState({
-        score: evaluation?.score || '',
-        comments: evaluation?.comments || '',
-        conclusion: evaluation?.conclusion || '',
-        fileReport: null
+const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast }) => {
+    const [newAttendee, setNewAttendee] = useState({
+        attendeeName: '',
+        attendeeRole: ''
     });
     const [loading, setLoading] = useState(false);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
+        setNewAttendee(prev => ({
             ...prev,
             [name]: value
         }));
     };
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        setFormData(prev => ({
-            ...prev,
-            fileReport: file
-        }));
-    };
-
-    const handleSubmit = async (e) => {
+    const handleAddAttendee = async (e) => {
         e.preventDefault();
 
-        if (!formData.score || !formData.conclusion) {
-            onToast('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
-            return;
-        }
-
-        if (formData.score < 1 || formData.score > 100) {
-            onToast('Lỗi', 'Điểm số phải từ 1 đến 100', 'warning');
+        if (!newAttendee.attendeeName || !newAttendee.attendeeRole) {
+            onToast('Lỗi', 'Vui lòng điền đầy đủ thông tin', 'warning');
             return;
         }
 
         try {
             setLoading(true);
-
-            let imageFileId = null;
-
-            // Upload file first if provided
-            if (formData.fileReport) {
-                imageFileId = await uploadTrialReport(formData.fileReport, trialId);
-            }
-
-            // Submit evaluation with file ID
-            const evaluationData = {
+            const attendeeData = {
                 trialId,
-                score: parseInt(formData.score),
-                comments: formData.comments,
-                conclusion: formData.conclusion,
-                imageFileId: imageFileId
+                attendeeName: newAttendee.attendeeName,
+                attendeeRole: newAttendee.attendeeRole
             };
 
-            await evaluateTrial(evaluationData);
-
-            onToast('Thành công', 'Đánh giá giảng thử thành công', 'success');
+            await addAttendee(attendeeData);
+            setNewAttendee({ attendeeName: '', attendeeRole: '' });
+            onToast('Thành công', 'Thêm người tham dự thành công', 'success');
             onSuccess();
         } catch (error) {
-            console.error('Error evaluating trial:', error);
-            onToast('Lỗi', 'Không thể đánh giá giảng thử', 'danger');
+            onToast('Lỗi', 'Không thể thêm người tham dự', 'danger');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleRemoveAttendee = async (attendeeId) => {
+        if (!window.confirm('Bạn có chắc muốn xóa người tham dự này?')) return;
+
+        try {
+            setLoading(true);
+            await removeAttendee(attendeeId);
+            onToast('Thành công', 'Xóa người tham dự thành công', 'success');
+            onSuccess();
+        } catch (error) {
+            onToast('Lỗi', 'Không thể xóa người tham dự', 'danger');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getRoleLabel = (role) => {
+        switch (role) {
+            case 'CHU_TOA': return 'Chủ tọa';
+            case 'THU_KY': return 'Thư ký';
+            case 'THANH_VIEN': return 'Thành viên';
+            default: return role;
+        }
+    };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content evaluation-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-content attendee-modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h3 className="modal-title">Đánh giá giảng thử</h3>
+                    <h3 className="modal-title">Quản lý người tham dự</h3>
                     <button className="modal-close" onClick={onClose}>
                         <i className="bi bi-x"></i>
                     </button>
                 </div>
 
                 <div className="modal-body">
-                    <div className="trial-info-summary">
-                        <div className="info-row">
-                            <span className="label">Giảng viên:</span>
-                            <span className="value">{trial?.teacherName}</span>
-                        </div>
-                        <div className="info-row">
-                            <span className="label">Môn học:</span>
-                            <span className="value">{trial?.subjectName}</span>
-                        </div>
-                        <div className="info-row">
-                            <span className="label">Ngày giảng thử:</span>
-                            <span className="value">{trial?.teachingDate}</span>
-                        </div>
-                        <div className="info-row">
-                            <span className="label">Giờ giảng thử:</span>
-                            <span className="value">{trial?.trialTime || 'N/A'}</span>
-                        </div>
+                    {/* Add New Attendee Form */}
+                    <div className="add-attendee-section">
+                        <h4>Thêm người tham dự</h4>
+                        <form onSubmit={handleAddAttendee}>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Tên người tham dự</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        name="attendeeName"
+                                        value={newAttendee.attendeeName}
+                                        onChange={handleInputChange}
+                                        placeholder="Nhập tên người tham dự"
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Vai trò</label>
+                                    <select
+                                        className="form-select"
+                                        name="attendeeRole"
+                                        value={newAttendee.attendeeRole}
+                                        onChange={handleInputChange}
+                                        required
+                                    >
+                                        <option value="">Chọn vai trò</option>
+                                        <option value="CHU_TOA">Chủ tọa</option>
+                                        <option value="THU_KY">Thư ký</option>
+                                        <option value="THANH_VIEN">Thành viên</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label visually-hidden">Thêm</label>
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                        disabled={loading}
+                                    >
+                                        <i className="bi bi-plus"></i>
+                                        Thêm
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label className="form-label">
-                                Điểm số <span className="required">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                name="score"
-                                value={formData.score}
-                                onChange={handleInputChange}
-                                min="1"
-                                max="100"
-                                step="0.1"
-                                required
-                            />
-                            <small className="form-text text-muted">Điểm từ 1 đến 100</small>
-                        </div>
+                    {/* Attendees List */}
+                    <div className="attendees-list-section">
+                        <h4>Danh sách người tham dự</h4>
+                        {attendees.length === 0 ? (
+                            <p className="text-muted">Chưa có người tham dự nào</p>
+                        ) : (
+                            <div className="attendees-table">
+                                <table className="table table-sm">
+                                    <thead>
+                                    <tr>
+                                        <th>Tên</th>
+                                        <th>Vai trò</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {attendees.map(attendee => (
+                                        <tr key={attendee.id}>
+                                            <td>{attendee.attendeeName}</td>
+                                            <td>
+                                                <span className="badge badge-secondary">
+                                                    {getRoleLabel(attendee.attendeeRole)}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    onClick={() => handleRemoveAttendee(attendee.id)}
+                                                    disabled={loading}
+                                                >
+                                                    <i className="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
-                        <div className="form-group">
-                            <label className="form-label">
-                                Kết luận <span className="required">*</span>
-                            </label>
-                            <select
-                                className="form-select"
-                                name="conclusion"
-                                value={formData.conclusion}
-                                onChange={handleInputChange}
-                                required
-                            >
-                                <option value="">Chọn kết luận</option>
-                                <option value="PASS">Đạt yêu cầu</option>
-                                <option value="FAIL">Không đạt yêu cầu</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Nhận xét</label>
-                            <textarea
-                                className="form-control"
-                                name="comments"
-                                value={formData.comments}
-                                onChange={handleInputChange}
-                                rows="4"
-                                placeholder="Nhập nhận xét chi tiết về buổi giảng thử..."
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Upload biên bản</label>
-                            <input
-                                type="file"
-                                className="form-control"
-                                accept=".pdf,.doc,.docx"
-                                onChange={handleFileChange}
-                            />
-                            <small className="form-text text-muted">
-                                Chấp nhận file PDF, DOC, DOCX (tối đa 10MB)
-                            </small>
-                        </div>
-
-                        <div className="modal-actions">
-                            <button
-                                type="button"
-                                className="btn btn-secondary"
-                                onClick={onClose}
-                                disabled={loading}
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                type="submit"
-                                className="btn btn-primary"
-                                disabled={loading}
-                            >
-                                {loading ? 'Đang lưu...' : 'Lưu đánh giá'}
-                            </button>
-                        </div>
-                    </form>
+                <div className="modal-footer">
+                    <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={onClose}
+                    >
+                        Đóng
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
 
-export default TrialEvaluationModal;
+export default TrialAttendeeModal;

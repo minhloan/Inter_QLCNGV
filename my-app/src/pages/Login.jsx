@@ -189,13 +189,13 @@ const Login = () => {
                   </div>
                 </div>
               </div> */}
-              <iframe
-                src="https://www.youtube.com/embed/xt00gVE1i5E?autoplay=1&rel=0"
-                title="Hướng dẫn đăng nhập"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+                <iframe
+                    src="https://www.youtube.com/embed/LLdL5n-P3Mw"
+                    title="Hướng dẫn đăng nhập"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                ></iframe>
             </div>
           </div>
           

@@ -271,13 +271,13 @@ const EvidenceManagement = () => {
                 <thead>
                   <tr>
                     <th width="5%">#</th>
-                    <th width="12%">Mã GV</th>
-                    <th width="18%">Tên Giáo viên</th>
-                    <th width="15%">Loại</th>
-                    <th width="20%">Tên Minh chứng</th>
-                    <th width="10%">Trạng thái OCR</th>
-                    <th width="10%">Trạng thái</th>
-                    <th width="10%" className="text-center">Thao tác</th>
+                    {/*<th width="12%">Mã GV</th>*/}
+                    <th width="20%">Tên Giáo viên</th>
+                    <th width="17%">Loại</th>
+                    <th width="22%">Tên Minh chứng</th>
+                    <th width="12%">Trạng thái OCR</th>
+                    <th width="12%">Trạng thái</th>
+                    <th width="12%" className="text-center">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -294,7 +294,7 @@ const EvidenceManagement = () => {
                     pageEvidences.map((evidence, index) => (
                       <tr key={evidence.id} className="fade-in">
                         <td>{startIndex + index + 1}</td>
-                        <td><span className="teacher-code">{evidence.teacher_code || 'N/A'}</span></td>
+                        {/*<td><span className="teacher-code">{evidence.teacher_code || 'N/A'}</span></td>*/}
                         <td>{evidence.teacher_name || 'N/A'}</td>
                         <td>{getTypeLabel(evidence.evidence_type)}</td>
                         <td>{evidence.evidence_name || 'N/A'}</td>

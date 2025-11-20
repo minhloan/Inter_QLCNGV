@@ -42,24 +42,28 @@ const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, 
         try {
             setLoading(true);
 
-            // Submit evaluation
+            let imageFileId = null;
+
+            // Upload file first if provided
+            if (formData.fileReport) {
+                imageFileId = await uploadTrialReport(formData.fileReport, trialId);
+            }
+
+            // Submit evaluation with file ID
             const evaluationData = {
                 trialId,
                 score: parseInt(formData.score),
                 comments: formData.comments,
-                conclusion: formData.conclusion
+                conclusion: formData.conclusion,
+                imageFileId: imageFileId
             };
 
-            const result = await evaluateTrial(evaluationData);
-
-            // Upload file if provided
-            if (formData.fileReport) {
-                await uploadTrialReport(formData.fileReport, trialId);
-            }
+            await evaluateTrial(evaluationData);
 
             onToast('Thành công', 'Đánh giá giảng thử thành công', 'success');
             onSuccess();
         } catch (error) {
+            console.error('Error evaluating trial:', error);
             onToast('Lỗi', 'Không thể đánh giá giảng thử', 'danger');
         } finally {
             setLoading(false);

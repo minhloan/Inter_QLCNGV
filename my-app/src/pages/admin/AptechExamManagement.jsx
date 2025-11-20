@@ -134,9 +134,11 @@ const AptechExamManagement = () => {
                             <div className="filter-group">
                                 <button
                                     className="btn btn-secondary"
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSearchTerm('');
                                         setStatusFilter('');
+                                        // Reload latest data from server
+                                        await loadData();
                                     }}
                                     style={{ width: '100%' }}
                                 >

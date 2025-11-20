@@ -18,6 +18,7 @@ public class EvidenceResponseDTO {
     private String id;
     private String teacherId;
     private String teacherName;
+    private String teacherCode;
     private String subjectId;
     private String subjectName;
     private String fileId;
