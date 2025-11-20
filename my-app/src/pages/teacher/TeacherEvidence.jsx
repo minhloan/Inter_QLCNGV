@@ -3,11 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
+import { useAuth } from '../../contexts/AuthContext';
+import { 
+  uploadEvidence, 
+  getEvidencesByTeacher, 
+  reprocessOCR 
+} from '../../api/evidence';
+import { getAllSubjects } from '../../api/subject';
 
 const TeacherEvidence = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [evidences, setEvidences] = useState([]);
   const [filteredEvidences, setFilteredEvidences] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState('');
@@ -15,68 +24,54 @@ const TeacherEvidence = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
   useEffect(() => {
-    loadEvidences();
-  }, []);
+    if (user?.userId) {
+      loadEvidences();
+      loadSubjects();
+    }
+  }, [user]);
 
   useEffect(() => {
     applyFilters();
   }, [evidences, statusFilter]);
 
+  const loadSubjects = async () => {
+    try {
+      const subjectsData = await getAllSubjects();
+      setSubjects(subjectsData || []);
+    } catch (error) {
+      console.error('Error loading subjects:', error);
+    }
+  };
+
   const loadEvidences = async () => {
+    if (!user?.userId) {
+      return;
+    }
     try {
       setLoading(true);
-      // Demo data - replace with actual API call
-      const demoEvidences = [
-        {
-          id: 1,
-          subject_id: 1,
-          subject_name: 'Elementary Programming in C-INTL',
-          file_id: 1,
-          file_path: '/evidences/evidence_001.pdf',
-          ocr_full_name: 'Nguyễn Văn A',
-          ocr_evaluator: 'Trường Đại học Công nghệ',
-          ocr_result: 'PASS',
-          ocr_text: 'Đại học Công nghệ Thông tin - Nguyễn Văn A - 2020',
-          status: 'VERIFIED',
-          submitted_date: '2024-01-10',
-          verified_at: '2024-01-12'
-        },
-        {
-          id: 2,
-          subject_id: 2,
-          subject_name: 'Intelligent Data Management with SQL Server',
-          file_id: 2,
-          file_path: '/evidences/evidence_002.pdf',
-          ocr_full_name: 'Nguyễn Văn A',
-          ocr_evaluator: 'Microsoft',
-          ocr_result: 'PASS',
-          ocr_text: 'Microsoft SQL Server Certification - Nguyễn Văn A',
-          status: 'PENDING',
-          submitted_date: '2024-01-15',
-          verified_at: null
-        },
-        {
-          id: 3,
-          subject_id: 3,
-          subject_name: 'Elegant and Effective Website Design with UI and UX',
-          file_id: 3,
-          file_path: '/evidences/evidence_003.pdf',
-          ocr_full_name: null,
-          ocr_evaluator: null,
-          ocr_result: null,
-          ocr_text: null,
-          status: 'REJECTED',
-          submitted_date: '2024-01-20',
-          verified_at: null
-        }
-      ];
-      
-      setEvidences(demoEvidences);
-      setFilteredEvidences(demoEvidences);
+      const data = await getEvidencesByTeacher(user.userId);
+      // Map API response to component format
+      const mappedEvidences = (data || []).map(evidence => ({
+        id: evidence.id,
+        subject_id: evidence.subjectId,
+        subject_name: evidence.subjectName || 'N/A',
+        file_id: evidence.fileId,
+        ocr_full_name: evidence.ocrFullName,
+        ocr_evaluator: evidence.ocrEvaluator,
+        ocr_result: evidence.ocrResult,
+        ocr_text: evidence.ocrText,
+        status: evidence.status,
+        submitted_date: evidence.submittedDate,
+        verified_at: evidence.verifiedAt
+      }));
+      setEvidences(mappedEvidences);
+      setFilteredEvidences(mappedEvidences);
     } catch (error) {
+      console.error('Error loading evidences:', error);
       showToast('Lỗi', 'Không thể tải danh sách minh chứng', 'danger');
     } finally {
       setLoading(false);
@@ -95,36 +90,75 @@ const TeacherEvidence = () => {
   };
 
   const handleFileUpload = async () => {
-    if (!selectedFile || !selectedSubject) {
-      showToast('Lỗi', 'Vui lòng chọn file và môn học', 'danger');
+    if (!selectedFile) {
+      showToast('Lỗi', 'Vui lòng chọn file', 'danger');
+      return;
+    }
+
+    if (!user?.userId) {
+      showToast('Lỗi', 'Không tìm thấy thông tin người dùng', 'danger');
       return;
     }
 
     try {
-      setLoading(true);
-      // Simulate API call
+      setUploading(true);
+      const submittedDate = new Date().toISOString().split('T')[0];
+      
+      // Upload evidence with OCR processing
+      const response = await uploadEvidence(
+        selectedFile,
+        user.userId,
+        selectedSubject || null,
+        submittedDate
+      );
+
+      // Map response to component format
       const newEvidence = {
-        id: Date.now(),
-        subject_id: parseInt(selectedSubject),
-        subject_name: `Môn học ${selectedSubject}`,
-        file_id: Date.now(),
-        file_path: `/evidences/evidence_${Date.now()}.pdf`,
-        ocr_full_name: null,
-        ocr_evaluator: null,
-        ocr_result: null,
-        ocr_text: null,
-        status: 'PENDING',
-        submitted_date: new Date().toISOString().split('T')[0],
-        verified_at: null
+        id: response.id,
+        subject_id: response.subjectId,
+        subject_name: response.subjectName || 'N/A',
+        file_id: response.fileId,
+        ocr_full_name: response.ocrFullName,
+        ocr_evaluator: response.ocrEvaluator,
+        ocr_result: response.ocrResult,
+        ocr_text: response.ocrText,
+        status: response.status,
+        submitted_date: response.submittedDate,
+        verified_at: response.verifiedAt
       };
 
+      // Add to list (will be at top after reload)
       setEvidences(prev => [newEvidence, ...prev]);
       setShowUploadModal(false);
       setSelectedFile(null);
       setSelectedSubject('');
-      showToast('Thành công', 'Upload minh chứng thành công', 'success');
+      showToast('Thành công', 'Upload minh chứng thành công. OCR đang được xử lý...', 'success');
+      
+      // Reload after a short delay to get OCR results
+      setTimeout(() => {
+        loadEvidences();
+      }, 2000);
     } catch (error) {
-      showToast('Lỗi', 'Không thể upload minh chứng', 'danger');
+      console.error('Error uploading evidence:', error);
+      const errorMessage = error?.response?.data?.message || 'Không thể upload minh chứng';
+      showToast('Lỗi', errorMessage, 'danger');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleReprocessOCR = async (evidenceId) => {
+    try {
+      setLoading(true);
+      await reprocessOCR(evidenceId);
+      showToast('Thành công', 'Đang xử lý OCR lại...', 'success');
+      // Reload after a delay
+      setTimeout(() => {
+        loadEvidences();
+      }, 2000);
+    } catch (error) {
+      console.error('Error reprocessing OCR:', error);
+      showToast('Lỗi', 'Không thể xử lý OCR lại', 'danger');
     } finally {
       setLoading(false);
     }
@@ -149,7 +183,7 @@ const TeacherEvidence = () => {
   const startIndex = (currentPage - 1) * pageSize;
   const pageEvidences = filteredEvidences.slice(startIndex, startIndex + pageSize);
 
-  if (loading) {
+  if (loading && evidences.length === 0) {
     return <Loading fullscreen={true} message="Đang tải danh sách minh chứng..." />;
   }
 
@@ -246,6 +280,15 @@ const TeacherEvidence = () => {
                         >
                           <i className="bi bi-eye"></i>
                         </button>
+                        {(!evidence.ocr_text || evidence.status === 'PENDING') && (
+                          <button
+                            className="btn btn-sm btn-warning btn-action"
+                            onClick={() => handleReprocessOCR(evidence.id)}
+                            title="Xử lý OCR lại"
+                          >
+                            <i className="bi bi-arrow-clockwise"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -301,16 +344,18 @@ const TeacherEvidence = () => {
           <div className="modal-content" style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '600px' }}>
             <h3 style={{ marginBottom: '20px' }}>Upload Minh chứng</h3>
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label className="form-label">Chọn Môn học</label>
+              <label className="form-label">Chọn Môn học (Tùy chọn)</label>
               <select
                 className="form-control"
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
               >
-                <option value="">-- Chọn môn học --</option>
-                <option value="1">Elementary Programming in C-INTL</option>
-                <option value="2">Intelligent Data Management with SQL Server</option>
-                <option value="3">Elegant and Effective Website Design with UI and UX</option>
+                <option value="">-- Chọn môn học (không bắt buộc) --</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.subjectName || subject.subjectCode}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -333,9 +378,9 @@ const TeacherEvidence = () => {
               <button
                 className="btn btn-primary"
                 onClick={handleFileUpload}
-                disabled={!selectedFile || !selectedSubject}
+                disabled={!selectedFile || uploading}
               >
-                Upload
+                {uploading ? 'Đang upload...' : 'Upload'}
               </button>
             </div>
           </div>

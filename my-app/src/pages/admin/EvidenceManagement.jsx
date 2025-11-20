@@ -3,9 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
+import { useAuth } from '../../contexts/AuthContext';
+import { 
+  getAllEvidences, 
+  getEvidencesByStatus, 
+  verifyEvidence, 
+  updateOCRText,
+  reprocessOCR
+} from '../../api/evidence';
 
 const EvidenceManagement = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [evidences, setEvidences] = useState([]);
   const [filteredEvidences, setFilteredEvidences] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,55 +36,37 @@ const EvidenceManagement = () => {
   const loadEvidences = async () => {
     try {
       setLoading(true);
-      // Demo data - replace with actual API call
-      const demoEvidences = [
-        {
-          id: 1,
-          teacher_code: 'GV001',
-          teacher_name: 'Nguyễn Văn A',
-          evidence_type: 'degree',
-          evidence_name: 'Bằng Đại học Công nghệ Thông tin',
-          file_path: '/evidences/gv001_degree.pdf',
-          ocr_text: 'Đại học Công nghệ Thông tin - Nguyễn Văn A - 2020',
-          ocr_status: 'verified',
-          uploaded_date: '2024-01-10',
-          verified_date: '2024-01-12',
-          status: 'approved',
-          notes: ''
-        },
-        {
-          id: 2,
-          teacher_code: 'GV002',
-          teacher_name: 'Trần Thị B',
-          evidence_type: 'certificate',
-          evidence_name: 'Chứng chỉ SQL Server',
-          file_path: '/evidences/gv002_cert.pdf',
-          ocr_text: 'Microsoft SQL Server Certification - Trần Thị B',
-          ocr_status: 'pending',
-          uploaded_date: '2024-01-15',
-          verified_date: null,
-          status: 'pending',
-          notes: ''
-        },
-        {
-          id: 3,
-          teacher_code: 'GV003',
-          teacher_name: 'Lê Văn C',
-          evidence_type: 'experience',
-          evidence_name: 'Giấy xác nhận kinh nghiệm',
-          file_path: '/evidences/gv003_exp.pdf',
-          ocr_text: 'Kinh nghiệm 5 năm - Lê Văn C',
-          ocr_status: 'failed',
-          uploaded_date: '2024-01-20',
-          verified_date: null,
-          status: 'rejected',
-          notes: 'Chất lượng ảnh kém, không đọc được'
-        }
-      ];
+      let data = [];
       
-      setEvidences(demoEvidences);
-      setFilteredEvidences(demoEvidences);
+      if (statusFilter) {
+        data = await getEvidencesByStatus(statusFilter);
+      } else {
+        data = await getAllEvidences();
+      }
+      
+      // Map API response to component format
+      const mappedEvidences = (data || []).map(evidence => ({
+        id: evidence.id,
+        teacher_code: evidence.teacherId, // You may need to adjust this based on your API
+        teacher_name: evidence.teacherName || 'N/A',
+        evidence_type: 'certificate', // Default type, adjust as needed
+        evidence_name: evidence.subjectName || 'Minh chứng',
+        file_path: evidence.fileId,
+        ocr_text: evidence.ocrText,
+        ocr_status: evidence.ocrText ? 'verified' : 'pending',
+        uploaded_date: evidence.submittedDate,
+        verified_date: evidence.verifiedAt,
+        status: evidence.status?.toLowerCase() || 'pending',
+        ocr_full_name: evidence.ocrFullName,
+        ocr_evaluator: evidence.ocrEvaluator,
+        ocr_result: evidence.ocrResult,
+        notes: ''
+      }));
+      
+      setEvidences(mappedEvidences);
+      setFilteredEvidences(mappedEvidences);
     } catch (error) {
+      console.error('Error loading evidences:', error);
       showToast('Lỗi', 'Không thể tải danh sách minh chứng', 'danger');
     } finally {
       setLoading(false);
@@ -109,11 +100,12 @@ const EvidenceManagement = () => {
   const handleVerifyOCR = async (evidenceId) => {
     try {
       setLoading(true);
-      setEvidences(prev => prev.map(ev =>
-        ev.id === evidenceId ? { ...ev, ocr_status: 'verified', verified_date: new Date().toISOString().split('T')[0] } : ev
-      ));
-      showToast('Thành công', 'Xác minh OCR thành công', 'success');
+      // This would typically update OCR text manually if needed
+      // For now, we'll just reload to get latest OCR status
+      await loadEvidences();
+      showToast('Thành công', 'Đã cập nhật trạng thái OCR', 'success');
     } catch (error) {
+      console.error('Error verifying OCR:', error);
       showToast('Lỗi', 'Không thể xác minh OCR', 'danger');
     } finally {
       setLoading(false);
@@ -121,14 +113,40 @@ const EvidenceManagement = () => {
   };
 
   const handleStatusChange = async (evidenceId, newStatus) => {
+    if (!user?.userId) {
+      showToast('Lỗi', 'Không tìm thấy thông tin người dùng', 'danger');
+      return;
+    }
+
     try {
       setLoading(true);
-      setEvidences(prev => prev.map(ev =>
-        ev.id === evidenceId ? { ...ev, status: newStatus } : ev
-      ));
+      const approved = newStatus === 'approved' || newStatus === 'verified';
+      await verifyEvidence(evidenceId, user.userId, approved);
+      
+      // Reload to get updated data
+      await loadEvidences();
       showToast('Thành công', 'Cập nhật trạng thái thành công', 'success');
     } catch (error) {
-      showToast('Lỗi', 'Không thể cập nhật trạng thái', 'danger');
+      console.error('Error updating status:', error);
+      const errorMessage = error?.response?.data?.message || 'Không thể cập nhật trạng thái';
+      showToast('Lỗi', errorMessage, 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReprocessOCR = async (evidenceId) => {
+    try {
+      setLoading(true);
+      await reprocessOCR(evidenceId);
+      showToast('Thành công', 'Đang xử lý OCR lại...', 'success');
+      // Reload after a delay
+      setTimeout(() => {
+        loadEvidences();
+      }, 2000);
+    } catch (error) {
+      console.error('Error reprocessing OCR:', error);
+      showToast('Lỗi', 'Không thể xử lý OCR lại', 'danger');
     } finally {
       setLoading(false);
     }
@@ -146,34 +164,36 @@ const EvidenceManagement = () => {
       experience: 'Kinh nghiệm',
       other: 'Khác'
     };
-    return typeMap[type] || type;
+    return typeMap[type] || 'Chứng chỉ';
   };
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      approved: { label: 'Đã duyệt', class: 'success' },
+      verified: { label: 'Đã xác minh', class: 'success' },
       rejected: { label: 'Từ chối', class: 'danger' },
-      pending: { label: 'Chờ duyệt', class: 'warning' }
+      pending: { label: 'Chờ xác minh', class: 'warning' },
+      approved: { label: 'Đã duyệt', class: 'success' }
     };
-    const statusInfo = statusMap[status] || { label: status, class: 'secondary' };
+    const statusUpper = status?.toUpperCase();
+    const statusInfo = statusMap[statusUpper?.toLowerCase()] || statusMap[status?.toLowerCase()] || { label: status, class: 'secondary' };
     return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
   };
 
-  const getOCRStatusBadge = (status) => {
-    const statusMap = {
-      verified: { label: 'Đã xác minh', class: 'success' },
-      pending: { label: 'Chờ xác minh', class: 'warning' },
-      failed: { label: 'Lỗi OCR', class: 'danger' }
-    };
-    const statusInfo = statusMap[status] || { label: status, class: 'secondary' };
-    return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
+  const getOCRStatusBadge = (evidence) => {
+    if (evidence.ocr_text) {
+      return <span className="badge badge-status success">Đã xác minh</span>;
+    } else if (evidence.status === 'PENDING' || evidence.status === 'pending') {
+      return <span className="badge badge-status warning">Chờ xác minh</span>;
+    } else {
+      return <span className="badge badge-status danger">Chưa có OCR</span>;
+    }
   };
 
   const totalPages = Math.ceil(filteredEvidences.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const pageEvidences = filteredEvidences.slice(startIndex, startIndex + pageSize);
 
-  if (loading) {
+  if (loading && evidences.length === 0) {
     return <Loading fullscreen={true} message="Đang tải danh sách minh chứng..." />;
   }
 
@@ -227,9 +247,9 @@ const EvidenceManagement = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option value="">Tất cả</option>
-                  <option value="approved">Đã duyệt</option>
-                  <option value="rejected">Từ chối</option>
-                  <option value="pending">Chờ duyệt</option>
+                  <option value="VERIFIED">Đã xác minh</option>
+                  <option value="REJECTED">Từ chối</option>
+                  <option value="PENDING">Chờ xác minh</option>
                 </select>
               </div>
               <div className="filter-group">
@@ -278,24 +298,24 @@ const EvidenceManagement = () => {
                         <td>{evidence.teacher_name || 'N/A'}</td>
                         <td>{getTypeLabel(evidence.evidence_type)}</td>
                         <td>{evidence.evidence_name || 'N/A'}</td>
-                        <td>{getOCRStatusBadge(evidence.ocr_status)}</td>
+                        <td>{getOCRStatusBadge(evidence)}</td>
                         <td>{getStatusBadge(evidence.status)}</td>
                         <td className="text-center">
                           <div className="action-buttons">
-                            {evidence.ocr_status === 'pending' && (
+                            {(!evidence.ocr_text || evidence.status === 'PENDING' || evidence.status === 'pending') && (
                               <button
-                                className="btn btn-sm btn-primary btn-action"
-                                onClick={() => handleVerifyOCR(evidence.id)}
-                                title="Xác minh OCR"
+                                className="btn btn-sm btn-warning btn-action"
+                                onClick={() => handleReprocessOCR(evidence.id)}
+                                title="Xử lý OCR lại"
                               >
-                                <i className="bi bi-check-circle"></i>
+                                <i className="bi bi-arrow-clockwise"></i>
                               </button>
                             )}
-                            {evidence.status === 'pending' && (
+                            {(evidence.status === 'PENDING' || evidence.status === 'pending') && (
                               <>
                                 <button
                                   className="btn btn-sm btn-success btn-action"
-                                  onClick={() => handleStatusChange(evidence.id, 'approved')}
+                                  onClick={() => handleStatusChange(evidence.id, 'verified')}
                                   title="Duyệt"
                                 >
                                   <i className="bi bi-check"></i>
