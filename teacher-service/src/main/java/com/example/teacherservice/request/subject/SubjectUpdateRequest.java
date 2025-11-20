@@ -1,5 +1,6 @@
 package com.example.teacherservice.request.subject;
 
+import com.example.teacherservice.enums.Semester;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -10,9 +11,6 @@ public class SubjectUpdateRequest {
     private String id;
 
     private String subjectName;
-
-    private Integer credit;
-
     private String description;
 
     private String systemId;
@@ -20,4 +18,8 @@ public class SubjectUpdateRequest {
     private Boolean isActive;
 
     private String imageFileId;
+    private Integer hours;
+
+    private Semester semester;
+
 }

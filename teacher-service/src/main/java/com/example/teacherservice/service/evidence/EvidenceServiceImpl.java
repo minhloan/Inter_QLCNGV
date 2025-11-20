@@ -36,16 +36,22 @@ public class EvidenceServiceImpl implements EvidenceService {
     private final SubjectRepository subjectRepository;
 
     @Override
+    // API upload minh chứng:
+    // 1. Kiểm tra giáo viên có tồn tại
+    // 2. Kiểm tra môn học có tồn tại
+    // 3. Upload file lên hệ thống file
+    // 4. Tạo bản ghi Evidence (trạng thái PENDING)
+    // 5. Gửi job xử lý OCR bất đồng bộ (processOCRAsync)
     public EvidenceResponseDTO uploadEvidence(EvidenceDTO dto, MultipartFile file) {
 
-        // 1. Validate teacher exists
+        // 1. Validate teacher exists (kiểm tra giáo viên tồn tại)
         User teacher = userRepository.findById(dto.getTeacherId())
                 .orElseThrow(() -> GenericErrorResponse.builder()
                         .message("Teacher not found")
                         .httpStatus(HttpStatus.NOT_FOUND)
                         .build());
 
-        // 2. Validate subject exists
+        // 2. Validate subject exists (kiểm tra môn học tồn tại)
         if (dto.getSubjectId() == null || dto.getSubjectId().isBlank()) {
             throw GenericErrorResponse.builder()
                     .message("Subject ID is required")
@@ -58,11 +64,11 @@ public class EvidenceServiceImpl implements EvidenceService {
                         .httpStatus(HttpStatus.NOT_FOUND)
                         .build());
 
-        // 3. Upload file
+        // 3. Upload file (lưu file vật lý và thông tin file vào DB)
         String fileId = fileService.uploadImageToFileSystem(file);
         File fileEntity = fileService.findFileById(fileId);
 
-        // 4. Create Evidence entity
+        // 4. Tạo entity Evidence và set trạng thái ban đầu là PENDING
         Evidence evidence = Evidence.builder()
                 .teacher(teacher)
                 .subject(subject)
@@ -75,7 +81,7 @@ public class EvidenceServiceImpl implements EvidenceService {
 
         evidence = evidenceRepository.save(evidence);
 
-        // 5. Trigger async OCR processing
+        // 5. Gọi xử lý OCR bất đồng bộ, không chặn API upload
         processOCRAsync(evidence.getId());
 
         return convertToDTO(evidence);
@@ -83,6 +89,7 @@ public class EvidenceServiceImpl implements EvidenceService {
 
     @Override
     @Transactional
+    // Lấy chi tiết 1 minh chứng theo id
     public EvidenceResponseDTO findById(String id) {
         Evidence evidence = evidenceRepository.findById(id)
                 .orElseThrow(() -> GenericErrorResponse.builder()
@@ -95,6 +102,7 @@ public class EvidenceServiceImpl implements EvidenceService {
 
     @Override
     @Transactional
+    // Lấy danh sách minh chứng của một giáo viên
     public List<EvidenceResponseDTO> findByTeacherId(String teacherId) {
         List<Evidence> evidences = evidenceRepository.findByTeacherId(teacherId);
         return evidences.stream()
@@ -104,6 +112,7 @@ public class EvidenceServiceImpl implements EvidenceService {
 
     @Override
     @Transactional
+    // Lấy danh sách minh chứng theo trạng thái (PENDING / VERIFIED / REJECTED)
     public List<EvidenceResponseDTO> findByStatus(String status) {
         EvidenceStatus evidenceStatus = EvidenceStatus.valueOf(status.toUpperCase());
         List<Evidence> evidences = evidenceRepository.findByStatus(evidenceStatus);
@@ -113,6 +122,7 @@ public class EvidenceServiceImpl implements EvidenceService {
     }
 
     @Override
+    // Cho phép chỉnh sửa lại nội dung OCR (text, họ tên, người đánh giá) thủ công
     public EvidenceResponseDTO updateOCRText(String id, UpdateOCRTextDTO dto) {
         Evidence evidence = evidenceRepository.findById(id)
                 .orElseThrow(() -> GenericErrorResponse.builder()
@@ -135,6 +145,10 @@ public class EvidenceServiceImpl implements EvidenceService {
     }
 
     @Override
+    // Hàm duyệt / từ chối minh chứng:
+    // - Gắn người duyệt
+    // - Gắn thời gian duyệt
+    // - Cập nhật trạng thái: VERIFIED hoặc REJECTED
     public EvidenceResponseDTO verifyEvidence(String id, String verifiedById, boolean approved) {
         Evidence evidence = evidenceRepository.findById(id)
                 .orElseThrow(() -> GenericErrorResponse.builder()
@@ -156,6 +170,11 @@ public class EvidenceServiceImpl implements EvidenceService {
 
     @Override
     @Async
+    // Xử lý OCR bất đồng bộ:
+    // - Được gọi sau khi upload minh chứng thành công
+    // - Lấy file của Evidence, gọi OCRService.processFile
+    // - Lưu lại kết quả OCR vào bản ghi Evidence
+    // Lưu ý: dùng @Async nên hàm này chạy trên thread riêng, không ảnh hưởng tới response upload
     public void processOCRAsync(String evidenceId) {
 
         try {
@@ -167,23 +186,23 @@ public class EvidenceServiceImpl implements EvidenceService {
                                 .build();
                     });
 
-            // Get file
+            // Lấy file gắn với minh chứng
             File fileEntity = evidence.getFile();
             if (fileEntity == null) {
                 return;
             }
 
-            // Check if physical file exists
+            // Kiểm tra file vật lý có tồn tại trên hệ thống không
             java.io.File physicalFile = new java.io.File(fileEntity.getFilePath());
             if (!physicalFile.exists()) {
                 return;
             }
 
-            // Process OCR
+            // Tiến hành OCR trên file
             try {
                 OCRResultDTO ocrResult = ocrService.processFile(fileEntity);
 
-                // Update Evidence with OCR results
+                // Cập nhật lại minh chứng với kết quả OCR (nếu có)
                 if (ocrResult != null) {
                     evidence.setOcrText(ocrResult.getOcrText());
                     evidence.setOcrFullName(ocrResult.getOcrFullName());
@@ -194,10 +213,11 @@ public class EvidenceServiceImpl implements EvidenceService {
                 evidenceRepository.save(evidence);
 
             } catch (Error e) {
+                // Trường hợp lỗi nghiêm trọng (Error) như lỗi bộ nhớ, vẫn cố gắng lưu thông tin lỗi vào ocrText
                 evidence.setOcrText("OCR processing failed: " + e.getMessage());
                 evidenceRepository.save(evidence);
             } catch (Exception e) {
-                // Save evidence without OCR results
+                // Trường hợp exception thông thường, cũng lưu thông tin lỗi vào ocrText
                 evidence.setOcrText("OCR processing failed: " + e.getMessage());
                 evidenceRepository.save(evidence);
             }
@@ -215,6 +235,7 @@ public class EvidenceServiceImpl implements EvidenceService {
     }
 
     @Override
+    // Lấy toàn bộ minh chứng (thường dùng cho admin)
     public List<EvidenceResponseDTO> findAll() {
         List<Evidence> evidences = evidenceRepository.findAll();
         return evidences.stream()
@@ -222,6 +243,8 @@ public class EvidenceServiceImpl implements EvidenceService {
                 .collect(Collectors.toList());
     }
 
+    // Hàm chuyển entity Evidence từ DB sang DTO trả về cho client
+    // Gom đủ thông tin: giáo viên, môn học, file, kết quả OCR, trạng thái, người duyệt, thời gian, ...
     private EvidenceResponseDTO convertToDTO(Evidence evidence) {
         return EvidenceResponseDTO.builder()
                 .id(evidence.getId())

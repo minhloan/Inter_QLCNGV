@@ -1,6 +1,7 @@
 package com.example.teacherservice.service.subject;
 
 import com.example.teacherservice.dto.subject.SubjectDto;
+import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.request.subject.SubjectCreateRequest;
 import com.example.teacherservice.request.subject.SubjectUpdateRequest;
@@ -26,5 +27,6 @@ public interface SubjectService {
 
     List<Subject> searchSubjects(String keyword,
                                  String systemId,
-                                 Boolean isActive);
+                                 Boolean isActive,
+                                 Semester semester);
 }

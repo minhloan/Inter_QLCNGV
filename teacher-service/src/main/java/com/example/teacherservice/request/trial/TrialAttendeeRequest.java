@@ -8,7 +8,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TrialAttendeeRequest {
+public class    TrialAttendeeRequest {
     private String trialId;
     private String attendeeUserId;
     private String attendeeName;

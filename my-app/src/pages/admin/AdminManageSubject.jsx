@@ -41,16 +41,22 @@ const AdminManageSubject = () => {
             id: s.id,
             subjectCode: s.subjectCode,
             subjectName: s.subjectName,
-            credit: s.credit,
 
-            // ⭐ FIX QUAN TRỌNG — ĐỌC ĐÚNG system
+            hours: s.hours,
+            semester: s.semester,
+            semesterLabel:
+                s.semester === "SEMESTER_1" ? "Học kỳ 1" :
+                    s.semester === "SEMESTER_2" ? "Học kỳ 2" :
+                        s.semester === "SEMESTER_3" ? "Học kỳ 3" :
+                            s.semester === "SEMESTER_4" ? "Học kỳ 4" :
+                                "",
+
             systemId: s.systemId || s.system?.id || "",
             systemName: s.systemName || s.system?.systemName || "Unknown system",
 
             isActive: s.isActive,
             status: s.isActive ? "active" : "inactive",
 
-            // ⭐ FIX image
             imageFileId: s.imageFileId || s.image_subject?.id || null
         }));
 
@@ -100,7 +106,7 @@ const AdminManageSubject = () => {
                     try {
                         const url = await getFile(s.imageFileId);
                         newImages[s.id] = url;
-                    } catch {}
+                    } catch { }
                 })
             );
 
@@ -293,7 +299,7 @@ const AdminManageSubject = () => {
                                         <div className="course-card-body">
                                             <h3>{subject.subjectName}</h3>
                                             <p>
-                                                {subject.subjectCode} • {subject.credit} tín chỉ •{" "}
+                                                {subject.subjectCode} • {subject.hours} giờ • {subject.semesterLabel} •{" "}
                                                 {subject.systemName}
                                             </p>
 

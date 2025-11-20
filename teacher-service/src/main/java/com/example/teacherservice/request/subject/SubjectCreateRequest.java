@@ -1,5 +1,6 @@
 package com.example.teacherservice.request.subject;
 
+import com.example.teacherservice.enums.Semester;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -13,9 +14,6 @@ public class SubjectCreateRequest {
     @NotBlank(message = "Subject name is required")
     private String subjectName;
 
-    @NotNull(message = "Credit is required")
-    private Integer credit;
-
     private String description;
 
     @NotBlank(message = "SystemId is required")
@@ -26,4 +24,9 @@ public class SubjectCreateRequest {
 
     // id file ảnh
     private String imageFileId;
+    @NotNull(message = "Hours is required")
+    private Integer hours;
+
+    @NotNull(message = "Semester is required")
+    private Semester semester;
 }

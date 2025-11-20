@@ -1,5 +1,6 @@
 package com.example.teacherservice.model;
 
+import com.example.teacherservice.enums.Semester;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -9,7 +10,8 @@ import lombok.*;
 @Table(name = "subjects", indexes = {
         @Index(name = "idx_subject_name", columnList = "subject_name"),
         @Index(name = "idx_system_id", columnList = "system_id"),
-        @Index(name = "idx_is_active", columnList = "is_active")
+        @Index(name = "idx_is_active", columnList = "is_active"),
+        @Index(name = "idx_subject_code", columnList = "subject_code")
 })
 @Getter
 @Setter
@@ -18,14 +20,18 @@ import lombok.*;
 @AllArgsConstructor
 public class Subject extends BaseEntity {
 
-    @Column(name = "subject_code", nullable = false, unique = true, length = 20)
+    @Column(name = "subject_code", nullable = false, length = 20)
     private String subjectCode;
 
     @Column(name = "subject_name", nullable = false, length = 100)
     private String subjectName;
 
-    @Column(name = "credit")
-    private Integer credit;
+    @Column(name = "hours")
+    private Integer hours;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "semester", nullable = false)
+    private Semester semester;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;

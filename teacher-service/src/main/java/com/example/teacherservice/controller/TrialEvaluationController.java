@@ -21,7 +21,8 @@ public class TrialEvaluationController {
                 request.getTrialId(),
                 request.getScore(),
                 request.getComments(),
-                request.getConclusion().toString()
+                request.getConclusion().toString(),
+                request.getImageFileId()
         );
         return new ResponseEntity<>(dto, HttpStatus.CREATED);
     }

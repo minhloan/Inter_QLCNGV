@@ -6,7 +6,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "trial_evaluations", indexes = {
-    @Index(name = "idx_trial_id", columnList = "trial_id")
+        @Index(name = "idx_trial_id", columnList = "trial_id")
 })
 @Getter
 @Setter
@@ -29,7 +29,7 @@ public class TrialEvaluation extends BaseEntity {
     private TrialConclusion conclusion;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "file_report_id")
-    private File fileReport;
+    @JoinColumn(name = "image_file_id")
+    private File imageFile;
 }
 

@@ -276,7 +276,7 @@ public class ReportService {
                     subjectData.put("subjectName", reg.getSubject().getSubjectName());
                     subjectData.put("subjectCode", reg.getSubject().getSubjectCode());
                     subjectData.put("className", "APTECH" + (reg.getSubject().getSubjectCode().hashCode() % 10 + 1)); // Mock class name
-                    subjectData.put("totalHours", reg.getSubject().getCredit() * 15); // Mock hours
+//                    subjectData.put("totalHours", reg.getSubject().getCredit() * 15); // Mock hours
                     subjectData.put("status", reg.getStatus().toString());
                     subjectData.put("notes", "");
                     return subjectData;
@@ -602,7 +602,7 @@ public class ReportService {
                     subjectData.put("year", reg.getYear());
                     subjectData.put("quarter", reg.getQuarter());
                     subjectData.put("status", reg.getStatus().toString());
-                    subjectData.put("credit", reg.getSubject().getCredit());
+//                    subjectData.put("credit", reg.getSubject().getCredit());
                     return subjectData;
                 })
                 .collect(Collectors.toList());

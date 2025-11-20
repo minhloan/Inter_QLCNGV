@@ -9,7 +9,6 @@ import { getFile } from '../../api/file';
 import { getAllSubjectSystems } from '../../api/subjectSystem';
 import createApiInstance from '../../api/createApiInstance';
 
-// instance upload ảnh
 const fileApi = createApiInstance('/v1/teacher/file');
 
 const AdminManageSubjectEdit = () => {
@@ -19,7 +18,7 @@ const AdminManageSubjectEdit = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    const [systems, setSystems] = useState([]); // ⭐ danh sách hệ đào tạo
+    const [systems, setSystems] = useState([]);
 
     const [toast, setToast] = useState({
         show: false,
@@ -32,9 +31,10 @@ const AdminManageSubjectEdit = () => {
         id: '',
         subjectCode: '',
         subjectName: '',
-        credit: '',
+        hours: '',            // ⭐ đổi từ credit → hours
+        semester: '',         // ⭐ thêm học kỳ
         description: '',
-        systemId: '',          // ⭐ sửa từ system →
+        systemId: '',
         isActive: true,
         imageFileId: null,
     });
@@ -48,14 +48,13 @@ const AdminManageSubjectEdit = () => {
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     }, []);
 
-    // ================== LOAD LIST SUBJECT SYSTEM ==================
+    // ================== LOAD SYSTEM LIST ==================
     useEffect(() => {
         const loadSystems = async () => {
             try {
                 const res = await getAllSubjectSystems();
                 setSystems(res || []);
-            } catch (err) {
-                console.error(err);
+            } catch {
                 showToast("Lỗi", "Không thể tải danh sách hệ đào tạo", "danger");
             }
         };
@@ -70,7 +69,7 @@ const AdminManageSubjectEdit = () => {
         fd.append('image', file);
 
         const res = await fileApi.post('/upload', fd, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: { 'Content-Type': 'multipart/form-data' },
         });
 
         return res.data.id ?? res.data.fileId ?? res.data;
@@ -93,27 +92,24 @@ const AdminManageSubjectEdit = () => {
                     id: data.id,
                     subjectCode: data.subjectCode || '',
                     subjectName: data.subjectName || '',
-                    credit: data.credit != null ? String(data.credit) : '',
+
+                    hours: data.hours != null ? String(data.hours) : "",
+
+                    semester: data.semester ?? "",      // ⭐ thêm
+
                     description: data.description || '',
-
-                    // ⭐ FIX CHUẨN NHẤT
-                    systemId: data.systemId || data.system?.id || '',
-
+                    systemId: data.systemId || '',
                     isActive: data.isActive,
-                    imageFileId: fileId
+                    imageFileId: fileId,
                 });
 
                 if (fileId) {
                     try {
                         const blobUrl = await getFile(fileId);
                         setImagePreview(blobUrl);
-                    } catch (e) {
-                        console.error(e);
-                    }
+                    } catch {}
                 }
-
-            } catch (err) {
-                console.error(err);
+            } catch {
                 showToast("Lỗi", "Không thể tải dữ liệu môn học", "danger");
             } finally {
                 setLoading(false);
@@ -121,7 +117,7 @@ const AdminManageSubjectEdit = () => {
         };
 
         loadSubject();
-    }, [id, showToast]);
+    }, [id]);
 
     // ================== INPUT CHANGE ==================
     const handleInputChange = (e) => {
@@ -129,21 +125,12 @@ const AdminManageSubjectEdit = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // chọn system
-    const handleSystemChange = (e) => {
-        setFormData(prev => ({ ...prev, systemId: e.target.value }));
-    };
-
-    // trạng thái
-    const handleStatusChange = (e) => {
-        setFormData(prev => ({ ...prev, isActive: e.target.value === 'active' }));
-    };
-
     // ================== IMAGE ==================
     const handleClearImage = () => {
         setImageFile(null);
         setImagePreview(null);
         setImageRemoved(true);
+        setFormData(prev => ({ ...prev, imageFileId: "__DELETE__" }));
     };
 
     const handleImageChange = (e) => {
@@ -164,6 +151,14 @@ const AdminManageSubjectEdit = () => {
             return showToast("Lỗi", "Tên môn học không được để trống", "danger");
         }
 
+        if (!formData.hours.trim() || Number(formData.hours) <= 0) {
+            return showToast("Lỗi", "Số giờ phải là số dương", "danger");
+        }
+
+        if (!formData.semester) {
+            return showToast("Lỗi", "Vui lòng chọn học kỳ", "danger");
+        }
+
         try {
             setSaving(true);
 
@@ -173,13 +168,15 @@ const AdminManageSubjectEdit = () => {
             const payload = {
                 id: formData.id,
                 subjectName: formData.subjectName.trim(),
-                credit: parseInt(formData.credit, 10) || null,
+                hours: Number(formData.hours),              // ⭐ đổi credit → hours
+                semester: formData.semester,                // ⭐ thêm
+
                 description: formData.description || null,
-                systemId: formData.systemId || null, // ⭐ gửi lên đúng field backend cần
-                isActive: formData.isActive
+                systemId: formData.systemId || null,
+                isActive: formData.isActive,
             };
 
-            if (imageRemoved) payload.imageFileId = "";
+            if (imageRemoved) payload.imageFileId = "__DELETE__";
             else if (newFileId) payload.imageFileId = newFileId;
 
             await updateSubject(payload);
@@ -200,7 +197,6 @@ const AdminManageSubjectEdit = () => {
 
     return (
         <MainLayout>
-
             {/* HEADER */}
             <div className="content-header">
                 <div className="content-title">
@@ -238,29 +234,48 @@ const AdminManageSubjectEdit = () => {
                                 </div>
                             </div>
 
-                            {/* CREDIT + SYSTEM */}
+                            {/* HOURS + SEMESTER */}
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label className="form-label">Số tín chỉ</label>
+                                    <label className="form-label">Số giờ *</label>
                                     <input
                                         type="number"
                                         className="form-control"
-                                        name="credit"
-                                        value={formData.credit}
+                                        name="hours"
+                                        value={formData.hours}
                                         onChange={handleInputChange}
-                                        min="0"
+                                        min="1"
                                     />
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Hệ đào tạo</label>
+                                    <label className="form-label">Học kỳ *</label>
                                     <select
                                         className="form-control"
+                                        name="semester"
+                                        value={formData.semester}
+                                        onChange={handleInputChange}
+                                    >
+                                        <option value="">Chọn học kỳ</option>
+                                        <option value="SEMESTER_1">Học kỳ 1</option>
+                                        <option value="SEMESTER_2">Học kỳ 2</option>
+                                        <option value="SEMESTER_3">Học kỳ 3</option>
+                                        <option value="SEMESTER_4">Học kỳ 4</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* SYSTEM */}
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Hệ đào tạo *</label>
+                                    <select
+                                        className="form-control"
+                                        name="systemId"
                                         value={formData.systemId}
-                                        onChange={handleSystemChange}
+                                        onChange={handleInputChange}
                                     >
                                         <option value="">Chọn hệ đào tạo</option>
-
                                         {systems.map(sys => (
                                             <option key={sys.id} value={sys.id}>
                                                 {sys.systemName}
@@ -268,16 +283,19 @@ const AdminManageSubjectEdit = () => {
                                         ))}
                                     </select>
                                 </div>
-                            </div>
 
-                            {/* STATUS */}
-                            <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Trạng thái</label>
                                     <select
                                         className="form-control"
-                                        value={formData.isActive ? 'active' : 'inactive'}
-                                        onChange={handleStatusChange}
+                                        name="isActive"
+                                        value={formData.isActive ? "active" : "inactive"}
+                                        onChange={(e) =>
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                isActive: e.target.value === "active",
+                                            }))
+                                        }
                                     >
                                         <option value="active">Hoạt động</option>
                                         <option value="inactive">Không hoạt động</option>
@@ -316,7 +334,12 @@ const AdminManageSubjectEdit = () => {
                                     <img
                                         src={imagePreview}
                                         alt=""
-                                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            borderRadius: "8px",
+                                        }}
                                     />
                                 ) : (
                                     <i className="bi bi-book" style={{ fontSize: 40 }}></i>
@@ -348,8 +371,9 @@ const AdminManageSubjectEdit = () => {
                 </div>
             </div>
 
-            {toast.show && <Toast title={toast.title} message={toast.message} type={toast.type} />}
-
+            {toast.show && (
+                <Toast title={toast.title} message={toast.message} type={toast.type} />
+            )}
         </MainLayout>
     );
 };

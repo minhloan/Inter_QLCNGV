@@ -131,7 +131,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                     .score(eval.getScore())
                     .comments(eval.getComments())
                     .conclusion(eval.getConclusion())
-                    .fileReportId(eval.getFileReport() != null ? eval.getFileReport().getId() : null)
+                    .imageFileId(eval.getImageFile() != null ? eval.getImageFile().getId() : null)
                     .build();
         }
 

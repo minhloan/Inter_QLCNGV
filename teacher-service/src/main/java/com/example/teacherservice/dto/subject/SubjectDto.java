@@ -17,4 +17,6 @@ public class SubjectDto {
     private String description;
     private Boolean isActive;
     private String imageFileId;
+    private Integer hours;
+    private String semester;
 }

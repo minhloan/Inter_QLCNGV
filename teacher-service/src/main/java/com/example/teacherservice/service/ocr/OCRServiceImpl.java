@@ -34,48 +34,47 @@ public class OCRServiceImpl implements OCRService {
     private final ITesseract tesseract;
     private final String tessdataPath;
 
-
-    public OCRServiceImpl(@Value("${tesseract.datapath:src/main/resources/tessdata}") String tessdataPath) {
-        this.tessdataPath = tessdataPath;
+    // Constructor: Spring sẽ inject giá trị cấu hình `tesseract.datapath`
+    // Nếu không cấu hình thì mặc định dùng `src/main/resources/tessdata`
+    public OCRServiceImpl(@Value("${tesseract.datapath:src/main/resources/tessdata}") String metadataPath) {
+        this.tessdataPath = metadataPath;
         this.tesseract = new Tesseract();
         initializeTesseract();
     }
 
+    // Hàm khởi tạo cấu hình cho Tesseract
+    // - Tìm thư mục tessdata khả dụng
+    // - Set datapath + ngôn ngữ
+    // - Cấu hình chế độ OCR và Page Segmentation
     private void initializeTesseract() {
-        try {
-            Path tessdata = findTessdataPath();
+        Path metadata = findTessdataPath();
             
-            if (tessdata != null && Files.exists(tessdata)) {
-                String absolutePath = tessdata.toAbsolutePath().toString();
-                tesseract.setDatapath(absolutePath);
-                log.info("Tesseract datapath set to: {}", absolutePath);
-                
+        // Nếu tìm được thư mục tessdata
+        if (metadata != null && Files.exists(metadata)) {
+            String absolutePath = metadata.toAbsolutePath().toString();
+            tesseract.setDatapath(absolutePath);
+
                 // Check which language files are available
-                String language = determineAvailableLanguage(tessdata);
-                tesseract.setLanguage(language);
-                log.info("Tesseract language set to: {}", language);
-            } else {
-                log.error("Tessdata path not found. OCR will not work correctly.");
+            String language = determineAvailableLanguage(metadata);
+            tesseract.setLanguage(language);
+        } else {
                 // Set default language anyway
-                tesseract.setLanguage("eng");
-            }
+            tesseract.setLanguage("eng");
+        }
 
             // Set OCR Engine Mode
-            tesseract.setOcrEngineMode(1); // LSTM OCR Engine
+        tesseract.setOcrEngineMode(1); // LSTM OCR Engine
 
             // Set Page Segmentation Mode
-            tesseract.setPageSegMode(1); // Automatic page segmentation with OSD
-
-        } catch (Exception e) {
-            log.error("Failed to initialize Tesseract: {}", e.getMessage(), e);
-            // Don't throw exception during initialization - allow app to start
-            // OCR will fail gracefully when called
-            log.warn("OCR service may not work correctly due to initialization error");
-        }
+        tesseract.setPageSegMode(1); // Automatic page segmentation with OSD
     }
     
+    // Tìm đường dẫn tessdata theo nhiều chiến lược:
+    // 1. Tìm trong classpath (khi chạy bằng JAR, lấy resource và copy ra thư mục tạm)
+    // 2. Tìm theo đường dẫn cấu hình tương đối
+    // 3. Tìm theo đường dẫn tuyệt đối (dựa trên user.dir)
+    // 4. Tìm trực tiếp trong thư mục resources của project (khi chạy trong IDE)
     private Path findTessdataPath() {
-        // Strategy 1: Try classpath resources (works in JAR and IDE)
         try {
             InputStream engStream = getClass().getClassLoader().getResourceAsStream("tessdata/eng.traineddata");
             if (engStream != null) {
@@ -87,8 +86,7 @@ public class OCRServiceImpl implements OCRService {
                 Path engFile = tempDir.resolve("eng.traineddata");
                 Files.copy(engStream, engFile, StandardCopyOption.REPLACE_EXISTING);
                 engStream.close();
-                
-                log.info("Extracted tessdata from classpath to: {}", tempDir);
+
                 return tempDir;
             }
         } catch (Exception e) {
@@ -116,12 +114,14 @@ public class OCRServiceImpl implements OCRService {
             log.info("Found tessdata in resources: {}", resourcesPath.toAbsolutePath());
             return resourcesPath;
         }
-        
-        log.error("Could not find tessdata directory. Tried: {}, {}, {}", 
-                tessdata.toAbsolutePath(), absoluteTessdata.toAbsolutePath(), resourcesPath.toAbsolutePath());
         return null;
     }
 
+    // Xác định ngôn ngữ OCR nào có thể dùng dựa vào các file *.traineddata hiện có
+    // Ưu tiên: có cả vie + eng -> dùng "vie+eng"
+    // Chỉ có eng -> dùng "eng"
+    // Chỉ có vie -> dùng "vie"
+    // Không có file nào -> log lỗi và trả về "eng" (khả năng cao sẽ lỗi OCR)
     private String determineAvailableLanguage(Path tessdataPath) {
         // If tessdata path doesn't exist, default to English
         if (tessdataPath == null || !Files.exists(tessdataPath)) {
@@ -150,9 +150,10 @@ public class OCRServiceImpl implements OCRService {
         }
     }
 
-
-
     @Override
+    // Hàm này là entry chung để xử lý mọi loại file minh chứng
+    // - Nhận vào model File (đường dẫn vật lý + tên file)
+    // - Phân loại file: PDF hay ảnh, sau đó gọi hàm tương ứng
     public OCRResultDTO processFile(File file) {
         // Convert model File to java.io.File
         java.io.File physicalFile = new java.io.File(file.getFilePath());
@@ -180,24 +181,20 @@ public class OCRServiceImpl implements OCRService {
     }
 
     @Override
+    // Xử lý file ảnh: JPG, PNG, TIFF, ...
+    // - Gọi trực tiếp Tesseract để đọc text từ file
+    // - Parse text để lấy thông tin cần thiết
     public OCRResultDTO processImage(File imageFile) {
         // Convert model File to java.io.File
         java.io.File physicalFile = new java.io.File(imageFile.getFilePath());
         try {
-            log.info("Processing image file: {}", physicalFile.getName());
-
             // Perform OCR
             String ocrText = tesseract.doOCR(physicalFile);
-
-            log.info("OCR completed. Text length: {}", ocrText != null ? ocrText.length() : 0);
-
             // Parse extracted text
             return parseOCRText(ocrText != null ? ocrText : "");
 
         } catch (TesseractException e) {
-            log.error("OCR processing failed for image: {}", physicalFile.getName(), e);
             // Return empty result instead of throwing exception
-            log.warn("Returning empty OCR result due to processing error");
             return OCRResultDTO.builder()
                     .ocrText("")
                     .build();
@@ -211,6 +208,10 @@ public class OCRServiceImpl implements OCRService {
     }
 
     @Override
+    // Xử lý file PDF:
+    // - Dùng PDFBox để render từng trang PDF thành ảnh
+    // - Dùng Tesseract OCR trên từng ảnh trang
+    // - Ghép text của tất cả các trang lại rồi parse
     public OCRResultDTO processPDF(File pdfFile) {
         // Convert model File to java.io.File
         java.io.File physicalFile = new java.io.File(pdfFile.getFilePath());
@@ -225,7 +226,7 @@ public class OCRServiceImpl implements OCRService {
             for (int page = 0; page < document.getNumberOfPages(); page++) {
                 try {
                     // Render page to image
-                    BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300); // 300 DPI for better quality
+                    BufferedImage image = pdfRenderer.renderImageWithDPI(page, 300);
 
                     // Create temporary file for this page
                     java.io.File tempImageFile = java.io.File.createTempFile("pdf_page_" + page + "_", ".png");
@@ -242,11 +243,8 @@ public class OCRServiceImpl implements OCRService {
                             allPagesText.add("");
                         }
                     } catch (TesseractException | Error e) {
-                        // Catch Tesseract errors and memory access errors
-                        log.warn("Failed to process page {}: {}", page + 1, e.getMessage());
                         allPagesText.add(""); // Add empty string for this page
                     } finally {
-                        // Clean up temp file
                         tempImageFile.delete();
                     }
 
@@ -273,6 +271,12 @@ public class OCRServiceImpl implements OCRService {
     }
 
 
+    // Hàm tổng để phân tích text đã OCR:
+    // - Lưu toàn bộ text vào DTO
+    // - Gọi các hàm con để trích:
+    //   + Kết quả PASS/FAIL
+    //   + Họ tên
+    //   + Người đánh giá
     private OCRResultDTO parseOCRText(String ocrText) {
         OCRResultDTO result = OCRResultDTO.builder()
                 .ocrText(ocrText)
@@ -297,6 +301,8 @@ public class OCRServiceImpl implements OCRService {
         return result;
     }
 
+    // Phần này chỉ tập trung vào việc phát hiện kết quả thi PASS / FAIL
+    // bằng cách dò các từ khóa tiếng Anh và tiếng Việt trong đoạn text OCR
     private void extractResult(String upperText, String normalizedText, OCRResultDTO result) {
         // Patterns for PASS
         String[] passPatterns = {
@@ -333,6 +339,9 @@ public class OCRServiceImpl implements OCRService {
         log.debug("No result pattern found in OCR text");
     }
 
+    // Cố gắng trích xuất họ tên từ text OCR dựa trên các pattern:
+    // - "Họ tên:", "Họ và tên:", "Full name:", ...
+    // - Pattern tên tiếng Việt 2-4 từ, mỗi từ viết hoa chữ cái đầu
     private void extractFullName(String text, String normalizedText, OCRResultDTO result) {
         // Pattern 1: "Họ tên: Nguyễn Văn A" or "Họ và tên: ..."
         Pattern pattern1 = Pattern.compile(
@@ -367,6 +376,8 @@ public class OCRServiceImpl implements OCRService {
         }
     }
 
+    // Cố gắng trích xuất tên người đánh giá / người chấm
+    // Dựa trên các từ khóa: "Người đánh giá", "Chấm bởi", "Evaluator", ...
     private void extractEvaluator(String text, String normalizedText, OCRResultDTO result) {
         Pattern pattern = Pattern.compile(
                 "(?:Người\\s+đánh\\s+giá|Đánh\\s+giá\\s+bởi|Evaluator|Reviewed\\s+by|Người\\s+chấm|Chấm\\s+bởi|Người\\s+kiểm\\s+tra|Kiểm\\s+tra\\s+bởi)[:：]?\\s*([A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]+(?:\\s+[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]+)*)",
@@ -383,6 +394,10 @@ public class OCRServiceImpl implements OCRService {
         }
     }
 
+    // Kiểm tra 1 chuỗi có hợp lệ là tên người Việt hay không
+    // - 2 đến 4 từ
+    // - Mỗi từ viết hoa chữ cái đầu
+    // - Độ dài tối thiểu 5 ký tự
     private boolean isValidVietnameseName(String name) {
         if (name == null || name.trim().isEmpty()) {
             return false;
@@ -411,6 +426,7 @@ public class OCRServiceImpl implements OCRService {
         return true;
     }
 
+    // Chuẩn hóa chữ cái tiếng Việt để dễ so khớp pattern (ví dụ chuyển đ -> d)
     private String normalizeVietnamese(String text) {
         return text.replace("đ", "d")
                 .replace("Đ", "D");

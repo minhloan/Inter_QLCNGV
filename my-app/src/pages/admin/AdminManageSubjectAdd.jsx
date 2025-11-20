@@ -15,7 +15,6 @@ const AdminManageSubjectAdd = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-
     const editingId = searchParams.get('id');
     const mode = searchParams.get('mode');
     const isEditMode = mode === 'edit' && !!editingId;
@@ -23,14 +22,14 @@ const AdminManageSubjectAdd = () => {
     const [formData, setFormData] = useState({
         subjectCode: '',
         subjectName: '',
-        credit: '',
+        hours: '',
+        semester: '',
         description: '',
-        systemId: '',               // ⭐ CHỈ THAY system → systemId
+        systemId: '',
         status: 'active'
     });
 
-    const [systemOptions, setSystemOptions] = useState([]); // ⭐ LOAD SYSTEM TỪ API
-
+    const [systemOptions, setSystemOptions] = useState([]);
     const [errors, setErrors] = useState({});
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
     const [loading, setLoading] = useState(false);
@@ -41,34 +40,37 @@ const AdminManageSubjectAdd = () => {
     const [existingImageFileId, setExistingImageFileId] = useState(null);
     const [imageRemoved, setImageRemoved] = useState(false);
 
-    // SHOW TOAST
+
     const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     }, []);
 
-    // HANDLE CHANGE
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
 
-    // VALIDATE
     const validate = () => {
         const newErrors = {};
 
         if (!formData.subjectCode.trim()) newErrors.subjectCode = 'Vui lòng nhập mã môn học';
         if (!formData.subjectName.trim()) newErrors.subjectName = 'Vui lòng nhập tên môn học';
 
-        if (!formData.credit.toString().trim()) {
-            newErrors.credit = 'Vui lòng nhập số tín chỉ';
-        } else if (isNaN(Number(formData.credit)) || Number(formData.credit) <= 0) {
-            newErrors.credit = 'Số tín chỉ phải là số dương';
+        // HOURS
+        if (!formData.hours.toString().trim()) {
+            newErrors.hours = 'Vui lòng nhập số giờ';
+        } else if (isNaN(Number(formData.hours)) || Number(formData.hours) <= 0) {
+            newErrors.hours = 'Số giờ phải là số dương';
         }
 
-        // ⭐ systemId
-        if (!formData.systemId) newErrors.systemId = 'Vui lòng chọn hệ thống';
+        // SEMESTER
+        if (!formData.semester) {
+            newErrors.semester = "Vui lòng chọn học kỳ";
+        }
+
+        if (!formData.systemId) newErrors.systemId = 'Vui lòng chọn hệ đào tạo';
 
         setErrors(newErrors);
 
@@ -76,21 +78,16 @@ const AdminManageSubjectAdd = () => {
         return null;
     };
 
-    // LOAD SYSTEM LIST
     useEffect(() => {
         const loadSystems = async () => {
             try {
                 const list = await listActiveSystems();
                 setSystemOptions(list);
-            } catch (err) {
-                console.error("Error loading systems:", err);
-            }
+            } catch {}
         };
-
         loadSystems();
     }, []);
 
-    // SCROLL TO ERROR
     const scrollToErrorField = (fieldName) => {
         setTimeout(() => {
             const el = document.getElementById(fieldName) || document.querySelector(`[name="${fieldName}"]`);
@@ -99,19 +96,20 @@ const AdminManageSubjectAdd = () => {
                 (group || el).scrollIntoView({ behavior: 'smooth', block: 'center' });
                 if (['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) el.focus();
             }
-        }, 100);
+        }, 150);
     };
 
-    // UPLOAD IMAGE
     const uploadImage = async (file) => {
         if (!file) return null;
         const fd = new FormData();
         fd.append('image', file);
-        const res = await fileApi.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' }});
+
+        const res = await fileApi.post('/upload', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return res.data;
     };
 
-    // SUBMIT
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -126,12 +124,10 @@ const AdminManageSubjectAdd = () => {
                 let payload = {
                     id: editingId,
                     subjectName: formData.subjectName.trim(),
-                    credit: Number(formData.credit),
+                    hours: Number(formData.hours),
+                    semester: formData.semester,
                     description: formData.description?.trim() || null,
-
-                    // ⭐ systemId mới
                     systemId: formData.systemId,
-
                     isActive: formData.status === "active"
                 };
 
@@ -143,18 +139,17 @@ const AdminManageSubjectAdd = () => {
                 showToast("Thành công", "Cập nhật môn học thành công!", "success");
 
             } else {
+
                 let imgId = null;
                 if (imageFile) imgId = await uploadImage(imageFile);
 
                 const payload = {
                     subjectCode: formData.subjectCode.trim(),
                     subjectName: formData.subjectName.trim(),
-                    credit: Number(formData.credit),
+                    hours: Number(formData.hours),
+                    semester: formData.semester,
                     description: formData.description?.trim() || null,
-
-                    // ⭐ CREATE bằng systemId
                     systemId: formData.systemId,
-
                     isActive: formData.status === "active",
                     imageFileId: imgId
                 };
@@ -164,6 +159,7 @@ const AdminManageSubjectAdd = () => {
             }
 
             setTimeout(() => navigate("/manage-subjects"), 1500);
+
         } catch (err) {
             const msg =
                 err.response?.data?.message ||
@@ -177,7 +173,9 @@ const AdminManageSubjectAdd = () => {
         }
     };
 
+    // ====================================================
     // FILE CHANGE
+    // ====================================================
     const handleFileChange = (e) => {
         const file = e.target.files?.[0] || null;
         setImageFile(file);
@@ -186,7 +184,7 @@ const AdminManageSubjectAdd = () => {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => setImagePreview(reader.result);
-            reader.readAsDataURL(file);
+            reader.readAsDataAsURL(file);
         } else {
             setImagePreview(null);
         }
@@ -198,7 +196,6 @@ const AdminManageSubjectAdd = () => {
         if (isEditMode && existingImageFileId) setImageRemoved(true);
     };
 
-    // LOAD SUBJECT IF EDIT
     useEffect(() => {
         const loadSubject = async () => {
             if (!isEditMode) return;
@@ -212,12 +209,10 @@ const AdminManageSubjectAdd = () => {
                 setFormData({
                     subjectCode: subject.subjectCode || "",
                     subjectName: subject.subjectName || "",
-                    credit: subject.credit ?? "",
+                    hours: subject.hours ?? "",
+                    semester: subject.semester ?? "",
                     description: subject.description || "",
-
-                    // ⭐ NHẬN systemId
                     systemId: subject.systemId || "",
-
                     status: subject.isActive ? "active" : "inactive"
                 });
 
@@ -231,7 +226,7 @@ const AdminManageSubjectAdd = () => {
                         setImagePreview(null);
                     }
                 }
-            } catch (err) {
+            } catch {
                 showToast("Lỗi", "Không thể tải môn học", "danger");
             } finally {
                 setLoading(false);
@@ -240,7 +235,8 @@ const AdminManageSubjectAdd = () => {
         };
 
         loadSubject();
-    }, [isEditMode, editingId, showToast]);
+    }, [isEditMode, editingId]);
+
 
     if (loading) {
         return <Loading fullscreen={true} message={loadingMessage || "Đang xử lý..."} />;
@@ -249,11 +245,14 @@ const AdminManageSubjectAdd = () => {
     return (
         <MainLayout>
             <div className="page-admin-add-subject">
+
+                {/* HEADER */}
                 <div className="content-header">
                     <div className="content-title">
                         <button className="back-button" onClick={() => navigate('/manage-subjects')}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
+
                         <div className="content-title-text">
                             <h1 className="page-title">
                                 {isEditMode ? "Cập nhật Môn học" : "Thêm Môn học"}
@@ -265,13 +264,17 @@ const AdminManageSubjectAdd = () => {
                     </div>
                 </div>
 
+                {/* FORM */}
                 <form onSubmit={handleSubmit} noValidate>
                     <div className="edit-profile-container">
                         <div className="edit-profile-content">
+
+                            {/* LEFT SIDE */}
                             <div className="edit-profile-main">
                                 <div className="form-section">
                                     <h3 className="section-title">THÔNG TIN MÔN HỌC</h3>
 
+                                    {/* subjectCode + subjectName */}
                                     <div className="form-row">
                                         <div className="form-group">
                                             <label className="form-label">Mã môn học *</label>
@@ -303,20 +306,39 @@ const AdminManageSubjectAdd = () => {
                                         </div>
                                     </div>
 
+                                    {/* HOURS + SYSTEM + STATUS */}
                                     <div className="form-row">
                                         <div className="form-group">
-                                            <label className="form-label">Số tín chỉ *</label>
+                                            <label className="form-label">Số giờ *</label>
                                             <input
                                                 type="number"
-                                                id="credit"
-                                                name="credit"
-                                                className={`form-control ${errors.credit ? "is-invalid" : ""}`}
-                                                value={formData.credit}
+                                                id="hours"
+                                                name="hours"
+                                                className={`form-control ${errors.hours ? "is-invalid" : ""}`}
+                                                value={formData.hours}
                                                 onChange={handleChange}
-                                                placeholder="Nhập số tín chỉ"
+                                                placeholder="Nhập số giờ"
                                                 min="1"
                                             />
-                                            {errors.credit && <div className="invalid-feedback">{errors.credit}</div>}
+                                            {errors.hours && <div className="invalid-feedback">{errors.hours}</div>}
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label className="form-label">Học kỳ *</label>
+                                            <select
+                                                id="semester"
+                                                name="semester"
+                                                className={`form-select ${errors.semester ? "is-invalid" : ""}`}
+                                                value={formData.semester}
+                                                onChange={handleChange}
+                                            >
+                                                <option value="">Chọn học kỳ</option>
+                                                <option value="SEMESTER_1">Học kỳ 1</option>
+                                                <option value="SEMESTER_2">Học kỳ 2</option>
+                                                <option value="SEMESTER_3">Học kỳ 3</option>
+                                                <option value="SEMESTER_4">Học kỳ 4</option>
+                                            </select>
+                                            {errors.semester && <div className="invalid-feedback">{errors.semester}</div>}
                                         </div>
 
                                         <div className="form-group">
@@ -335,26 +357,11 @@ const AdminManageSubjectAdd = () => {
                                                     </option>
                                                 ))}
                                             </select>
-                                            {errors.systemId && (
-                                                <div className="invalid-feedback">{errors.systemId}</div>
-                                            )}
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Trạng thái *</label>
-                                            <select
-                                                id="status"
-                                                name="status"
-                                                className="form-select"
-                                                value={formData.status}
-                                                onChange={handleChange}
-                                            >
-                                                <option value="active">Hoạt động</option>
-                                                <option value="inactive">Không hoạt động</option>
-                                            </select>
+                                            {errors.systemId && <div className="invalid-feedback">{errors.systemId}</div>}
                                         </div>
                                     </div>
 
+                                    {/* DESCRIPTION */}
                                     <div className="form-group">
                                         <label className="form-label">Mô tả</label>
                                         <textarea
@@ -369,6 +376,7 @@ const AdminManageSubjectAdd = () => {
                                     </div>
                                 </div>
 
+                                {/* ACTION BUTTONS */}
                                 <div className="save-button-container">
                                     <button
                                         type="button"
@@ -377,12 +385,14 @@ const AdminManageSubjectAdd = () => {
                                     >
                                         <i className="bi bi-x-circle" /> Hủy
                                     </button>
-                                    <button type="submit" className="btn-save" disabled={loading}>
+
+                                    <button type="submit" className="btn-save">
                                         {isEditMode ? "CẬP NHẬT" : "LƯU MÔN HỌC"}
                                     </button>
                                 </div>
                             </div>
 
+                            {/* RIGHT SIDE — IMAGE UPLOAD */}
                             <div className="edit-profile-sidebar">
                                 <div className="image-upload-section">
                                     <h3 className="section-title">ẢNH MÔN HỌC</h3>
@@ -392,7 +402,12 @@ const AdminManageSubjectAdd = () => {
                                             <img
                                                 src={imagePreview}
                                                 alt=""
-                                                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px" }}
+                                                style={{
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    objectFit: "cover",
+                                                    borderRadius: "8px"
+                                                }}
                                             />
                                         ) : (
                                             <i className="bi bi-book" style={{ fontSize: 40 }}></i>
@@ -405,11 +420,7 @@ const AdminManageSubjectAdd = () => {
                                         </label>
 
                                         {imagePreview && (
-                                            <button
-                                                type="button"
-                                                className="btn btn-danger"
-                                                onClick={handleRemoveImage}
-                                            >
+                                            <button type="button" className="btn btn-danger" onClick={handleRemoveImage}>
                                                 <i className="bi bi-x-circle"></i> Xóa ảnh
                                             </button>
                                         )}
@@ -428,6 +439,7 @@ const AdminManageSubjectAdd = () => {
                                     </small>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </form>

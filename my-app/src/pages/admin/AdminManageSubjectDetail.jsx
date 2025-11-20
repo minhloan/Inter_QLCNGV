@@ -16,28 +16,34 @@ const AdminManageSubjectDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
 
     const [loading, setLoading] = useState(true);
-    const [toast, setToast] = useState({
-        show: false,
-        title: '',
-        message: '',
-        type: 'info',
-    });
+    const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
-        setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
+        setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     }, []);
 
-    // Format System theo SUBJECT SYSTEM (entity)
+    // ================== FORMATTERS ==================
     const formatSystem = (system) => {
         if (!system) return "Chưa có hệ đào tạo";
-        return system.systemName || system.systemCode || "Unknown";
+        return system.systemName || "Unknown";
     };
 
     const formatStatus = (isActive) =>
         isActive ? "Hoạt động" : "Không hoạt động";
+
+    const formatSemester = (s) => {
+        if (!s) return "Chưa có";
+        switch (s) {
+            case "SEMESTER_1": return "Học kỳ 1";
+            case "SEMESTER_2": return "Học kỳ 2";
+            case "SEMESTER_3": return "Học kỳ 3";
+            case "SEMESTER_4": return "Học kỳ 4";
+            default: return s;
+        }
+    };
 
     // ================= LOAD DATA =================
     useEffect(() => {
@@ -50,18 +56,19 @@ const AdminManageSubjectDetail = () => {
                     id: data.id,
                     subjectCode: data.subjectCode,
                     subjectName: data.subjectName,
-                    credit: data.credit,
+
+                    hours: data.hours,                   // ⭐ credit → hours
+                    semester: data.semester,             // ⭐ thêm học kỳ
+
                     description: data.description,
+
                     system: {
-                        id: data.systemId || data.system?.id || null,
-                        systemName: data.systemName || data.system?.systemName || null
+                        id: data.systemId || null,
+                        systemName: data.systemName || null
                     },
 
                     isActive: data.isActive,
-                    imageFileId:
-                        data.imageFileId ||
-                        data.image_subject?.id ||
-                        null,
+                    imageFileId: data.imageFileId || null
                 };
 
                 setSubject(mapped);
@@ -70,12 +77,11 @@ const AdminManageSubjectDetail = () => {
                     try {
                         const blobUrl = await getFile(mapped.imageFileId);
                         setImageUrl(blobUrl);
-                    } catch (error) {
-                        console.error("Image load error:", error);
+                    } catch {
+                        setImageUrl(null);
                     }
                 }
             } catch (error) {
-                console.error("Error getting detail:", error);
                 showToast(
                     "Lỗi",
                     error.response?.data?.message || "Không thể tải chi tiết môn học",
@@ -89,8 +95,8 @@ const AdminManageSubjectDetail = () => {
         if (id) fetchDetail();
     }, [id, showToast]);
 
+    // ================= DELETE =================
     const handleEdit = () => navigate(`/manage-subject-edit/${subject.id}`);
-
     const handleDeleteClick = () => setShowDeleteModal(true);
 
     const confirmDelete = async () => {
@@ -100,16 +106,13 @@ const AdminManageSubjectDetail = () => {
             showToast("Thành công", "Xóa môn học thành công", "success");
             navigate("/manage-subjects");
         } catch (error) {
-            showToast(
-                "Lỗi",
-                error.response?.data?.message || "Không thể xóa môn học",
-                "danger"
-            );
+            showToast("Lỗi", error.response?.data?.message || "Không thể xóa môn học", "danger");
         } finally {
             setLoading(false);
         }
     };
 
+    // ================= LOADING =================
     if (loading) {
         return <Loading fullscreen={true} message="Đang tải chi tiết môn học..." />;
     }
@@ -136,15 +139,14 @@ const AdminManageSubjectDetail = () => {
     // ==================== UI ====================
     return (
         <MainLayout>
+
             {/* HEADER */}
             <div className="content-header">
                 <div className="content-title">
                     <button className="back-button" onClick={() => navigate(-1)}>
                         <i className="bi bi-arrow-left"></i>
                     </button>
-                    <h1 className="page-title">
-                        Chi tiết môn học
-                    </h1>
+                    <h1 className="page-title">Chi tiết môn học</h1>
                 </div>
 
                 <div className="action-buttons">
@@ -157,7 +159,7 @@ const AdminManageSubjectDetail = () => {
                 </div>
             </div>
 
-            {/* BODY giống layout Edit */}
+            {/* BODY */}
             <div className="edit-profile-container">
                 <div className="edit-profile-content">
 
@@ -169,36 +171,38 @@ const AdminManageSubjectDetail = () => {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Mã môn học</label>
+                                    <input type="text" className="form-control" value={subject.subjectCode} disabled />
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Tên môn học</label>
+                                    <input type="text" className="form-control" value={subject.subjectName} disabled />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Số giờ</label>
                                     <input
                                         type="text"
                                         className="form-control"
-                                        value={subject.subjectCode}
+                                        value={subject.hours ?? "Chưa có"}
                                         disabled
                                     />
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Tên môn học</label>
+                                    <label className="form-label">Học kỳ</label>
                                     <input
                                         type="text"
                                         className="form-control"
-                                        value={subject.subjectName}
+                                        value={formatSemester(subject.semester)}
                                         disabled
                                     />
                                 </div>
                             </div>
 
                             <div className="form-row">
-                                <div className="form-group">
-                                    <label className="form-label">Số tín chỉ</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        value={subject.credit ?? "Chưa có"}
-                                        disabled
-                                    />
-                                </div>
-
                                 <div className="form-group">
                                     <label className="form-label">Hệ đào tạo</label>
                                     <input
@@ -208,9 +212,7 @@ const AdminManageSubjectDetail = () => {
                                         disabled
                                     />
                                 </div>
-                            </div>
 
-                            <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Trạng thái</label>
                                     <input
@@ -261,6 +263,7 @@ const AdminManageSubjectDetail = () => {
                 </div>
             </div>
 
+            {/* DELETE MODAL */}
             {showDeleteModal && (
                 <DeleteModal
                     teacher={subject}
@@ -269,12 +272,13 @@ const AdminManageSubjectDetail = () => {
                 />
             )}
 
+            {/* TOAST */}
             {toast.show && (
                 <Toast
                     title={toast.title}
                     message={toast.message}
                     type={toast.type}
-                    onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+                    onClose={() => setToast(prev => ({ ...prev, show: false }))}
                 />
             )}
         </MainLayout>

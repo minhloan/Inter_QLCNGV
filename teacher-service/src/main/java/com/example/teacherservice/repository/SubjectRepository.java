@@ -1,5 +1,6 @@
 package com.example.teacherservice.repository;
 
+import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.model.Subject;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,10 +39,12 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
               or lower(s.subjectName) like lower(concat('%', :keyword, '%')))
          and (:systemId is null or s.system.id = :systemId)
          and (:isActive is null or s.isActive = :isActive)
+         and (:semester is null or s.semester = :semester)
        """)
     List<Subject> searchWithFilters(@Param("keyword") String keyword,
                                     @Param("systemId") String systemId,
-                                    @Param("isActive") Boolean isActive);
+                                    @Param("isActive") Boolean isActive,
+                                    @Param("semester") Semester semester);
     List<Subject> findByIsActive(boolean isActive);
 
     @Query("SELECT COUNT(s) FROM Subject s WHERE s.isActive = :isActive")

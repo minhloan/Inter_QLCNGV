@@ -60,7 +60,6 @@ export const removeAttendee = async (attendeeId) => {
     return response.data;
 };
 
-// File Upload API (assuming there's a file service)
 export const uploadTrialReport = async (file, trialId) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -80,5 +79,5 @@ export const downloadTrialReport = async (fileId) => {
     const response = await fileApi.get(`/download-trial-report/${fileId}`, {
         responseType: 'blob'
     });
-    return response.data;
+    return response;
 };

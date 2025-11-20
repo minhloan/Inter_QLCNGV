@@ -12,5 +12,6 @@ public class TrialEvaluationDto {
     private Integer score;
     private String comments;
     private TrialConclusion conclusion;
-    private String fileReportId;
+    private String imageFileId;
 }
+

@@ -2,6 +2,7 @@ package com.example.teacherservice.controller.subject;
 
 
 import com.example.teacherservice.dto.subject.SubjectDto;
+import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.enums.SubjectSystem;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.request.subject.SubjectCreateRequest;
@@ -24,9 +25,12 @@ public class SubjectController {
     public ResponseEntity<List<Subject>> searchSubjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String systemId,
-            @RequestParam(required = false) Boolean isActive
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) Semester semester
     ) {
-        List<Subject> subjects = subjectService.searchSubjects(keyword, systemId, isActive);
+        List<Subject> subjects =
+                subjectService.searchSubjects(keyword, systemId, isActive, semester);
+
         return ResponseEntity.ok(subjects);
     }
 

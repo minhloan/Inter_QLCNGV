@@ -13,5 +13,5 @@ public class TrialEvaluationRequest {
     private Integer score;
     private String comments;
     private TrialConclusion conclusion;
-    private String fileReportId;
+    private String imageFileId;
 }

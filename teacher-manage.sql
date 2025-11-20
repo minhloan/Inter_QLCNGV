@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 20, 2025 at 03:06 AM
+-- Generation Time: Nov 20, 2025 at 08:57 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -42,6 +42,15 @@ CREATE TABLE `aptech_exams` (
   `aptech_status` enum('PENDING','APPROVED','REJECTED') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `aptech_exams`
+--
+
+INSERT INTO `aptech_exams` (`id`, `creation_timestamp`, `update_timestamp`, `attempt`, `exam_date`, `result`, `score`, `certificate_file_id`, `session_id`, `subject_id`, `teacher_id`, `aptech_status`) VALUES
+('0f4ed4a7-d395-4b0e-8599-ea1b6a414327', '2025-11-20 10:18:14.000000', '2025-11-20 10:30:19.000000', 1, '2025-11-20', 'FAIL', 0, NULL, '1', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', 'PENDING'),
+('a26b3708-5a16-43a1-8627-883c262d5da9', '2025-11-20 10:32:15.000000', '2025-11-20 10:33:45.000000', 2, '2025-11-20', 'FAIL', 10, NULL, '1', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', 'REJECTED'),
+('b39341d8-6836-4a87-a362-b29a6aef2f5c', '2025-11-20 10:34:36.000000', '2025-11-20 10:34:36.000000', 3, '2025-11-20', NULL, NULL, NULL, '1', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', 'PENDING');
+
 -- --------------------------------------------------------
 
 --
@@ -57,6 +66,13 @@ CREATE TABLE `aptech_exam_sessions` (
   `note` text DEFAULT NULL,
   `room` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `aptech_exam_sessions`
+--
+
+INSERT INTO `aptech_exam_sessions` (`id`, `creation_timestamp`, `update_timestamp`, `exam_date`, `exam_time`, `note`, `room`) VALUES
+('1', NULL, NULL, '2025-11-20', '10:17:04.000000', NULL, 'LAB1');
 
 -- --------------------------------------------------------
 
@@ -98,13 +114,17 @@ INSERT INTO `audit_logs` (`id`, `creation_timestamp`, `update_timestamp`, `actio
 ('0e906d52-825b-4bc2-9ce9-2e50f09a31a6', '2025-11-13 17:13:46.000000', '2025-11-13 17:13:46.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('0f188c10-d6f1-44d5-aa71-c80cdc5a7550', '2025-11-18 16:49:12.000000', '2025-11-18 16:49:12.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('111ed61d-48fe-4da0-881c-409ee201397c', '2025-11-16 01:09:31.000000', '2025-11-16 01:09:31.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('11d584aa-e326-42d4-8b4f-f6bb1c525891', '2025-11-20 12:45:29.000000', '2025-11-20 12:45:29.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('1308a518-4ada-4594-bb28-b92d8778aad0', '2025-11-16 00:45:06.000000', '2025-11-16 00:45:06.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('147f5d36-5fb2-44d0-bce7-c66c5ef67170', '2025-11-16 01:17:46.000000', '2025-11-16 01:17:46.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('15f0f828-221c-4059-b610-0b8124e73e63', '2025-11-17 15:04:39.000000', '2025-11-17 15:04:39.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('16647968-ebcc-4987-8fe1-cfb65a0e3392', '2025-11-17 21:46:58.000000', '2025-11-17 21:46:58.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
+('1b2ac52e-b0bf-493d-8342-51382d408512', '2025-11-20 12:52:03.000000', '2025-11-20 12:52:03.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('1c773b03-2c41-480d-b849-f7a3ecdf9617', '2025-11-20 14:24:15.000000', '2025-11-20 14:24:15.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('1d0eaa4d-0186-4b06-a06d-57afb4237089', '2025-11-14 00:32:12.000000', '2025-11-14 00:32:12.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('1e2f0976-aa6c-4046-8cc6-89abfcb1aa2b', '2025-11-13 09:10:13.000000', '2025-11-13 09:10:13.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('1e39490b-fa9d-47b9-b036-6c4385805e40', '2025-11-16 01:40:14.000000', '2025-11-16 01:40:14.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
+('206b3d25-feef-4fb9-992f-38dfea976265', '2025-11-20 12:41:51.000000', '2025-11-20 12:41:51.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('210381e9-d525-4db2-8eef-f3a3e0616281', '2025-11-12 14:50:34.000000', '2025-11-12 14:50:34.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('230e3f4b-34bc-4fb7-963e-cc62a1de11c9', '2025-11-17 11:06:19.000000', '2025-11-17 11:06:19.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('2443bded-5ded-4bf1-88b0-1212840ff251', '2025-11-12 09:31:48.000000', '2025-11-12 09:31:48.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
@@ -116,9 +136,11 @@ INSERT INTO `audit_logs` (`id`, `creation_timestamp`, `update_timestamp`, `actio
 ('2ca321f7-cdc7-4e87-af49-662060c07ae4', '2025-11-19 12:10:59.000000', '2025-11-19 12:10:59.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('2d5f3745-04cd-4a1c-95c9-d055324f1c0c', '2025-11-17 22:04:12.000000', '2025-11-17 22:04:12.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('30bab52d-c54e-4c51-b86f-1097aaf282be', '2025-11-13 14:52:37.000000', '2025-11-13 14:52:37.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('31963095-40f5-4eb4-b441-30c2cc937852', '2025-11-20 10:14:30.000000', '2025-11-20 10:14:30.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('33755759-6678-481b-91b6-a1d0cc40c16b', '2025-11-12 10:22:02.000000', '2025-11-12 10:22:02.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('365e6678-86e3-474d-a632-dea769208121', '2025-11-12 10:29:43.000000', '2025-11-12 10:29:43.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('36a91e76-1f7c-4dcf-b602-f2ac3e2252fb', '2025-11-13 17:12:17.000000', '2025-11-13 17:12:17.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('37438363-83d1-4e2e-aeb8-4420108b1b64', '2025-11-20 10:13:34.000000', '2025-11-20 10:13:34.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('398b535a-9032-44ff-a005-82a370b307c6', '2025-11-13 16:01:11.000000', '2025-11-13 16:01:11.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('3a30ad46-a4be-4c96-99b7-efee1f121836', '2025-11-16 01:30:00.000000', '2025-11-16 01:30:00.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('40dbc548-b1fb-444b-b955-3dae3f91c8c3', '2025-11-12 10:25:14.000000', '2025-11-12 10:25:14.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
@@ -126,19 +148,23 @@ INSERT INTO `audit_logs` (`id`, `creation_timestamp`, `update_timestamp`, `actio
 ('45820183-cdd1-4ff4-abc9-a176c63d2705', '2025-11-13 21:27:14.000000', '2025-11-13 21:27:14.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('48aee16d-c48c-408d-a964-922199fbd906', '2025-11-15 15:33:10.000000', '2025-11-15 15:33:10.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('48f47383-790c-4d34-9e58-acd8817bedad', '2025-11-12 10:32:26.000000', '2025-11-12 10:32:26.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
+('4953b147-3a9e-46f6-b8ff-bb927055f220', '2025-11-20 13:02:28.000000', '2025-11-20 13:02:28.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('498e62f3-9e9b-49b6-ae91-e8c40a384936', '2025-11-14 00:54:41.000000', '2025-11-14 00:54:41.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('499e38ca-d981-48b3-b624-71daed8931c1', '2025-11-17 23:23:53.000000', '2025-11-17 23:23:53.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
+('49b86304-52f7-41aa-b8f8-e4f6d4fd8ff1', '2025-11-20 09:08:20.000000', '2025-11-20 09:08:20.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('4a107a77-3724-4619-823e-8532fc1ef388', '2025-11-18 11:24:03.000000', '2025-11-18 11:24:03.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('4cc7ec4b-e6a3-4dca-9b07-6a44e2ecd766', '2025-11-18 14:35:35.000000', '2025-11-18 14:35:35.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('4d75c7d3-fd0d-44a2-99a6-85f5984cff07', '2025-11-13 17:12:09.000000', '2025-11-13 17:12:09.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('4e959ea7-b62b-42e0-a400-0f8387f5bd85', '2025-11-13 16:54:11.000000', '2025-11-13 16:54:11.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('519021f4-ee33-407c-a57f-556c3c646be5', '2025-11-17 23:29:52.000000', '2025-11-17 23:29:52.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('5237bcfa-ea8d-443c-8e40-b953eeede623', '2025-11-16 00:47:12.000000', '2025-11-16 00:47:12.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('5440c7cd-8356-46e1-9a48-7cf75043e930', '2025-11-20 14:54:52.000000', '2025-11-20 14:54:52.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('58fc5071-e271-4e20-9838-26ac7014306c', '2025-11-12 10:16:55.000000', '2025-11-12 10:16:55.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('5a502345-389f-462d-828d-0ec2b9894e69', '2025-11-13 16:15:23.000000', '2025-11-13 16:15:23.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('5a7686d0-b0b0-451a-8cad-5a962929b5e1', '2025-11-13 20:45:59.000000', '2025-11-13 20:45:59.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('5ba037db-a06a-4449-a530-ac52f616c807', '2025-11-18 15:21:47.000000', '2025-11-18 15:21:47.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('5c4105be-32a8-4765-a4b7-881b5425d221', '2025-11-13 15:11:04.000000', '2025-11-13 15:11:04.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('61c484f1-9a30-43c0-a613-7d9b5760bb76', '2025-11-20 11:10:29.000000', '2025-11-20 11:10:29.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('61d3ad18-0ab0-4453-8672-08363eba464d', '2025-11-15 01:13:31.000000', '2025-11-15 01:13:31.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('6488ad2b-e556-4bbd-a9a9-0dd4f414b79b', '2025-11-16 02:08:40.000000', '2025-11-16 02:08:40.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('65b2b8a9-f244-414c-9964-a3ed75113305', '2025-11-13 17:00:34.000000', '2025-11-13 17:00:34.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
@@ -160,6 +186,7 @@ INSERT INTO `audit_logs` (`id`, `creation_timestamp`, `update_timestamp`, `actio
 ('7b297038-4f83-4d01-8d02-74a8206ef353', '2025-11-16 01:18:16.000000', '2025-11-16 01:18:16.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('7ce070a2-abb0-4d93-bb45-0acf91dec173', '2025-11-14 00:47:51.000000', '2025-11-14 00:47:51.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('7e8790d9-2e0c-4a75-9146-ae37c4468b22', '2025-11-13 08:20:57.000000', '2025-11-13 08:20:57.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('806216fd-200b-4cf0-ab32-b86cb7846870', '2025-11-20 11:23:35.000000', '2025-11-20 11:23:35.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('81b1a23f-6f5a-425e-a026-a84cdc8a2269', '2025-11-18 11:14:13.000000', '2025-11-18 11:14:13.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('82e771b0-deff-4e74-9d11-41af98c8a931', '2025-11-11 15:12:36.000000', '2025-11-11 15:12:36.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('836d9a3a-d8d7-4788-982e-a960d2c17421', '2025-11-17 21:46:29.000000', '2025-11-17 21:46:29.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
@@ -177,8 +204,10 @@ INSERT INTO `audit_logs` (`id`, `creation_timestamp`, `update_timestamp`, `actio
 ('8c89841c-9289-4b10-8217-3fa6e62e8419', '2025-11-12 10:27:50.000000', '2025-11-12 10:27:50.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('8cb4829d-77fc-48e2-a925-85b3d6d0691b', '2025-11-17 09:55:04.000000', '2025-11-17 09:55:04.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('8effd36b-40c7-4b60-be71-d0ecab27c236', '2025-11-17 23:08:31.000000', '2025-11-17 23:08:31.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('8fa8e78f-4281-4a4e-ae89-51cd26cf517e', '2025-11-20 10:11:43.000000', '2025-11-20 10:11:43.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('915cb7f5-64d0-4670-b433-d63aa892774a', '2025-11-14 09:23:12.000000', '2025-11-14 09:23:12.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('91d0371e-0ab4-49d3-a6cd-909c9931a5f8', '2025-11-18 15:42:59.000000', '2025-11-18 15:42:59.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
+('9288c1c3-f9e9-47c1-aab3-d46689904fac', '2025-11-20 14:54:13.000000', '2025-11-20 14:54:13.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2891', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('960ac3fd-aaa6-4104-97bb-4e1f8f141931', '2025-11-17 23:13:33.000000', '2025-11-17 23:13:33.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('96d2f93f-43ac-4a09-b19e-b2aa1ed6c921', '2025-11-17 12:10:30.000000', '2025-11-17 12:10:30.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
 ('9c5cb3f6-2c9b-4da7-add7-51f7e1b021ad', '2025-11-17 14:50:56.000000', '2025-11-17 14:50:56.000000', 'LOGIN', 'USER', 'ea089c84-f49b-456d-98a3-5313117a2899', '{\"method\":\"PASSWORD\"}', 'ea089c84-f49b-456d-98a3-5313117a2899'),
@@ -284,6 +313,18 @@ CREATE TABLE `evidence` (
   `verified_by` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `evidence`
+--
+
+INSERT INTO `evidence` (`id`, `creation_timestamp`, `update_timestamp`, `ocr_evaluator`, `ocr_full_name`, `ocr_result`, `ocr_text`, `status`, `submitted_date`, `verified_at`, `file_id`, `subject_id`, `teacher_id`, `verified_by`) VALUES
+('3dd7c812-9892-4769-a58f-540d6e0f2c4c', '2025-11-20 12:55:00.000000', '2025-11-20 12:55:00.000000', NULL, NULL, NULL, 'OCR processing failed: Invalid memory access', 'PENDING', '2025-11-20', NULL, 'c3a43609-b0c2-4f90-b22c-d23c931d284b', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', NULL),
+('62d5c2a9-0158-4b83-9ccf-6fd13f633f8a', '2025-11-20 12:45:42.000000', '2025-11-20 12:45:42.000000', NULL, NULL, NULL, NULL, 'PENDING', '2025-11-20', NULL, 'fdde12f5-882d-492b-89c4-7d0d23634fc2', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', NULL),
+('78c915f9-ef5d-48c2-8a0b-7a9cb7569332', '2025-11-20 12:46:08.000000', '2025-11-20 12:46:08.000000', NULL, NULL, NULL, NULL, 'PENDING', '2025-11-20', NULL, '8624429f-bfa3-4375-a64e-ce3c549559e8', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', NULL),
+('86843ca9-b955-4168-9995-33cefec3d133', '2025-11-20 12:53:21.000000', '2025-11-20 12:53:21.000000', NULL, NULL, NULL, 'OCR processing failed: Invalid memory access', 'PENDING', '2025-11-20', NULL, '9758e326-5fbf-4a2e-ac1c-da3b75303a44', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', NULL),
+('a85fae0e-082a-497f-814d-bb6db330560a', '2025-11-20 12:45:53.000000', '2025-11-20 12:53:48.000000', NULL, NULL, NULL, 'OCR processing failed: could not initialize proxy [com.example.teacherservice.model.File#664b9524-482d-4377-ac8a-a0ed9f751f53] - no Session', 'PENDING', '2025-11-20', NULL, '664b9524-482d-4377-ac8a-a0ed9f751f53', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', NULL),
+('f90a2e7f-8970-4b3c-81cb-eea95e4bb824', '2025-11-20 13:02:39.000000', '2025-11-20 13:02:40.000000', 'Pham Thi', 'LéVanC\n\nSubject', 'FAIL', 'TEACHING EVALUATION FORM\n\nAPTECH CERTIFICATION EXAM\n\nFull Name: LéVanC\n\nSubject: Advanced Programming\nEvaluator: Pham Thi D\n\nResult: FAIL\n\nExam Date: 20/01/2024\n\nScore: 45/100\n\nEvaluator\n', 'PENDING', '2025-11-20', NULL, 'ace1cff5-4b72-4e01-8151-abc5511b3a65', '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -316,18 +357,30 @@ INSERT INTO `files` (`id`, `file_path`, `type`, `creation_timestamp`, `update_ti
 ('3bf3410f-622c-4052-9639-9acaa3483a09', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/9b4de082-13a7-4f26-96b2-5095ad419689', 'image/jpeg', '2025-11-15 01:08:39.000000', '2025-11-15 01:08:39.000000', NULL, NULL, NULL, NULL, NULL),
 ('3eba8819-152d-4b70-9a7e-1c5def8424e4', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/34d8875b-c610-4f33-8ea8-42af0dea06a5', 'image/png', '2025-11-19 11:00:55.000000', '2025-11-19 11:00:55.000000', NULL, NULL, NULL, NULL, NULL),
 ('3f443935-7b49-4022-83c0-058d1447ce11', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\6b3b288f-7890-4f5a-bdea-55e441ad8308.png', 'image/png', '2025-11-19 11:58:48.000000', '2025-11-19 11:58:48.000000', NULL, NULL, NULL, NULL, NULL),
+('40a6f6f0-f2a2-471e-a453-566454b1e0b3', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\98bd46f1-d823-4bb1-9879-86c10e3c1c3f.jpg', 'image/jpeg', '2025-11-20 14:26:04.000000', '2025-11-20 14:26:04.000000', NULL, NULL, NULL, NULL, NULL),
 ('41eb9dc2-9104-429d-bdfc-ac697eb67bb1', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/2f988566-4e38-4e32-a002-60e4505b9e1a', 'image/png', '2025-11-19 11:27:50.000000', '2025-11-19 11:27:50.000000', NULL, NULL, NULL, NULL, NULL),
 ('429ef31c-9315-40e7-ab91-393b8037765d', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/84fea810-c21b-4454-b3a9-6a5d397525ac', 'image/png', '2025-11-19 11:13:28.000000', '2025-11-19 11:13:28.000000', NULL, NULL, NULL, NULL, NULL),
+('48664255-0edd-4a17-ab4e-d1dc2990c9ea', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\c0ecb187-e7ad-44b9-8560-cad41da3f21a.jpg', 'image/jpeg', '2025-11-20 12:43:01.000000', '2025-11-20 12:43:01.000000', NULL, NULL, NULL, NULL, NULL),
+('605b4a41-eef8-4402-8091-485186858fc5', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\47929a90-4db6-4995-b407-315865b7c036.jpg', 'image/jpeg', '2025-11-20 12:42:26.000000', '2025-11-20 12:42:26.000000', NULL, NULL, NULL, NULL, NULL),
+('664b9524-482d-4377-ac8a-a0ed9f751f53', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\8f4d1596-d66c-442e-84f3-49599161f580.jpg', 'image/jpeg', '2025-11-20 12:45:53.000000', '2025-11-20 12:45:53.000000', NULL, NULL, NULL, NULL, NULL),
 ('6bec0d99-6eb9-41b8-aa23-ee850d36dc55', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/d95bbeee-0d70-48ca-966c-671f5c4508b4', 'image/png', '2025-11-14 17:11:09.000000', '2025-11-14 17:11:09.000000', NULL, NULL, NULL, NULL, NULL),
 ('703a06ca-f66a-4289-be78-9dcf27bf06a1', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/59138327-3200-4f71-8893-0ca8477385f0', 'image/png', '2025-11-15 01:04:30.000000', '2025-11-15 01:04:30.000000', NULL, NULL, NULL, NULL, NULL),
 ('7250d364-bfda-4800-9091-a859bac012ae', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/4bc192ef-b811-4457-b028-8a3cc51d80b0', 'image/png', '2025-11-19 11:16:41.000000', '2025-11-19 11:16:41.000000', NULL, NULL, NULL, NULL, NULL),
 ('7765490f-f1b0-4078-9b8a-4a2414e12081', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/73793238-dd15-4a1f-a257-5ef9bffe4a60', 'image/png', '2025-11-19 11:26:18.000000', '2025-11-19 11:26:18.000000', NULL, NULL, NULL, NULL, NULL),
 ('81766c57-ab54-4db9-badc-57b3f1a5643c', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/104e7614-55d3-4d87-b405-42e4f245e664', 'image/png', '2025-11-15 00:27:32.000000', '2025-11-15 00:27:32.000000', NULL, NULL, NULL, NULL, NULL),
+('85d21387-e6b4-4821-ba72-b1cef9927c4b', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\1adb43d3-d264-423c-a1b1-c00e5c5389ec.jpg', 'image/jpeg', '2025-11-20 14:38:55.000000', '2025-11-20 14:38:55.000000', NULL, NULL, NULL, NULL, NULL),
+('8624429f-bfa3-4375-a64e-ce3c549559e8', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\0477a6ed-4626-4d70-bdc9-24077b60f720.jpg', 'image/jpeg', '2025-11-20 12:46:08.000000', '2025-11-20 12:46:08.000000', NULL, NULL, NULL, NULL, NULL),
 ('91271d0f-19da-45ed-ae20-777b30c50564', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/cdb97e32-1e04-40d2-a78e-97ba2e24d740', 'image/png', '2025-11-15 00:58:21.000000', '2025-11-15 00:58:21.000000', NULL, NULL, NULL, NULL, NULL),
+('9758e326-5fbf-4a2e-ac1c-da3b75303a44', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\e6ef37da-7ecc-43a5-b5c2-7615f97e8c71.jpg', 'image/jpeg', '2025-11-20 12:53:21.000000', '2025-11-20 12:53:21.000000', NULL, NULL, NULL, NULL, NULL),
+('9a134354-c1c5-4533-b4b7-efb2de0d58ae', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\26884ece-4da1-4ba1-996f-0137ac443696.jpg', 'image/jpeg', '2025-11-20 14:27:37.000000', '2025-11-20 14:27:37.000000', NULL, NULL, NULL, NULL, NULL),
 ('a46b9f9f-c586-4354-aa44-809c0882988a', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/e2aab488-85e2-45f7-845d-133c71122c1a', 'image/png', '2025-11-15 01:08:59.000000', '2025-11-15 01:08:59.000000', NULL, NULL, NULL, NULL, NULL),
+('ace1cff5-4b72-4e01-8151-abc5511b3a65', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\de204d28-0bd3-4a0c-ba59-ec23eece0200.jpg', 'image/jpeg', '2025-11-20 13:02:39.000000', '2025-11-20 13:02:39.000000', NULL, NULL, NULL, NULL, NULL),
+('c3a43609-b0c2-4f90-b22c-d23c931d284b', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\ed4f1e9b-e1c0-4ac2-9fc7-d9d5ec2ee43b.jpg', 'image/jpeg', '2025-11-20 12:55:00.000000', '2025-11-20 12:55:00.000000', NULL, NULL, NULL, NULL, NULL),
 ('c4e2a806-eff2-4759-9c8b-4619e427d95c', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\eee6c608-8466-4680-af27-c25f0f71f518.png', 'image/png', '2025-11-19 11:58:41.000000', '2025-11-19 11:58:41.000000', NULL, NULL, NULL, NULL, NULL),
 ('d2363190-58ef-45d0-ac5b-a33281425468', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/5521d2f5-8835-4a5e-be8e-5fad799c7f37', 'image/png', '2025-11-19 11:15:46.000000', '2025-11-19 11:15:46.000000', NULL, NULL, NULL, NULL, NULL),
-('ea455375-a4b8-4284-bb2a-b04ec89f077a', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/8a56a610-f907-4758-b507-1c1c0a47ed02', 'image/png', '2025-11-19 11:26:33.000000', '2025-11-19 11:26:33.000000', NULL, NULL, NULL, NULL, NULL);
+('e1039013-2029-475f-bd2c-1d17b922d099', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\917c20dc-e8a2-4faf-b6aa-3f70ed419f8a.jpg', 'image/jpeg', '2025-11-20 14:34:41.000000', '2025-11-20 14:34:41.000000', NULL, NULL, NULL, NULL, NULL),
+('ea455375-a4b8-4284-bb2a-b04ec89f077a', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV/teacher-service/src/main/resources/attachments/8a56a610-f907-4758-b507-1c1c0a47ed02', 'image/png', '2025-11-19 11:26:33.000000', '2025-11-19 11:26:33.000000', NULL, NULL, NULL, NULL, NULL),
+('fdde12f5-882d-492b-89c4-7d0d23634fc2', 'C:\\Users\\nguye\\Desktop\\Inter_QLCNGV\\teacher-service\\src\\main\\resources\\attachments\\21cdc7bc-dc87-421c-abfd-26389e1da152.jpg', 'image/jpeg', '2025-11-20 12:45:42.000000', '2025-11-20 12:45:42.000000', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -353,6 +406,7 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`id`, `creation_timestamp`, `update_timestamp`, `message`, `is_read`, `related_entity`, `related_id`, `title`, `type`, `user_id`) VALUES
+('07db0988-2f5d-4fb5-8e1e-132414bac731', '2025-11-20 10:14:35.000000', '2025-11-20 10:15:32.000000', 'Đăng ký môn Hen taiu học kỳ QUY1 năm học 2025 đã được duyệt.', b'1', 'SubjectRegistration', 'fda7338c-800a-4ebe-ad7b-8dfba96afe80', 'Đăng ký môn học đã được duyệt', 'SUBJECT_NOTIFICATION', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('0b661dd3-078b-4e32-a383-74ccc396cbc4', '2025-11-18 16:19:08.000000', '2025-11-18 16:36:00.000000', 'Bạn chưa đủ điều kiện để được phân công giảng dạy môn Hen taiu (lớp Dm máaasdasdasaa, học kỳ 2025-4).\n\nCác điều kiện còn thiếu:\n- Chưa có kết quả thi Aptech PASS.\n- Chưa có minh chứng được VERIFY.\n\nVui lòng hoàn thành đầy đủ các bước trên rồi liên hệ quản lý để được phân công lại.\n', b'1', 'TEACHING_ASSIGNMENT', 'b4caf17d-2b81-4c1a-a802-814b71ebf42a', 'Phân công giảng dạy thất bại', 'ASSIGNMENT_NOTIFICATION', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('1636c3de-92f1-4ece-87b2-2647e14c470c', '2025-11-18 13:57:40.000000', '2025-11-18 15:11:52.000000', 'Bạn chưa đủ điều kiện để được phân công giảng dạy môn Hen taiu (lớp Dm maaa, học kỳ 2025-1).\n\nCác điều kiện còn thiếu:\n- Chưa có kết quả thi Aptech PASS.\n- Chưa có minh chứng được VERIFY.\n\nVui lòng hoàn thành đầy đủ các bước trên rồi liên hệ quản lý để được phân công lại.\n', b'1', 'TEACHING_ASSIGNMENT', '3794e582-eda7-486a-b542-f7ea2d0abbbe', 'Phân công giảng dạy thất bại', 'ASSIGNMENT_NOTIFICATION', 'ea089c84-f49b-456d-98a3-5313117a2891'),
 ('3d146c89-40e3-4a1e-87e4-84f3f46964f7', '2025-11-18 17:22:28.000000', '2025-11-18 17:22:28.000000', 'Bạn có lịch giảng thử mới môn Hen taiu vào ngày 2025-11-19 lúc 00:21.', b'0', 'TrialTeaching', '76d7d4d6-ccef-482d-9c9d-91b371c1538c', 'Lịch giảng thử mới', 'TRIAL_NOTIFICATION', '64dd5b04-e355-4607-a83e-3656b488ad8c'),
@@ -477,21 +531,23 @@ CREATE TABLE `subjects` (
   `id` varchar(255) NOT NULL,
   `creation_timestamp` datetime(6) DEFAULT NULL,
   `update_timestamp` datetime(6) DEFAULT NULL,
-  `credit` int(11) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `is_active` bit(1) NOT NULL,
   `subject_code` varchar(20) NOT NULL,
   `subject_name` varchar(100) NOT NULL,
   `image_subject` varchar(255) DEFAULT NULL,
-  `system_id` varchar(255) DEFAULT NULL
+  `system_id` varchar(255) DEFAULT NULL,
+  `hours` int(11) DEFAULT NULL,
+  `semester` enum('SEMESTER_1','SEMESTER_2','SEMESTER_3','SEMESTER_4') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `subjects`
 --
 
-INSERT INTO `subjects` (`id`, `creation_timestamp`, `update_timestamp`, `credit`, `description`, `is_active`, `subject_code`, `subject_name`, `image_subject`, `system_id`) VALUES
-('10464251-b5fd-4023-a446-62689cc24e0e', '2025-11-17 11:19:46.000000', '2025-11-17 11:19:46.000000', 12, 'ádasd', b'1', 'Hentai z', 'Hen taiu', '11d6f67b-5d0e-420a-b915-4845e14f5b22', NULL);
+INSERT INTO `subjects` (`id`, `creation_timestamp`, `update_timestamp`, `description`, `is_active`, `subject_code`, `subject_name`, `image_subject`, `system_id`, `hours`, `semester`) VALUES
+('10464251-b5fd-4023-a446-62689cc24e0e', '2025-11-17 11:19:46.000000', '2025-11-20 14:29:02.000000', 'ádasd', b'1', 'Hentai z', 'Naruto', '11d6f67b-5d0e-420a-b915-4845e14f5b22', '64a2c679-e663-41ee-8bde-8f236bb07171', 12312, 'SEMESTER_1'),
+('3844c615-1b12-436a-9a69-326090da7019', '2025-11-20 14:38:55.000000', '2025-11-20 14:38:55.000000', 'ádasdas', b'1', '1473', 'Naruto', '85d21387-e6b4-4821-ba72-b1cef9927c4b', '64a2c679-e663-41ee-8bde-8f236bb07171', 123, 'SEMESTER_1');
 
 -- --------------------------------------------------------
 
@@ -512,6 +568,13 @@ CREATE TABLE `subject_registrations` (
   `teacher_id` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `subject_registrations`
+--
+
+INSERT INTO `subject_registrations` (`id`, `creation_timestamp`, `update_timestamp`, `quarter`, `reason_for_carry_over`, `status`, `year`, `carried_from_id`, `subject_id`, `teacher_id`) VALUES
+('fda7338c-800a-4ebe-ad7b-8dfba96afe80', '2025-11-20 10:11:59.000000', '2025-11-20 10:14:35.000000', 'QUY1', NULL, 'COMPLETED', 2025, NULL, '10464251-b5fd-4023-a446-62689cc24e0e', 'ea089c84-f49b-456d-98a3-5313117a2891');
+
 -- --------------------------------------------------------
 
 --
@@ -526,6 +589,13 @@ CREATE TABLE `subject_systems` (
   `system_code` varchar(20) NOT NULL,
   `system_name` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `subject_systems`
+--
+
+INSERT INTO `subject_systems` (`id`, `creation_timestamp`, `update_timestamp`, `is_active`, `system_code`, `system_name`) VALUES
+('64a2c679-e663-41ee-8bde-8f236bb07171', '2025-11-20 14:24:52.000000', '2025-11-20 14:24:52.000000', b'1', 'Thuận', 'Thuận');
 
 -- --------------------------------------------------------
 
@@ -604,19 +674,20 @@ CREATE TABLE `trial_evaluations` (
   `conclusion` enum('PASS','FAIL') NOT NULL,
   `score` int(11) NOT NULL,
   `file_report_id` varchar(255) DEFAULT NULL,
-  `trial_id` varchar(255) NOT NULL
+  `trial_id` varchar(255) NOT NULL,
+  `image_file_id` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `trial_evaluations`
 --
 
-INSERT INTO `trial_evaluations` (`id`, `creation_timestamp`, `update_timestamp`, `comments`, `conclusion`, `score`, `file_report_id`, `trial_id`) VALUES
-('0f65fa99-beab-4d0d-bf9b-eb1a6b5f1e94', '2025-11-18 17:24:10.000000', '2025-11-18 17:24:10.000000', 'Cút', 'FAIL', 1, NULL, '76d7d4d6-ccef-482d-9c9d-91b371c1538c'),
-('3b55b963-e580-4287-a974-4a3386c46f46', '2025-11-18 17:08:40.000000', '2025-11-18 17:08:40.000000', 'ádasdas', 'FAIL', 90, NULL, 'a51acd14-ba27-4f88-a450-8a0c2fea0acd'),
-('3d4bef9e-fdb8-4a7a-9eb9-3eae23c460b4', '2025-11-18 17:14:23.000000', '2025-11-18 17:15:27.000000', 'ádasdsa', 'FAIL', 10, NULL, 'fae8b579-8ec5-4319-8315-aa7886d412fc'),
-('93714d58-0bbd-4160-89b3-eb0afd90a576', '2025-11-18 17:02:44.000000', '2025-11-18 17:02:44.000000', 'ádasdas', 'PASS', 100, NULL, 'fea389d4-e64e-460a-82e1-9d68d3ec460d'),
-('af9f81a7-97ad-441d-984f-9d05befb3ddf', '2025-11-18 15:10:39.000000', '2025-11-18 15:10:39.000000', 'Giỏi lắm ', 'PASS', 100, NULL, 'ec197b4e-7d91-49ec-a20a-bd5a5935fff7');
+INSERT INTO `trial_evaluations` (`id`, `creation_timestamp`, `update_timestamp`, `comments`, `conclusion`, `score`, `file_report_id`, `trial_id`, `image_file_id`) VALUES
+('0f65fa99-beab-4d0d-bf9b-eb1a6b5f1e94', '2025-11-18 17:24:10.000000', '2025-11-18 17:24:10.000000', 'Cút', 'FAIL', 1, NULL, '76d7d4d6-ccef-482d-9c9d-91b371c1538c', NULL),
+('3b55b963-e580-4287-a974-4a3386c46f46', '2025-11-18 17:08:40.000000', '2025-11-18 17:08:40.000000', 'ádasdas', 'FAIL', 90, NULL, 'a51acd14-ba27-4f88-a450-8a0c2fea0acd', NULL),
+('3d4bef9e-fdb8-4a7a-9eb9-3eae23c460b4', '2025-11-18 17:14:23.000000', '2025-11-18 17:15:27.000000', 'ádasdsa', 'FAIL', 10, NULL, 'fae8b579-8ec5-4319-8315-aa7886d412fc', NULL),
+('93714d58-0bbd-4160-89b3-eb0afd90a576', '2025-11-18 17:02:44.000000', '2025-11-18 17:02:44.000000', 'ádasdas', 'PASS', 100, NULL, 'fea389d4-e64e-460a-82e1-9d68d3ec460d', NULL),
+('af9f81a7-97ad-441d-984f-9d05befb3ddf', '2025-11-18 15:10:39.000000', '2025-11-18 15:10:39.000000', 'Giỏi lắm ', 'PASS', 100, NULL, 'ec197b4e-7d91-49ec-a20a-bd5a5935fff7', NULL);
 
 -- --------------------------------------------------------
 
@@ -1843,7 +1914,8 @@ ALTER TABLE `subjects`
   ADD UNIQUE KEY `UK_gc99fcjumra0b9onucg6jvtje` (`image_subject`),
   ADD KEY `idx_subject_name` (`subject_name`),
   ADD KEY `idx_is_active` (`is_active`),
-  ADD KEY `idx_system_id` (`system_id`);
+  ADD KEY `idx_system_id` (`system_id`),
+  ADD KEY `idx_subject_code` (`subject_code`);
 
 --
 -- Indexes for table `subject_registrations`
@@ -1890,7 +1962,8 @@ ALTER TABLE `trial_evaluations`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `UK_gldfeii8955ny68nqpnnlpfq4` (`trial_id`),
   ADD KEY `idx_trial_id` (`trial_id`),
-  ADD KEY `FKrtkgpfu4udrp2w89v6vxsp5un` (`file_report_id`);
+  ADD KEY `FKrtkgpfu4udrp2w89v6vxsp5un` (`file_report_id`),
+  ADD KEY `FKs3sorhquf7rbo4drlvsc2v0kt` (`image_file_id`);
 
 --
 -- Indexes for table `trial_teachings`
@@ -2016,7 +2089,8 @@ ALTER TABLE `trial_attendees`
 --
 ALTER TABLE `trial_evaluations`
   ADD CONSTRAINT `FK31k37muro62b3mh62jdpel7yr` FOREIGN KEY (`trial_id`) REFERENCES `trial_teachings` (`id`),
-  ADD CONSTRAINT `FKrtkgpfu4udrp2w89v6vxsp5un` FOREIGN KEY (`file_report_id`) REFERENCES `files` (`id`);
+  ADD CONSTRAINT `FKrtkgpfu4udrp2w89v6vxsp5un` FOREIGN KEY (`file_report_id`) REFERENCES `files` (`id`),
+  ADD CONSTRAINT `FKs3sorhquf7rbo4drlvsc2v0kt` FOREIGN KEY (`image_file_id`) REFERENCES `files` (`id`);
 
 --
 -- Constraints for table `trial_teachings`

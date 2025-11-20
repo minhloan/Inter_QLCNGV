@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import { getTrialById, downloadTrialReport } from '../../api/trial';
+import { getTrialById, getTrialEvaluation } from '../../api/trial';
+import { downloadTrialReport } from '../../api/file';
 
 const TeacherTrialTeachingDetail = () => {
     const { id } = useParams();
@@ -33,20 +34,18 @@ const TeacherTrialTeachingDetail = () => {
         }
     };
 
-    const handleDownloadReport = async () => {
+    const handleDownloadReport = async (format) => {
         try {
-            const blob = await downloadTrialReport(evaluation?.fileReportId);
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `trial_report_${id}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            showToast('Thành công', 'Tải biên bản thành công', 'success');
+            if (!evaluation?.imageFileId) {
+                showToast('Lỗi', 'Biên bản chưa có sẵn', 'warning');
+                return;
+            }
+
+            await downloadTrialReport(evaluation.imageFileId, id, format);
+            showToast('Thành công', `Tải biên bản ${format.toUpperCase()} thành công`, 'success');
         } catch (error) {
-            showToast('Lỗi', 'Không thể tải biên bản', 'danger');
+            console.error('Error downloading report:', error);
+            showToast('Lỗi', `Không thể tải biên bản ${format.toUpperCase()}`, 'danger');
         }
     };
 
@@ -135,13 +134,21 @@ const TeacherTrialTeachingDetail = () => {
                                         <tr><td><strong>Điểm số:</strong></td><td>{evaluation.score}/100</td></tr>
                                         <tr><td><strong>Kết luận:</strong></td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
                                         {evaluation.comments && <tr><td><strong>Nhận xét:</strong></td><td>{evaluation.comments}</td></tr>}
-                                        {evaluation.fileReportId && (
+                                        {evaluation && evaluation.imageFileId && (
                                             <tr>
                                                 <td><strong>Biên bản:</strong></td>
                                                 <td>
-                                                    <button className="btn btn-sm btn-outline-primary" onClick={handleDownloadReport}>
-                                                        <i className="bi bi-download"></i> Tải xuống
-                                                    </button>
+                                                    <div className="d-flex gap-2">
+                                                        <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('pdf')}>
+                                                            <i className="bi bi-file-earmark-pdf"></i> PDF
+                                                        </button>
+                                                        <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('docx')}>
+                                                            <i className="bi bi-file-earmark-word"></i> DOCX
+                                                        </button>
+                                                        <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('doc')}>
+                                                            <i className="bi bi-file-earmark-word"></i> DOC
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )}

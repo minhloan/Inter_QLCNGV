@@ -41,4 +41,21 @@ public class StorageController {
                 .contentType(MediaType.valueOf(file.getType()))
                 .body(imageData);
     }
+
+    @PostMapping("/upload-trial-report")
+    public ResponseEntity<String> uploadTrialReport(@RequestPart("file") MultipartFile file, @RequestPart("trialId") String trialId) {
+        String fileId = fileService.uploadImageToFileSystem(file);
+        return ResponseEntity.ok(fileId);
+    }
+
+    @GetMapping("/download-trial-report/{id}")
+    public ResponseEntity<byte[]> downloadTrialReport(@PathVariable String id) {
+        File file = fileService.findFileById(id);
+        byte[] fileData = fileService.downloadImageFromFileSystem(id);
+        String filename = file.getFileName() != null ? file.getFileName() : file.getId();
+        return ResponseEntity.ok()
+                .contentType(MediaType.valueOf(file.getType()))
+                .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                .body(fileData);
+    }
 }
