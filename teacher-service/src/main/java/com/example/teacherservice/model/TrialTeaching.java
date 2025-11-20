@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "trial_teachings", indexes = {
-    @Index(name = "idx_teacher_subject_date", columnList = "teacher_id,subject_id,teaching_date")
+        @Index(name = "idx_teacher_subject_date", columnList = "teacher_id,subject_id,teaching_date")
 })
 @Getter
 @Setter
@@ -44,5 +44,7 @@ public class TrialTeaching extends BaseEntity {
 
     @Column(name = "teaching_time")
     private String teachingTime;
-}
 
+    @OneToOne(mappedBy = "trial", fetch = FetchType.LAZY)
+    private TrialEvaluation evaluation;
+}

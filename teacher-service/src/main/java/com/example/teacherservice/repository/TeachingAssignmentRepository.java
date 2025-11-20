@@ -2,6 +2,7 @@ package com.example.teacherservice.repository;
 
 import com.example.teacherservice.enums.AssignmentStatus;
 import com.example.teacherservice.enums.Quarter;
+import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.TeachingAssignment;
 import com.example.teacherservice.model.User;
 import org.springframework.data.domain.Page;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TeachingAssignmentRepository extends JpaRepository<TeachingAssignment, String> {
     List<TeachingAssignment> findByTeacher(User teacher);
@@ -56,5 +58,22 @@ public interface TeachingAssignmentRepository extends JpaRepository<TeachingAssi
                                                          @Param("status") AssignmentStatus status,
                                                          @Param("year") Integer year,
                                                          Pageable pageable);
+
+
+    @Query("SELECT ta FROM TeachingAssignment ta WHERE ta.teacher = :teacher AND ta.scheduleClass.subject = :subject AND ta.scheduleClass.year = :year AND ta.scheduleClass.quarter = :quarter")
+    Optional<TeachingAssignment> findByTeacherAndSubjectAndYearAndQuarter(@Param("teacher") User teacher, @Param("subject") Subject subject, @Param("year") Integer year, @Param("quarter") com.example.teacherservice.enums.Quarter quarter);
+    @Query("SELECT ta FROM TeachingAssignment ta WHERE ta.scheduleClass.subject = :subject")
+    List<TeachingAssignment> findBySubject(@Param("subject") Subject subject);
+    @Query("SELECT ta FROM TeachingAssignment ta WHERE ta.teacher.id = :teacherId AND ta.scheduleClass.year = :year AND ta.scheduleClass.quarter = :quarter")
+    List<TeachingAssignment> findByTeacherIdAndYearAndQuarter(@Param("teacherId") String teacherId, @Param("year") Integer year, @Param("quarter") com.example.teacherservice.enums.Quarter quarter);
+
+    @Query("SELECT ta FROM TeachingAssignment ta WHERE ta.teacher.id = :teacherId")
+    List<TeachingAssignment> findByTeacherId(@Param("teacherId") String teacherId);
+
+    @Query("SELECT COUNT(ta) FROM TeachingAssignment ta WHERE ta.status = :status")
+    long countByStatus(@Param("status") AssignmentStatus status);
+
+    @Query("SELECT COUNT(ta) FROM TeachingAssignment ta WHERE ta.teacher.id = :teacherId")
+    long countByTeacherId(@Param("teacherId") String teacherId);
 }
 

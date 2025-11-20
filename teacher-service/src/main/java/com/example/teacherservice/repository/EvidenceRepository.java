@@ -30,5 +30,14 @@ public interface EvidenceRepository extends JpaRepository<Evidence, String> {
             String subjectId,
             EvidenceStatus status
     );
+
+    @Query("SELECT COUNT(e) FROM Evidence e WHERE e.status = :status")
+    long countByStatus(@Param("status") EvidenceStatus status);
+
+    @Query("SELECT COUNT(e) FROM Evidence e WHERE e.teacher.id = :teacherId")
+    long countByTeacherId(@Param("teacherId") String teacherId);
+
+    @Query("SELECT e FROM Evidence e WHERE e.teacher.id = :teacherId")
+    List<Evidence> findByTeacherId(@Param("teacherId") String teacherId);
 }
 

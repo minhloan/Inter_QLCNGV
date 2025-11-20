@@ -20,7 +20,6 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     boolean existsBySubjectCodeIgnoreCase(String subjectCode);
 
-    // ⭐ Kiểm tra system đang được Subject sử dụng
     boolean existsBySystem_Id(String systemId);
 
     List<Subject> findBySubjectNameContainingIgnoreCase(String subjectName);
@@ -43,4 +42,9 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
     List<Subject> searchWithFilters(@Param("keyword") String keyword,
                                     @Param("systemId") String systemId,
                                     @Param("isActive") Boolean isActive);
+    List<Subject> findByIsActive(boolean isActive);
+
+    @Query("SELECT COUNT(s) FROM Subject s WHERE s.isActive = :isActive")
+    long countByIsActive(boolean isActive);
+
 }

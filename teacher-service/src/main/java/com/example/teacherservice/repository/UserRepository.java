@@ -20,5 +20,11 @@ public interface UserRepository extends JpaRepository<User, String> {
     List<User> searchByKeyword(@Param("keyword") String keyword);
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByUsernameIgnoreCase(String username);
+
+
+    List<User> findAllByActive(Active active);
+    long countByActive(Active active);
+    @Query("SELECT COUNT(u) FROM users u WHERE u.primaryRole = 'TEACHER' AND u.active = 'ACTIVE'")
+    long countActiveTeachers();
 }
 
