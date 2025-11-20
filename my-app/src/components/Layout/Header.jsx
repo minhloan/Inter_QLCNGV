@@ -21,19 +21,10 @@ const Header = () => {
   const hasValidProfileImage = profileImage && typeof profileImage === 'string' && profileImage.trim() !== '';
   const hasValidCoverImage = coverImage && typeof coverImage === 'string' && coverImage.trim() !== '';
   
-  // Reset image errors when profileImage changes
   useEffect(() => {
     setImageErrors({ profile: false, dropdown: false, mobile: false });
   }, [profileImage]);
   
-  useEffect(() => {
-    console.log('[Header] user:', user);
-    console.log('[Header] user?.userId:', user?.userId);
-    console.log('[Header] coverImage:', coverImage);
-    console.log('[Header] profileImage:', profileImage);
-    console.log('[Header] hasValidProfileImage:', hasValidProfileImage);
-    console.log('[Header] hasValidCoverImage:', hasValidCoverImage);
-  }, [user, coverImage, profileImage, hasValidProfileImage, hasValidCoverImage]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

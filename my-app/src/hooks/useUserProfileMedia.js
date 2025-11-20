@@ -59,17 +59,13 @@ const useUserProfileMedia = (userId) => {
         };
 
         const fetchMedia = async () => {
-            // Use a default cache key if userId is not available
-            // The API getCurrentUserInfo() doesn't require userId as it uses the token
             const cacheKey = userId ? `user_${userId}` : 'current_user';
-            // Create unique fetch key that includes mount ID to track valid fetches
             const fetchKey = `${cacheKey}_${currentMountId}`;
 
             // Check cache first
             const cached = profileMediaCache.get(cacheKey);
 
             if (cached) {
-                // Use cached data immediately
                 if (isMounted) {
                     setProfileImage(cached.profileImage);
                     setCoverImage(cached.coverImage);
@@ -79,9 +75,7 @@ const useUserProfileMedia = (userId) => {
                 return;
             }
 
-            // Prevent multiple simultaneous fetches for the same user (use cacheKey, not fetchKey)
             if (fetchingUsers.has(cacheKey)) {
-                // Wait for the ongoing fetch to complete
                 intervalRef.current = setInterval(() => {
                     if (!isMounted || mountIdRef.current !== currentMountId) {
                         if (intervalRef.current) {
@@ -110,7 +104,6 @@ const useUserProfileMedia = (userId) => {
                     }
                 }, 100);
 
-                // Cleanup after 5 seconds
                 timeoutRef.current = setTimeout(() => {
                     if (intervalRef.current) {
                         clearInterval(intervalRef.current);
@@ -127,21 +120,11 @@ const useUserProfileMedia = (userId) => {
             }
 
             try {
-                fetchingUsers.add(cacheKey); // Use cacheKey for tracking
-                fetchRef.current = fetchKey; // Use fetchKey for ref tracking
+                fetchingUsers.add(cacheKey);
+                fetchRef.current = fetchKey;
                 setLoading(true);
 
                 const data = await getCurrentUserInfo();
-
-                // Check if this fetch is still valid (component might have remounted)
-                if (fetchRef.current !== fetchKey || mountIdRef.current !== currentMountId) {
-                    fetchingUsers.delete(cacheKey);
-                    return;
-                }
-
-                if (!isMounted) {
-                    // Don't return here - we still want to cache the data
-                }
 
                 const fullNameValue =
                     data?.full_name ||
@@ -155,6 +138,7 @@ const useUserProfileMedia = (userId) => {
                 const imageUrl = data?.imageUrl;
                 const imageCoverUrl = data?.imageCoverUrl;
 
+
                 let avatarUrl = null;
                 let coverUrl = null;
 
@@ -164,11 +148,8 @@ const useUserProfileMedia = (userId) => {
                         imageCoverUrl ? resolveImage(imageCoverUrl) : Promise.resolve(null),
                     ]);
                 } catch (imageError) {
-                    // Silent error: keep logic, remove logs
-                    // Continue with null values
                 }
 
-                // Cache the results (always cache, even if component unmounted)
                 const cacheData = {
                     profileImage: avatarUrl,
                     coverImage: coverUrl,
@@ -176,38 +157,29 @@ const useUserProfileMedia = (userId) => {
                 };
                 profileMediaCache.set(cacheKey, cacheData);
 
-                // Check again if this fetch is still valid
-                if (fetchRef.current !== fetchKey || mountIdRef.current !== currentMountId) {
-                    fetchingUsers.delete(cacheKey);
-                    return;
-                }
-
-                // Only set state if component is still mounted AND fetch is still valid
-                if (isMounted && fetchRef.current === fetchKey && mountIdRef.current === currentMountId) {
+                if (isMounted && mountIdRef.current === currentMountId) {
                     setProfileImage(avatarUrl);
                     setCoverImage(coverUrl);
                     setFullName(fullNameValue);
                     setLoading(false);
                 }
-
-                // Clean up (use cacheKey for fetchingUsers)
                 fetchingUsers.delete(cacheKey);
                 if (fetchRef.current === fetchKey) {
                     fetchRef.current = null;
                 }
             } catch (error) {
-                // Silent error: keep logic, remove logs
-                // Only set state if component is still mounted AND fetch is still valid
-                if (isMounted && fetchRef.current === fetchKey && mountIdRef.current === currentMountId) {
+
+                const isAuthError = error?.response?.status === 401;
+                
+                if (isMounted && mountIdRef.current === currentMountId && !isAuthError) {
                     setProfileImage(null);
                     setCoverImage(null);
                     setFullName('');
                     setLoading(false);
+                } else if (isAuthError) {
                 }
+                
                 fetchingUsers.delete(cacheKey);
-                if (fetchRef.current === fetchKey) {
-                    fetchRef.current = null;
-                }
             }
         };
 
@@ -215,13 +187,6 @@ const useUserProfileMedia = (userId) => {
 
         return () => {
             isMounted = false;
-            // Reset fetchRef when userId changes or component unmounts
-            const cacheKey = userId ? `user_${userId}` : 'current_user';
-            const fetchKey = cacheKey;
-            if (fetchRef.current === fetchKey) {
-                fetchRef.current = null;
-            }
-            // Cleanup intervals and timeouts
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
@@ -230,10 +195,11 @@ const useUserProfileMedia = (userId) => {
                 clearTimeout(timeoutRef.current);
                 timeoutRef.current = null;
             }
+
         };
     }, [userId]);
 
-    return {
+        return {
         profileImage,
         coverImage,
         fullName,
