@@ -35,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Bỏ qua JWT filter cho các endpoint public
         if (path.contains("/auth/login") || 
+            path.contains("/auth/google-login") || 
             path.contains("/auth/register") || 
             path.contains("/auth/forgotPassword") ||
             path.contains("/auth/verifyOtp") ||

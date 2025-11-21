@@ -5,6 +5,7 @@ import com.example.teacherservice.dto.auth.RegisterDto;
 import com.example.teacherservice.dto.auth.TokenDto;
 import com.example.teacherservice.dto.auth.VerifyOtp;
 import com.example.teacherservice.request.auth.LoginRequest;
+import com.example.teacherservice.request.auth.GoogleLoginRequest;
 import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.auth.UpdatePasswordRequest;
 import com.example.teacherservice.service.auth.AuthService;
@@ -31,6 +32,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenDto> login(@RequestBody LoginRequest request) {
         TokenDto tokenDto = authService.login(request);
+        return ResponseEntity.ok(tokenDto);
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<TokenDto> googleLogin(@RequestBody GoogleLoginRequest request) {
+        TokenDto tokenDto = authService.googleLogin(request);
         return ResponseEntity.ok(tokenDto);
     }
 

@@ -9,6 +9,13 @@ import com.example.teacherservice.model.User;
 import com.example.teacherservice.request.auth.LoginRequest;
 import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.auth.UpdatePasswordRequest;
+import com.example.teacherservice.request.auth.GoogleLoginRequest;
+import com.example.teacherservice.enums.Active;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import java.util.Collections;
 import com.example.teacherservice.service.auditlog.AuditLogService;
 import com.example.teacherservice.service.user.UserService;
 import io.jsonwebtoken.Claims;
@@ -298,6 +305,55 @@ public class AuthService {
         if (first == null) return last;
         if (last == null) return first;
         return first + " " + last;
+    }
+
+    public TokenDto googleLogin(GoogleLoginRequest request) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList("941069814660-8rajmadcapkjimfpai8ao8fh3d78f770.apps.googleusercontent.com"))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(request.getToken());
+            if (idToken == null) {
+                throw new RuntimeException("Token Google không hợp lệ");
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+
+            User user = userService.getUserByEmail(email);
+            if (user == null) {
+                 throw new RuntimeException("Email " + email + " chưa được đăng ký trong hệ thống");
+            }
+
+            if (user.getActive() != Active.ACTIVE) {
+                throw new RuntimeException("Tài khoản đã bị khóa hoặc chưa kích hoạt");
+            }
+
+            String accessToken = jwtService.generateToken(email);
+            String refreshToken = jwtService.generateRefreshToken(email);
+
+            String refreshKey = REFRESH_TOKEN_PREFIX + refreshToken;
+            redisTemplate.opsForValue().set(refreshKey, user.getId(), REFRESH_TOKEN_TTL);
+
+            auditLogService.writeAndBroadcast(user.getId(),
+                    "LOGIN", "USER", user.getId(),
+                    "{\"method\":\"GOOGLE\"}"
+            );
+
+            return TokenDto.builder()
+                    .token(accessToken)
+                    .access(accessToken)
+                    .refresh(refreshToken)
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .full_name(buildFullName(user))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Google Login Error", e);
+            throw new RuntimeException("Đăng nhập Google thất bại: Không tìm thấy giáo viên" );
+        }
     }
 }
 

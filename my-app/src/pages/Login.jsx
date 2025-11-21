@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { login as apiLogin, getPrimaryRole, getUserInfo } from '../api/auth';
+import { login as apiLogin, getPrimaryRole, getUserInfo, googleLogin } from '../api/auth';
+import { GoogleLogin } from '@react-oauth/google';
 import Loading from '../components/Common/Loading';
 import '../assets/styles/Login.css';
 import '../assets/styles/Common.css';
@@ -76,7 +77,7 @@ const Login = () => {
       });
 
       const token = response.token;
-      
+
       if (!token) {
         setError('Đăng nhập thất bại. Vui lòng thử lại.');
         setIsLoading(false);
@@ -129,9 +130,60 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
       const errorMessage = error?.response?.data?.error ||
-                              error?.response?.data?.message || 
-                              error?.message || 
-                              'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';
+        error?.response?.data?.message ||
+        error?.message ||
+        'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';
+      setError(errorMessage);
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setIsLoading(true);
+      setError('');
+
+      const response = await googleLogin(credentialResponse.credential);
+
+      const token = response.token;
+      const role = getPrimaryRole();
+      const userInfo = getUserInfo();
+
+      if (!role) {
+        setError('Không thể xác định quyền truy cập. Vui lòng liên hệ quản trị viên.');
+        setIsLoading(false);
+        return;
+      }
+
+      const fullName =
+        userInfo?.full_name ||
+        response.full_name ||
+        response.fullName ||
+        response.name ||
+        null;
+
+      login(token, role, userInfo?.email, {
+        id: userInfo?.userId,
+        email: userInfo?.email,
+        roles: userInfo?.roles || [],
+        full_name: fullName
+      });
+
+      if (role === 'Manage-Leader' || role === 'admin') {
+        navigate('/module-selection');
+      } else if (role === 'Teacher' || role === 'teacher') {
+        navigate('/module-selection');
+      } else {
+        setError('Bạn không có quyền truy cập vào hệ thống.');
+        setIsLoading(false);
+      }
+
+    } catch (error) {
+      console.error('Google Login error:', error);
+      const errorMessage = error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Đăng nhập Google thất bại. Email có thể chưa được đăng ký.';
       setError(errorMessage);
       setIsLoading(false);
     }
@@ -153,9 +205,9 @@ const Login = () => {
             <h1 className="form-welcome">Cần trợ giúp đăng nhập?</h1>
           </div>
           <p className="help-description">
-              Đừng lo lắng! Video hướng dẫn này sẽ hướng dẫn bạn quy trình đăng nhập và giúp bạn bắt đầu chỉ trong vòng một phút.
+            Đừng lo lắng! Video hướng dẫn này sẽ hướng dẫn bạn quy trình đăng nhập và giúp bạn bắt đầu chỉ trong vòng một phút.
           </p>
-          
+
           {/* Video Player */}
           <div className="video-container">
             <div className="video-wrapper">
@@ -189,16 +241,16 @@ const Login = () => {
                   </div>
                 </div>
               </div> */}
-                <iframe
-                    src="https://www.youtube.com/embed/LLdL5n-P3Mw"
-                    title="Hướng dẫn đăng nhập"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                ></iframe>
+              <iframe
+                src="https://www.youtube.com/embed/LLdL5n-P3Mw"
+                title="Hướng dẫn đăng nhập"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
             </div>
           </div>
-          
+
           <div className="login-tutorial">
             <h3 className="tutorial-title">Hướng dẫn đăng nhập</h3>
             <p className="tutorial-description">Một video hướng dẫn nhanh về quy trình đăng nhập.</p>
@@ -209,7 +261,7 @@ const Login = () => {
       {/* Right Column - Login Form */}
       <div className="login-right-column">
         <div className="login-form-container">
-          <button 
+          <button
             className="back-button"
             onClick={() => navigate('/')}
             type="button"
@@ -299,8 +351,8 @@ const Login = () => {
               </div>
             )}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="btn btn-primary btn-lg w-100 mb-3"
               disabled={isLoading}
             >
@@ -313,6 +365,23 @@ const Login = () => {
                 'Đăng nhập'
               )}
             </button>
+
+            <div className="google-login-container text-center mb-3">
+              <div className="d-flex align-items-center justify-content-center mb-3">
+                <hr className="flex-grow-1" />
+                <span className="mx-2 text-muted">Hoặc</span>
+                <hr className="flex-grow-1" />
+              </div>
+              <div className="d-flex justify-content-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Đăng nhập Google thất bại')}
+                  useOneTap
+                  shape="circle"
+                  width="100%"
+                />
+              </div>
+            </div>
 
             <div className="text-center">
               <a href="#" className="faqs-link">FAQs</a>

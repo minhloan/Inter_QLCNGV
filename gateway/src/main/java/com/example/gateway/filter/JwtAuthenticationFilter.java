@@ -34,6 +34,7 @@ public class JwtAuthenticationFilter implements GatewayFilter {
 
         final List<String> apiEndpoints = List.of(
                 "/v1/teacher/auth/login",
+                "/v1/teacher/auth/google-login",
                 "/v1/teacher/auth/register",
                 "/v1/teacher/auth/forgotPassword",
                 "/v1/teacher/auth/verifyOtp",

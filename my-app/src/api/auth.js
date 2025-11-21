@@ -94,7 +94,7 @@ export const refreshAccessToken = async () => {
             const response = await api.post("/refresh", {}, {
                 withCredentials: true // Quan trọng: gửi cookie
             });
-            
+
             const accessToken = response.data.access || response.data.token;
             const newRefreshToken = response.data.refresh || response.data.refreshToken;
 
@@ -229,6 +229,7 @@ export const forgotPassword = async (email) => {
     return response.data;
 };
 
+
 // Verify OTP API
 export const verifyOtp = async (email, otp) => {
     const response = await api.post("/verifyOtp", { email, otp });
@@ -238,5 +239,31 @@ export const verifyOtp = async (email, otp) => {
 // Update Password API
 export const updatePassword = async (email, newPassword, otp = null) => {
     const response = await api.post("/updatePassword", { email, newPassword, otp });
+    return response.data;
+};
+
+export const googleLogin = async (token) => {
+    const response = await api.post("/google-login", { token });
+    const accessToken = response.data.access || response.data.token;
+    const refreshToken = response.data.refresh || response.data.refreshToken;
+
+    // Lưu accessToken trong cookie
+    Cookies.set("accessToken", accessToken, {
+        expires: 1, // 1 ngày
+        path: '/',
+        sameSite: 'lax',
+        secure: window.location.protocol === 'https:'
+    });
+
+    // Lưu refreshToken trong cookie
+    if (refreshToken) {
+        Cookies.set("refreshToken", refreshToken, {
+            expires: 7, // 7 ngày
+            path: '/',
+            sameSite: 'lax',
+            secure: window.location.protocol === 'https:'
+        });
+    }
+
     return response.data;
 };
