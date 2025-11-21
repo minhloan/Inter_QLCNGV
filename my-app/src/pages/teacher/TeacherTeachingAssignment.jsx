@@ -190,7 +190,7 @@ const TeacherTeachingAssignment = () => {
                             className="btn btn-sm btn-info"
                             onClick={() => navigate(`/teacher-teaching-assignment-detail/${assignment.id}`)}
                           >
-                            <i className="bi bi-eye"></i> Chi tiết
+                            <i className="bi bi-eye"></i>
                           </button>
                         </td>
                         <td>
