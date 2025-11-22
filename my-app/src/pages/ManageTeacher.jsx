@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import MainLayout from '../components/Layout/MainLayout';
 import DeleteModal from '../components/Teacher/DeleteModal';
+import ExportImportModal from '../components/Teacher/ExportImportModal';
 import Toast from '../components/Common/Toast';
 import Loading from '../components/Common/Loading';
-import { getAllUsers, searchUsers, deleteUser } from '../api/user';
+import { getAllUsers, searchUsers, deleteUser, exportUsers, importUsers } from '../api/user';
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
@@ -24,6 +25,9 @@ const ManageTeacher = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showExportImportModal, setShowExportImportModal] = useState(false);
   const searchTimeoutRef = useRef(null);
 
   const showToast = useCallback((title, message, type) => {
@@ -204,6 +208,97 @@ const ManageTeacher = () => {
     setCurrentPage(1);
   };
 
+  // Handler cho Export Excel từ modal
+  const handleExport = async (activeStatus) => {
+    try {
+      setExporting(true);
+      const blob = await exportUsers(activeStatus);
+      
+      // Tạo URL từ blob và trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().getTime();
+      const statusSuffix = activeStatus ? `_${activeStatus.toLowerCase()}` : '';
+      link.setAttribute('download', `users_export${statusSuffix}_${timestamp}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      const statusText = activeStatus === 'ACTIVE' ? 'đang hoạt động' : 
+                        activeStatus === 'INACTIVE' ? 'không hoạt động' : 'tất cả';
+      showToast('Thành công', `Export danh sách giáo viên ${statusText} thành công`, 'success');
+      
+      // Đóng modal sau khi export thành công
+      setTimeout(() => {
+        setShowExportImportModal(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Error exporting users:', error);
+      showToast('Lỗi', error.response?.data?.message || 'Không thể export danh sách giáo viên', 'danger');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Handler cho Import Excel từ modal
+  const handleImport = async (file) => {
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      showToast('Lỗi', 'File phải là định dạng Excel (.xlsx hoặc .xls)', 'danger');
+      return;
+    }
+
+    try {
+      setImporting(true);
+      const result = await importUsers(file);
+      
+      // Hiển thị kết quả
+      const successCount = result.created + result.updated;
+      const errorCount = result.errors ? result.errors.length : 0;
+      
+      let message = `Import thành công: ${result.created} tạo mới, ${result.updated} cập nhật`;
+      if (errorCount > 0) {
+        message += `. Có ${errorCount} lỗi`;
+      }
+      
+      showToast(
+        'Thành công', 
+        message, 
+        errorCount > 0 ? 'warning' : 'success'
+      );
+      
+      // Hiển thị chi tiết lỗi nếu có
+      if (result.errors && result.errors.length > 0) {
+        console.error('Import errors:', result.errors);
+        const errorDetails = result.errors
+          .map(err => `Dòng ${err.rowNumber}: ${err.message}`)
+          .join('\n');
+        alert('Chi tiết lỗi:\n' + errorDetails);
+      }
+      
+      // Reload danh sách sau khi import
+      if (searchTerm.trim()) {
+        await handleSearch(searchTerm, 1, serverPageSize);
+      } else {
+        await loadTeachers(1, serverPageSize);
+      }
+      
+      // Đóng modal sau khi import thành công
+      setTimeout(() => {
+        setShowExportImportModal(false);
+      }, 1500);
+    } catch (error) {
+      console.error('Error importing users:', error);
+      showToast('Lỗi', error.response?.data?.message || 'Không thể import danh sách giáo viên', 'danger');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const totalFilteredElements = filteredTeachers.length;
   const totalFilteredPages = Math.ceil(totalFilteredElements / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -221,10 +316,25 @@ const ManageTeacher = () => {
             </button>
             <h1 className="page-title">Quản lý Giáo viên</h1>
           </div>
-          <Link to="/add-teacher" className="btn btn-primary">
-            <i className="bi bi-plus-circle"></i>
-            Thêm Giáo viên
-          </Link>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              onClick={() => setShowExportImportModal(true)} 
+              className="btn btn-success"
+              disabled={loading || !hasLoaded}
+              style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+                fontWeight: '500'
+              }}
+            >
+              <i className="bi bi-file-earmark-spreadsheet"></i>
+              Xuất / Nhập Excel
+            </button>
+            <Link to="/add-teacher" className="btn btn-primary">
+              <i className="bi bi-plus-circle"></i>
+              Thêm Giáo viên
+            </Link>
+          </div>
         </div>
 
         {/* List Content */}
@@ -398,6 +508,17 @@ const ManageTeacher = () => {
               setShowDeleteModal(false);
               setDeleteTeacher(null);
             }}
+          />
+        )}
+
+        {showExportImportModal && (
+          <ExportImportModal
+            isOpen={showExportImportModal}
+            onClose={() => !exporting && !importing && setShowExportImportModal(false)}
+            onExport={handleExport}
+            onImport={handleImport}
+            exporting={exporting}
+            importing={importing}
           />
         )}
 

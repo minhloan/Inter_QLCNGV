@@ -92,3 +92,37 @@ export const deleteUser = async (userId) => {
   const response = await api.delete(`/deleteUserById/${userId}`);
   return response.data;
 };
+
+/**
+ * Export users ra file Excel với filter theo trạng thái active
+ * @param {string} activeStatus - Trạng thái active (ACTIVE, INACTIVE, hoặc null/undefined để export tất cả)
+ * @returns {Promise<Blob>} File Excel dưới dạng Blob
+ */
+export const exportUsers = async (activeStatus = null) => {
+  const params = {};
+  if (activeStatus) {
+    params.activeStatus = activeStatus;
+  }
+  const response = await api.get("/export", {
+    params,
+    responseType: "blob", // Quan trọng: phải set responseType là blob để nhận file
+  });
+  return response.data;
+};
+
+/**
+ * Import users từ file Excel
+ * @param {File} file - File Excel cần import
+ * @returns {Promise<Object>} Kết quả import (created, updated, errors)
+ */
+export const importUsers = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  const response = await api.post("/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};

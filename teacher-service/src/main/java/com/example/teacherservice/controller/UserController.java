@@ -2,6 +2,8 @@ package com.example.teacherservice.controller;
 
 import com.example.teacherservice.dto.auth.AuthUserDto;
 import com.example.teacherservice.dto.auth.UpdatePassword;
+import com.example.teacherservice.dto.user.ImportError;
+import com.example.teacherservice.dto.user.ImportResult;
 import com.example.teacherservice.dto.user.InformationDto;
 import com.example.teacherservice.dto.user.UserAdminDto;
 import com.example.teacherservice.dto.user.UserDto;
@@ -12,6 +14,7 @@ import com.example.teacherservice.request.auth.RegisterRequest;
 import com.example.teacherservice.request.user.UserUpdateRequest;
 import com.example.teacherservice.service.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -135,5 +138,48 @@ public class UserController {
         User user = userService.findUserByEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Export users ra file Excel với filter theo trạng thái active
+     * @param response HttpServletResponse để ghi file Excel
+     * @param activeStatus Trạng thái active (ACTIVE, INACTIVE, hoặc để trống để export tất cả)
+     */
+    @GetMapping("/export")
+    public void exportUsers(
+            HttpServletResponse response,
+            @RequestParam(required = false) String activeStatus) {
+        try {
+            userService.exportUsersToExcel(response, activeStatus);
+        } catch (Exception e) {
+            System.out.println("Error in exportUsers controller: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Lỗi khi export users ra Excel", e);
+        }
+    }
+
+    /**
+     * Import users từ file Excel
+     * @param file File Excel chứa dữ liệu users
+     * @return ImportResult chứa kết quả import (số lượng created, updated, errors)
+     */
+    @PostMapping("/import")
+    public ResponseEntity<ImportResult> importUsers(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file == null || file.isEmpty()) {
+                ImportResult errorResult = ImportResult.builder().build();
+                errorResult.addError(new ImportError(0, "File không được để trống"));
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+            
+            ImportResult result = userService.importUsersFromExcel(file);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            System.out.println("Error in importUsers controller: " + e.getMessage());
+            e.printStackTrace();
+            ImportResult errorResult = ImportResult.builder().build();
+            errorResult.addError(new ImportError(0, "Lỗi khi import: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(errorResult);
+        }
     }
 }
