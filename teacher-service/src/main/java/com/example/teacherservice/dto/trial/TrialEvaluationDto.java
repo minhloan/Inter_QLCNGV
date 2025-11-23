@@ -9,6 +9,10 @@ import lombok.Data;
 public class TrialEvaluationDto {
     private String id;
     private String trialId;
+    private String attendeeId;
+    private String attendeeName;
+    private String attendeeRole;
+    private String evaluatorUserId;
     private Integer score;
     private String comments;
     private TrialConclusion conclusion;

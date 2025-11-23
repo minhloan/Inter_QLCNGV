@@ -4,13 +4,16 @@ import com.example.teacherservice.dto.trial.TrialAttendeeDto;
 import com.example.teacherservice.dto.trial.TrialEvaluationDto;
 import com.example.teacherservice.dto.trial.TrialTeachingDto;
 import com.example.teacherservice.enums.NotificationType;
+import com.example.teacherservice.enums.TrialConclusion;
 import com.example.teacherservice.enums.TrialStatus;
 import com.example.teacherservice.exception.NotFoundException;
+import com.example.teacherservice.model.TrialAttendee;
 import com.example.teacherservice.model.TrialEvaluation;
 import com.example.teacherservice.model.TrialTeaching;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.repository.SubjectRepository;
+import com.example.teacherservice.repository.TrialAttendeeRepository;
 import com.example.teacherservice.repository.TrialEvaluationRepository;
 import com.example.teacherservice.repository.TrialTeachingRepository;
 import com.example.teacherservice.repository.UserRepository;
@@ -22,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +37,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
     private final UserRepository userRepository;
     private final SubjectRepository subjectRepository;
     private final TrialAttendeeService trialAttendeeService;
+    private final TrialAttendeeRepository trialAttendeeRepository;
     private final NotificationService notificationService;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -84,6 +87,26 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
     }
 
     @Override
+    public TrialTeachingDto finalizeResult(String trialId, TrialConclusion finalResult) {
+        TrialTeaching trial = trialTeachingRepository.findById(trialId)
+                .orElseThrow(() -> new NotFoundException("Trial not found"));
+
+        trial.setFinalResult(finalResult);
+        // Update status based on result
+        if (finalResult == TrialConclusion.PASS) {
+            trial.setStatus(TrialStatus.PASSED);
+        } else if (finalResult == TrialConclusion.FAIL) {
+            trial.setStatus(TrialStatus.FAILED);
+        }
+        
+        TrialTeaching updated = trialTeachingRepository.save(trial);
+
+        notifyTeacherStatusUpdate(updated);
+
+        return toDto(updated);
+    }
+
+    @Override
     public List<TrialTeachingDto> getAllTrials() {
         return trialTeachingRepository.findAll()
                 .stream()
@@ -106,9 +129,20 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
         return toDto(trial);
     }
 
-    private TrialTeachingDto toDto(TrialTeaching trial) {
-        Optional<TrialEvaluation> evaluation = trialEvaluationRepository.findByTrial_Id(trial.getId());
+    @Override
+    public List<TrialTeachingDto> getTrialsForEvaluation(String evaluatorUserId) {
+        // Get all attendees for this evaluator
+        List<TrialAttendee> attendees = trialAttendeeRepository.findByAttendeeUser_Id(evaluatorUserId);
+        
+        // Get unique trials from attendees
+        return attendees.stream()
+                .map(TrialAttendee::getTrial)
+                .distinct()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
 
+    private TrialTeachingDto toDto(TrialTeaching trial) {
         // Format giờ
         String trialTimeStr = null;
         if (trial.getAptechExam() != null
@@ -121,19 +155,25 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
         // Get attendees
         List<TrialAttendeeDto> attendees = trialAttendeeService.getAttendeesByTrial(trial.getId());
 
-        // Get evaluation details
-        TrialEvaluationDto evaluationDto = null;
-        if (evaluation.isPresent()) {
-            TrialEvaluation eval = evaluation.get();
-            evaluationDto = TrialEvaluationDto.builder()
-                    .id(eval.getId())
-                    .trialId(eval.getTrial().getId())
-                    .score(eval.getScore())
-                    .comments(eval.getComments())
-                    .conclusion(eval.getConclusion())
-                    .imageFileId(eval.getImageFile() != null ? eval.getImageFile().getId() : null)
-                    .build();
-        }
+        // Get all evaluations for this trial
+        List<TrialEvaluation> evaluations = trialEvaluationRepository.findByTrial_Id(trial.getId());
+        List<TrialEvaluationDto> evaluationDtos = evaluations.stream()
+                .map(eval -> {
+                    TrialAttendee attendee = eval.getAttendee();
+                    return TrialEvaluationDto.builder()
+                            .id(eval.getId())
+                            .trialId(eval.getTrial().getId())
+                            .attendeeId(attendee.getId())
+                            .attendeeName(attendee.getAttendeeName())
+                            .attendeeRole(attendee.getAttendeeRole() != null ? attendee.getAttendeeRole().toString() : null)
+                            .evaluatorUserId(attendee.getAttendeeUser() != null ? attendee.getAttendeeUser().getId() : null)
+                            .score(eval.getScore())
+                            .comments(eval.getComments())
+                            .conclusion(eval.getConclusion())
+                            .imageFileId(eval.getImageFile() != null ? eval.getImageFile().getId() : null)
+                            .build();
+                })
+                .collect(Collectors.toList());
 
         return TrialTeachingDto.builder()
                 .id(trial.getId())
@@ -145,11 +185,11 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .teachingDate(trial.getTeachingDate())
                 .teachingTime(trial.getTeachingTime())
                 .status(trial.getStatus())
-                .score(evaluation.map(TrialEvaluation::getScore).orElse(null))
+                .finalResult(trial.getFinalResult())
                 .location(trial.getLocation())
                 .note(trial.getNote())
                 .attendees(attendees)
-                .evaluation(evaluationDto)
+                .evaluations(evaluationDtos)
                 .build();
     }
 

@@ -42,6 +42,13 @@ public class TrialTeachingController {
         return ResponseEntity.ok(trials);
     }
 
+    @GetMapping("/my-reviews")
+    public ResponseEntity<List<TrialTeachingDto>> getMyReviews(HttpServletRequest request) {
+        String evaluatorId = jwtUtil.ExtractUserId(request);
+        List<TrialTeachingDto> trials = trialTeachingService.getTrialsForEvaluation(evaluatorId);
+        return ResponseEntity.ok(trials);
+    }
+
     @GetMapping("/{trialId}")
     public ResponseEntity<TrialTeachingDto> getTrialById(@PathVariable String trialId) {
         TrialTeachingDto dto = trialTeachingService.getTrialById(trialId);
@@ -54,6 +61,17 @@ public class TrialTeachingController {
             @RequestParam("status") TrialStatus status
     ) {
         TrialTeachingDto dto = trialTeachingService.updateStatus(trialId, status);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PatchMapping("/{trialId}/finalize")
+    public ResponseEntity<TrialTeachingDto> finalizeResult(
+            @PathVariable String trialId,
+            @RequestParam("result") String result
+    ) {
+        com.example.teacherservice.enums.TrialConclusion conclusion = 
+            com.example.teacherservice.enums.TrialConclusion.valueOf(result.toUpperCase());
+        TrialTeachingDto dto = trialTeachingService.finalizeResult(trialId, conclusion);
         return ResponseEntity.ok(dto);
     }
 }

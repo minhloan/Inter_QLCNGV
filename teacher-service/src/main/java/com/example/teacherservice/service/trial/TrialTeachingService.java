@@ -1,6 +1,7 @@
 package com.example.teacherservice.service.trial;
 
 import com.example.teacherservice.dto.trial.TrialTeachingDto;
+import com.example.teacherservice.enums.TrialConclusion;
 import com.example.teacherservice.enums.TrialStatus;
 import com.example.teacherservice.request.trial.TrialTeachingRequest;
 
@@ -11,7 +12,9 @@ public interface TrialTeachingService {
 
     TrialTeachingDto createTrial(TrialTeachingRequest request);
     TrialTeachingDto updateStatus(String trialId, TrialStatus status);
+    TrialTeachingDto finalizeResult(String trialId, TrialConclusion finalResult);
     List<TrialTeachingDto> getAllTrials();
     List<TrialTeachingDto> getTrialsByTeacher(String teacherId);
+    List<TrialTeachingDto> getTrialsForEvaluation(String evaluatorUserId);
     TrialTeachingDto getTrialById(String id);
 }

@@ -50,6 +50,8 @@ import TeachingAssignmentDetail from "./pages/admin/TeachingAssignmentDetail.jsx
 import TeacherTrialTeachingDetail from "./pages/teacher/TeacherTrialTeachingDetail.jsx";
 import AptechExamDetail from "./pages/admin/AptechExamDetail.jsx";
 import AptechExamAdd from "./pages/teacher/AptechExamAdd.jsx";
+import MyReviews from "./pages/teacher/MyReviews.jsx";
+import TrialEvaluationForm from "./pages/teacher/TrialEvaluationForm.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -326,6 +328,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
             <TeacherTrialTeaching />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-reviews"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <MyReviews />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/trial-evaluation/:trialId"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <TrialEvaluationForm />
           </ProtectedRoute>
         }
       />

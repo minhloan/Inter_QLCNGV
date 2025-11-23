@@ -39,8 +39,13 @@ export const evaluateTrial = async (evaluationData) => {
     return response.data;
 };
 
-export const getTrialEvaluation = async (trialId) => {
-    const response = await api.get(`/evaluation/${trialId}`);
+export const getEvaluationByAttendee = async (attendeeId) => {
+    const response = await api.get(`/evaluation/attendee/${attendeeId}`);
+    return response.data;
+};
+
+export const getEvaluationsByTrial = async (trialId) => {
+    const response = await api.get(`/evaluation/trial/${trialId}`);
     return response.data;
 };
 
@@ -57,6 +62,25 @@ export const getTrialAttendees = async (trialId) => {
 
 export const removeAttendee = async (attendeeId) => {
     const response = await api.delete(`/attendee/${attendeeId}`);
+    return response.data;
+};
+
+export const getMyAttendees = async () => {
+    const response = await api.get("/attendee/my");
+    return response.data;
+};
+
+// Get trials for evaluation (My Reviews)
+export const getMyReviews = async () => {
+    const response = await api.get("/my-reviews");
+    return response.data;
+};
+
+// Finalize trial result
+export const finalizeTrialResult = async (trialId, result) => {
+    const response = await api.patch(`/${trialId}/finalize`, null, {
+        params: { result }
+    });
     return response.data;
 };
 
@@ -77,6 +101,37 @@ export const uploadTrialReport = async (file, trialId) => {
 export const downloadTrialReport = async (fileId) => {
     const fileApi = createApiInstance("/v1/teacher/file");
     const response = await fileApi.get(`/download-trial-report/${fileId}`, {
+        responseType: 'blob'
+    });
+    return response;
+};
+
+// Export trial evaluation documents
+export const exportTrialAssignment = async (trialId) => {
+    const response = await api.get(`/export/${trialId}/assignment`, {
+        responseType: 'blob'
+    });
+    return response;
+};
+
+export const exportTrialEvaluationForm = async (trialId, attendeeId) => {
+    const response = await api.get(`/export/${trialId}/evaluation-form/${attendeeId}`, {
+        responseType: 'blob'
+    });
+    return response;
+};
+
+export const exportTrialMinutes = async (trialId) => {
+    const response = await api.get(`/export/${trialId}/minutes`, {
+        responseType: 'blob'
+    });
+    return response;
+};
+
+export const exportTrialStatistics = async (teacherId = null) => {
+    const params = teacherId ? { teacherId } : {};
+    const response = await api.get('/export/statistics', {
+        params,
         responseType: 'blob'
     });
     return response;

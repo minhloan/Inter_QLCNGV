@@ -8,8 +8,17 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   define: {
-    // Polyfill cho global trong browser environment
     global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: [
+      'html2pdf.js',
+      'axios',
+      '@stomp/stompjs',
+      'js-cookie',
+      'sockjs-client'
+    ],
+    exclude: ['html-docx-js'] // Exclude vì package này dùng 'with' statement không được phép trong strict mode
   },
   assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.eot', '**/*.ttf', '**/*.svg'],
   server: {

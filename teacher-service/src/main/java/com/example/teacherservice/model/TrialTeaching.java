@@ -1,10 +1,12 @@
 package com.example.teacherservice.model;
 
+import com.example.teacherservice.enums.TrialConclusion;
 import com.example.teacherservice.enums.TrialStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "trial_teachings", indexes = {
@@ -45,6 +47,13 @@ public class TrialTeaching extends BaseEntity {
     @Column(name = "teaching_time")
     private String teachingTime;
 
-    @OneToOne(mappedBy = "trial", fetch = FetchType.LAZY)
-    private TrialEvaluation evaluation;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "final_result")
+    private TrialConclusion finalResult;
+
+    @OneToMany(mappedBy = "trial", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<TrialAttendee> attendees;
+
+    @OneToMany(mappedBy = "trial", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<TrialEvaluation> evaluations;
 }

@@ -2,6 +2,8 @@ package com.example.teacherservice.model;
 import com.example.teacherservice.enums.TrialAttendeeRole;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 @Entity
 @Table(name = "trial_attendees", indexes = {
         @Index(name = "idx_trial_id", columnList = "trial_id")
@@ -24,7 +26,6 @@ public class TrialAttendee extends BaseEntity {
     @Column(name = "attendee_role")
     private TrialAttendeeRole attendeeRole;
 
-    // Optional: Nếu muốn từ Attendee lấy được danh sách các bài đánh giá họ đã làm (thường là 1)
-    // @OneToMany(mappedBy = "evaluator", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    // private List<TrialEvaluation> evaluations;
+    @OneToMany(mappedBy = "attendee", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<TrialEvaluation> evaluations;
 }

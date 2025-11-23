@@ -1,5 +1,6 @@
 package com.example.teacherservice.dto.trial;
 
+import com.example.teacherservice.enums.TrialConclusion;
 import com.example.teacherservice.enums.TrialStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,9 +24,9 @@ public class TrialTeachingDto {
     private LocalDate teachingDate;
     private String teachingTime;
     private TrialStatus status;
-    private Integer score;
+    private TrialConclusion finalResult;
     private String location;
     private String note;
     private List<TrialAttendeeDto> attendees;
-    private TrialEvaluationDto evaluation;
+    private List<TrialEvaluationDto> evaluations; // Danh sách tất cả đánh giá từ hội đồng
 }

@@ -5,12 +5,15 @@ import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import TrialEvaluationModal from '../../components/TrialEvaluationModal';
 import TrialAttendeeModal from '../../components/TrialAttendeeModal';
-import { getTrialById, updateTrialStatus } from '../../api/trial';
+import { useAuth } from '../../contexts/AuthContext';
+import { getTrialById, updateTrialStatus, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes, exportTrialStatistics, getAllTrials } from '../../api/trial';
 import { downloadTrialReport } from '../../api/file';
+import { exportTrialAssignment as exportTrialAssignmentTemplate, exportTrialMinutes as exportTrialMinutesTemplate, exportTrialEvaluationForm as exportTrialEvaluationFormTemplate, exportTrialStatistics as exportTrialStatisticsTemplate } from '../../utils/trialExportUtils';
 
 const TrialTeachingDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user, isManageLeader } = useAuth();
     const [trial, setTrial] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
     const [attendees, setAttendees] = useState([]);
@@ -29,7 +32,14 @@ const TrialTeachingDetail = () => {
             const trialData = await getTrialById(id);
             setTrial(trialData);
 
-            if (trialData.evaluation) setEvaluation(trialData.evaluation);
+            // Xử lý evaluation (số ít) hoặc evaluations (số nhiều)
+            if (trialData.evaluation) {
+                setEvaluation(trialData.evaluation);
+            } else if (trialData.evaluations && trialData.evaluations.length > 0) {
+                // Nếu có nhiều evaluations, lấy cái đầu tiên làm evaluation chính (nếu cần)
+                setEvaluation(trialData.evaluations[0]);
+            }
+            
             if (trialData.attendees) setAttendees(trialData.attendees);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu giảng thử', 'danger');
@@ -66,6 +76,54 @@ const TrialTeachingDetail = () => {
         }
     };
 
+    const handleExportDocument = async (exportType, attendeeId = null) => {
+        try {
+            setLoading(true);
+
+            switch (exportType) {
+                case 'assignment':
+                    // Sử dụng frontend template với docxtemplater
+                    await exportTrialAssignmentTemplate(trial);
+                    showToast('Thành công', 'Xuất file BM06.39 thành công', 'success');
+                    break;
+                case 'evaluation-form':
+                    if (!attendeeId) {
+                        showToast('Lỗi', 'Vui lòng chọn người đánh giá', 'warning');
+                        return;
+                    }
+                    // Tìm evaluation tương ứng với attendeeId
+                    const evaluation = trial.evaluations?.find(e => e.attendeeId === attendeeId);
+                    if (!evaluation) {
+                        showToast('Lỗi', 'Không tìm thấy đánh giá cho người này. Vui lòng đánh giá trước khi xuất file.', 'warning');
+                        return;
+                    }
+                    // Sử dụng frontend template (không fallback về backend để đảm bảo format đúng)
+                    await exportTrialEvaluationFormTemplate(trial, evaluation);
+                    showToast('Thành công', 'Xuất file BM06.40 thành công', 'success');
+                    break;
+                case 'minutes':
+                    // Sử dụng frontend template với docxtemplater
+                    await exportTrialMinutesTemplate(trial);
+                    showToast('Thành công', 'Xuất file BM06.41 thành công', 'success');
+                    break;
+                case 'statistics':
+                    // Sử dụng frontend template (không fallback về backend để đảm bảo format đúng)
+                    const allTrials = await getAllTrials();
+                    await exportTrialStatisticsTemplate(allTrials || []);
+                    showToast('Thành công', 'Xuất file BM06.42 thành công', 'success');
+                    break;
+                default:
+                    return;
+            }
+        } catch (error) {
+            console.error('Error exporting document:', error);
+            const errorMessage = error.message || 'Không thể xuất file';
+            showToast('Lỗi', errorMessage, 'danger');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const showToast = (title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -88,6 +146,16 @@ const TrialTeachingDetail = () => {
         };
         const conclusionInfo = conclusionMap[conclusion] || { label: conclusion, class: 'secondary' };
         return <span className={`badge badge-${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
+    };
+
+    // Kiểm tra xem user hiện tại có phải là Manage hoặc giáo viên được phân công đánh giá không
+    const canEvaluate = () => {
+        // Manage/Admin luôn có quyền đánh giá
+        if (isManageLeader) return true;
+        
+        // Kiểm tra xem user hiện tại có trong danh sách attendees không
+        if (!user?.userId || !attendees || attendees.length === 0) return false;
+        return attendees.some(attendee => attendee.attendeeUserId === user.userId);
     };
 
     if (loading && !trial) return <MainLayout><Loading /></MainLayout>;
@@ -189,12 +257,88 @@ const TrialTeachingDetail = () => {
 
                         {/* Action Buttons */}
                         <div className="d-flex gap-2 flex-wrap mb-4">
-                            <button className="btn btn-primary" onClick={() => setShowEvaluationModal(true)}>
-                                <i className="bi bi-star"></i> Đánh giá giảng thử
-                            </button>
-                            <button className="btn btn-info" onClick={() => setShowAttendeeModal(true)}>
-                                <i className="bi bi-people"></i> Quản lý người tham dự
-                            </button>
+                            {canEvaluate() && (
+                                <button className="btn btn-primary" onClick={() => setShowEvaluationModal(true)}>
+                                    <i className="bi bi-star"></i> Đánh giá giảng thử
+                                </button>
+                            )}
+                            {isManageLeader && (
+                                <button className="btn btn-info" onClick={() => setShowAttendeeModal(true)}>
+                                    <i className="bi bi-people"></i> Quản lý người tham dự
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Export Documents Section */}
+                        <div className="card mb-4">
+                            <div className="card-header">
+                                <h5 className="mb-0">
+                                    <i className="bi bi-file-earmark-arrow-down me-2"></i>
+                                    Xuất biểu mẫu đánh giá
+                                </h5>
+                            </div>
+                            <div className="card-body">
+                                <div className="row g-3">
+                                    <div className="col-md-6">
+                                        <button 
+                                            className="btn btn-outline-primary w-100" 
+                                            onClick={() => handleExportDocument('assignment')}
+                                            disabled={loading}
+                                        >
+                                            <i className="bi bi-file-earmark-word me-2"></i>
+                                            BM06.39 - Phân công đánh giá (Word)
+                                        </button>
+                                    </div>
+                                    <div className="col-md-6">
+                                        <button 
+                                            className="btn btn-outline-success w-100" 
+                                            onClick={() => handleExportDocument('minutes')}
+                                            disabled={loading}
+                                        >
+                                            <i className="bi bi-file-earmark-word me-2"></i>
+                                            BM06.41 - Biên bản đánh giá (Word)
+                                        </button>
+                                    </div>
+                                    {trial?.evaluations && trial.evaluations.length > 0 && (
+                                        <div className="col-md-6">
+                                            <div className="dropdown">
+                                                <button 
+                                                    className="btn btn-outline-info w-100 dropdown-toggle" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown"
+                                                    disabled={loading}
+                                                >
+                                                    <i className="bi bi-file-earmark-excel me-2"></i>
+                                                    BM06.40 - Phiếu đánh giá (Excel)
+                                                </button>
+                                                <ul className="dropdown-menu w-100">
+                                                    {trial.evaluations.map((evaluation) => (
+                                                        <li key={evaluation.id}>
+                                                            <button 
+                                                                className="dropdown-item" 
+                                                                onClick={() => handleExportDocument('evaluation-form', evaluation.attendeeId)}
+                                                            >
+                                                                {evaluation.attendeeName || 'Người đánh giá'} 
+                                                                {evaluation.attendeeRole && ` (${evaluation.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' : evaluation.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'})`}
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="col-md-6">
+                                        <button 
+                                            className="btn btn-outline-warning w-100" 
+                                            onClick={() => handleExportDocument('statistics')}
+                                            disabled={loading}
+                                        >
+                                            <i className="bi bi-file-earmark-excel me-2"></i>
+                                            BM06.42 - Thống kê đánh giá (Excel)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Attendees Section */}
@@ -232,6 +376,7 @@ const TrialTeachingDetail = () => {
                         trialId={id}
                         trial={trial}
                         evaluation={evaluation}
+                        attendees={attendees}
                         onClose={() => setShowEvaluationModal(false)}
                         onSuccess={() => { setShowEvaluationModal(false); loadTrialData(); }}
                         onToast={showToast}

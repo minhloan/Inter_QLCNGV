@@ -60,6 +60,14 @@ public class ReportService {
     private final TeacherReportGeneratorService teacherReportGeneratorService;
     private final ManagerReportGeneratorService managerReportGeneratorService;
 
+    // Helper method to get first evaluation from a trial
+    private TrialEvaluation getFirstEvaluation(TrialTeaching trial) {
+        if (trial.getEvaluations() == null || trial.getEvaluations().isEmpty()) {
+            return null;
+        }
+        return trial.getEvaluations().get(0);
+    }
+
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
         // Teacher stats
@@ -315,8 +323,10 @@ public class ReportService {
         List<TrialTeaching> trials = trialTeachingRepository.findByTeacherIdAndYear(teacherId, year);
         long totalTrials = trials.size();
         long passedTrials = trials.stream()
-                .filter(trial -> trial.getEvaluation() != null &&
-                        "PASS".equals(trial.getEvaluation().getConclusion().toString()))
+                .filter(trial -> {
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                })
                 .count();
 
         // Quarterly breakdown
@@ -438,10 +448,11 @@ public class ReportService {
                     trialInfo.put("location", trial.getLocation());
                     trialInfo.put("status", trial.getStatus().toString());
 
-                    if (trial.getEvaluation() != null) {
-                        trialInfo.put("score", trial.getEvaluation().getScore());
-                        trialInfo.put("conclusion", trial.getEvaluation().getConclusion().toString());
-                        trialInfo.put("comments", trial.getEvaluation().getComments());
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    if (eval != null) {
+                        trialInfo.put("score", eval.getScore());
+                        trialInfo.put("conclusion", eval.getConclusion().toString());
+                        trialInfo.put("comments", eval.getComments());
                     } else {
                         trialInfo.put("score", null);
                         trialInfo.put("conclusion", "PENDING");
@@ -454,8 +465,10 @@ public class ReportService {
 
         long totalTrials = trials.size();
         long passedTrials = trials.stream()
-                .filter(trial -> trial.getEvaluation() != null &&
-                        "PASS".equals(trial.getEvaluation().getConclusion().toString()))
+                .filter(trial -> {
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                })
                 .count();
 
         data.put("trials", trialData);
@@ -641,10 +654,11 @@ public class ReportService {
                     trialData.put("location", trial.getLocation());
                     trialData.put("status", trial.getStatus().toString());
 
-                    if (trial.getEvaluation() != null) {
-                        trialData.put("score", trial.getEvaluation().getScore());
-                        trialData.put("conclusion", trial.getEvaluation().getConclusion().toString());
-                        trialData.put("comments", trial.getEvaluation().getComments());
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    if (eval != null) {
+                        trialData.put("score", eval.getScore());
+                        trialData.put("conclusion", eval.getConclusion().toString());
+                        trialData.put("comments", eval.getComments());
                     } else {
                         trialData.put("score", null);
                         trialData.put("conclusion", "PENDING");
@@ -669,8 +683,10 @@ public class ReportService {
         List<TrialTeaching> trials = trialTeachingRepository.findByTeacherId(teacherId);
         long totalTrials = trials.size();
         long passedTrials = trials.stream()
-                .filter(trial -> trial.getEvaluation() != null &&
-                        "PASS".equals(trial.getEvaluation().getConclusion().toString()))
+                .filter(trial -> {
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                })
                 .count();
 
         // Get subject completion rate
@@ -798,7 +814,10 @@ public class ReportService {
                 .toList();
         long totalTrials = trials.size();
         long passedTrials = trials.stream()
-                .filter(t -> t.getEvaluation() != null && "PASS".equals(t.getEvaluation().getConclusion()))
+                .filter(t -> {
+                    TrialEvaluation eval = getFirstEvaluation(t);
+                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                })
                 .count();
         double passRate = totalTrials > 0 ? (double) passedTrials / totalTrials * 100 : 0;
 
@@ -829,7 +848,10 @@ public class ReportService {
                     .toList();
             totalTrials += trials.size();
             passedTrials += trials.stream()
-                    .filter(t -> t.getEvaluation() != null && "PASS".equals(t.getEvaluation().getConclusion()))
+                    .filter(t -> {
+                        TrialEvaluation eval = getFirstEvaluation(t);
+                        return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                    })
                     .count();
         }
 

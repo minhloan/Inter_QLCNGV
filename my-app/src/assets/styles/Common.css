@@ -1636,6 +1636,7 @@ body {
 
 /* Page-specific: Teacher Trial Teaching - reduce top spacing */
 .main-content:has(.page-teacher-trial),
+.main-content:has(.page-teacher-my-reviews),
 .main-content:has(.page-teacher-subject-registration),
 .main-content:has(.page-teacher-aptech-exam),
 .main-content:has(.page-teacher-evidence),
@@ -1648,6 +1649,7 @@ body {
 }
 
 .main-content:has(.page-teacher-trial) .content-header,
+.main-content:has(.page-teacher-my-reviews) .content-header,
 .main-content:has(.page-teacher-subject-registration) .content-header,
 .main-content:has(.page-teacher-aptech-exam) .content-header,
 .main-content:has(.page-teacher-evidence) .content-header,
@@ -1667,6 +1669,7 @@ body {
     .main-content:has(.page-admin-add-subject),
     .main-content:has(.page-admin-audit-log),
     .main-content:has(.page-teacher-trial),
+    .main-content:has(.page-teacher-my-reviews),
     .main-content:has(.page-teacher-subject-registration),
     .main-content:has(.page-teacher-aptech-exam),
     .main-content:has(.page-teacher-evidence),
@@ -1685,6 +1688,7 @@ body {
     .main-content:has(.page-admin-add-subject) .content-header,
     .main-content:has(.page-admin-audit-log) .content-header,
     .main-content:has(.page-teacher-trial) .content-header,
+    .main-content:has(.page-teacher-my-reviews) .content-header,
     .main-content:has(.page-teacher-subject-registration) .content-header,
     .main-content:has(.page-teacher-aptech-exam) .content-header,
     .main-content:has(.page-teacher-evidence) .content-header,

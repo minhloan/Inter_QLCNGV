@@ -16,6 +16,7 @@ export const getMenuItems = (role) => {
     { path: '/teacher-subject-registration', icon: 'bi-clipboard-check', label: 'Đăng ký Môn học' },
     { path: '/teacher-aptech-exam', icon: 'bi-file-earmark-text', label: 'Kỳ thi Aptech' },
     { path: '/teacher-trial-teaching', icon: 'bi-mortarboard', label: 'Giảng thử' },
+    { path: '/my-reviews', icon: 'bi-clipboard-check', label: 'Chấm giảng thử' },
     { path: '/teacher-evidence', icon: 'bi-file-check', label: 'Minh chứng' },
     { path: '/teacher-teaching-assignment', icon: 'bi-calendar-check', label: 'Phân công Giảng dạy' },
     { path: '/teacher-personal-reports', icon: 'bi-graph-up', label: 'Báo cáo Cá nhân' },

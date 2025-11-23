@@ -1,12 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addAttendee, removeAttendee } from '../api/trial';
+import { getAllUsers } from '../api/user';
 
 const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast }) => {
     const [newAttendee, setNewAttendee] = useState({
-        attendeeName: '',
+        attendeeUserId: '',
         attendeeRole: ''
     });
     const [loading, setLoading] = useState(false);
+    const [teachers, setTeachers] = useState([]);
+    const [loadingTeachers, setLoadingTeachers] = useState(false);
+
+    useEffect(() => {
+        loadTeachers();
+    }, []);
+
+    const loadTeachers = async () => {
+        try {
+            setLoadingTeachers(true);
+            const response = await getAllUsers(1, 1000); // Load tất cả giáo viên
+            const teachersList = (response.content || []).map(user => ({
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                phoneNumber: user.phoneNumber
+            }));
+            setTeachers(teachersList);
+        } catch (error) {
+            console.error('Error loading teachers:', error);
+            onToast('Lỗi', 'Không thể tải danh sách giáo viên', 'danger');
+        } finally {
+            setLoadingTeachers(false);
+        }
+    };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -16,27 +42,44 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
         }));
     };
 
+    // Lọc bỏ các giáo viên đã được thêm vào danh sách attendees
+    const getAvailableTeachers = () => {
+        const addedTeacherIds = attendees
+            .filter(attendee => attendee.attendeeUserId)
+            .map(attendee => attendee.attendeeUserId);
+        return teachers.filter(teacher => !addedTeacherIds.includes(teacher.id));
+    };
+
     const handleAddAttendee = async (e) => {
         e.preventDefault();
 
-        if (!newAttendee.attendeeName || !newAttendee.attendeeRole) {
-            onToast('Lỗi', 'Vui lòng điền đầy đủ thông tin', 'warning');
+        if (!newAttendee.attendeeUserId || !newAttendee.attendeeRole) {
+            onToast('Lỗi', 'Vui lòng chọn giáo viên và vai trò', 'warning');
             return;
         }
 
         try {
             setLoading(true);
+            // Tìm thông tin giáo viên được chọn
+            const selectedTeacher = teachers.find(t => t.id === newAttendee.attendeeUserId);
+            if (!selectedTeacher) {
+                onToast('Lỗi', 'Không tìm thấy thông tin giáo viên', 'danger');
+                return;
+            }
+
             const attendeeData = {
                 trialId,
-                attendeeName: newAttendee.attendeeName,
+                attendeeUserId: newAttendee.attendeeUserId,
+                attendeeName: selectedTeacher.username, // Lấy tên từ username
                 attendeeRole: newAttendee.attendeeRole
             };
 
             await addAttendee(attendeeData);
-            setNewAttendee({ attendeeName: '', attendeeRole: '' });
+            setNewAttendee({ attendeeUserId: '', attendeeRole: '' });
             onToast('Thành công', 'Thêm người tham dự thành công', 'success');
             onSuccess();
         } catch (error) {
+            console.error('Error adding attendee:', error);
             onToast('Lỗi', 'Không thể thêm người tham dự', 'danger');
         } finally {
             setLoading(false);
@@ -84,16 +127,33 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                         <form onSubmit={handleAddAttendee}>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label className="form-label">Tên người tham dự</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        name="attendeeName"
-                                        value={newAttendee.attendeeName}
-                                        onChange={handleInputChange}
-                                        placeholder="Nhập tên người tham dự"
-                                        required
-                                    />
+                                    <label className="form-label">Giáo viên</label>
+                                    {loadingTeachers ? (
+                                        <div className="form-control">
+                                            <span className="text-muted">Đang tải danh sách giáo viên...</span>
+                                        </div>
+                                    ) : (
+                                        <select
+                                            className="form-select"
+                                            name="attendeeUserId"
+                                            value={newAttendee.attendeeUserId}
+                                            onChange={handleInputChange}
+                                            required
+                                        >
+                                            <option value="">Chọn giáo viên</option>
+                                            {getAvailableTeachers().map(teacher => (
+                                                <option key={teacher.id} value={teacher.id}>
+                                                    {teacher.username}
+                                                    {teacher.email && ` (${teacher.email})`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                    {getAvailableTeachers().length === 0 && !loadingTeachers && (
+                                        <small className="form-text text-muted">
+                                            Tất cả giáo viên đã được thêm vào danh sách
+                                        </small>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Vai trò</label>
@@ -115,7 +175,7 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                                     <button
                                         type="submit"
                                         className="btn btn-primary"
-                                        disabled={loading}
+                                        disabled={loading || loadingTeachers || getAvailableTeachers().length === 0}
                                     >
                                         <i className="bi bi-plus"></i>
                                         Thêm

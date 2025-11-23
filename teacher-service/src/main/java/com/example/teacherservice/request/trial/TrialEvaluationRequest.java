@@ -9,7 +9,8 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class TrialEvaluationRequest {
-    private String trialId;
+    private String attendeeId; // ID của TrialAttendee (người chấm)
+    private String trialId; // ID của TrialTeaching (để validate)
     private Integer score;
     private String comments;
     private TrialConclusion conclusion;

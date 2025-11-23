@@ -3,6 +3,8 @@ package com.example.teacherservice.controller;
 import com.example.teacherservice.dto.trial.TrialAttendeeDto;
 import com.example.teacherservice.request.trial.TrialAttendeeRequest;
 import com.example.teacherservice.service.trial.TrialAttendeeService;
+import com.example.teacherservice.jwt.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import java.util.List;
 public class TrialAttendeeController {
 
     private final TrialAttendeeService trialAttendeeService;
+    private final JwtUtil jwtUtil;
 
     @PostMapping("/attendee")
     public ResponseEntity<TrialAttendeeDto> addAttendee(@RequestBody TrialAttendeeRequest request) {
@@ -38,5 +41,12 @@ public class TrialAttendeeController {
     public ResponseEntity<Void> removeAttendee(@PathVariable String attendeeId) {
         trialAttendeeService.removeAttendee(attendeeId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/attendee/my")
+    public ResponseEntity<List<TrialAttendeeDto>> getMyAttendees(HttpServletRequest request) {
+        String userId = jwtUtil.ExtractUserId(request);
+        List<TrialAttendeeDto> attendees = trialAttendeeService.getMyAttendees(userId);
+        return ResponseEntity.ok(attendees);
     }
 }

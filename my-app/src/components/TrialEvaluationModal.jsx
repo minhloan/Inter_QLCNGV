@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react';
 import { evaluateTrial, uploadTrialReport } from '../api/trial';
 
-const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, onToast }) => {
+const TrialEvaluationModal = ({ trialId, trial, evaluation, attendeeId, attendees = [], onClose, onSuccess, onToast }) => {
     const [formData, setFormData] = useState({
+        selectedAttendeeId: attendeeId || evaluation?.attendeeId || '',
         score: evaluation?.score || '',
         comments: evaluation?.comments || '',
         conclusion: evaluation?.conclusion || '',
         fileReport: null
     });
     const [loading, setLoading] = useState(false);
+
+    // Cập nhật selectedAttendeeId khi attendeeId thay đổi
+    useEffect(() => {
+        if (attendeeId) {
+            setFormData(prev => ({
+                ...prev,
+                selectedAttendeeId: attendeeId
+            }));
+        }
+    }, [attendeeId]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -28,6 +39,11 @@ const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.selectedAttendeeId) {
+            onToast('Lỗi', 'Vui lòng chọn giáo viên đánh giá', 'warning');
+            return;
+        }
 
         if (!formData.score || !formData.conclusion) {
             onToast('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
@@ -51,7 +67,8 @@ const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, 
 
             // Submit evaluation with file ID
             const evaluationData = {
-                trialId,
+                attendeeId: formData.selectedAttendeeId, // Required: ID of the attendee (evaluator)
+                trialId: trialId,
                 score: parseInt(formData.score),
                 comments: formData.comments,
                 conclusion: formData.conclusion,
@@ -101,6 +118,40 @@ const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, 
                     </div>
 
                     <form onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <label className="form-label">
+                                Giáo viên đánh giá <span className="required">*</span>
+                            </label>
+                            {attendees.length === 0 ? (
+                                <div className="alert alert-warning">
+                                    <i className="bi bi-exclamation-triangle"></i> Chưa có người tham dự nào. Vui lòng thêm người tham dự trước khi đánh giá.
+                                </div>
+                            ) : (
+                                <select
+                                    className="form-select"
+                                    name="selectedAttendeeId"
+                                    value={formData.selectedAttendeeId}
+                                    onChange={handleInputChange}
+                                    required
+                                    disabled={!!attendeeId}
+                                >
+                                    <option value="">Chọn giáo viên đánh giá</option>
+                                    {attendees.map(attendee => (
+                                        <option key={attendee.id} value={attendee.id}>
+                                            {attendee.attendeeName} 
+                                            {attendee.attendeeRole && ` - ${attendee.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' : 
+                                                attendee.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                            <small className="form-text text-muted">
+                                {attendeeId 
+                                    ? 'Bạn đang đánh giá với vai trò Chủ tọa' 
+                                    : 'Chọn giáo viên từ danh sách người tham dự để thực hiện đánh giá'}
+                            </small>
+                        </div>
+
                         <div className="form-group">
                             <label className="form-label">
                                 Điểm số <span className="required">*</span>
@@ -173,7 +224,7 @@ const TrialEvaluationModal = ({ trialId, trial, evaluation, onClose, onSuccess, 
                             <button
                                 type="submit"
                                 className="btn btn-primary"
-                                disabled={loading}
+                                disabled={loading || attendees.length === 0}
                             >
                                 {loading ? 'Đang lưu...' : 'Lưu đánh giá'}
                             </button>

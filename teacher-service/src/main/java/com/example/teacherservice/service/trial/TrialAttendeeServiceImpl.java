@@ -53,6 +53,14 @@ public class TrialAttendeeServiceImpl implements TrialAttendeeService {
     }
 
     @Override
+    public List<TrialAttendeeDto> getMyAttendees(String userId) {
+        return attendeeRepository.findByAttendeeUser_Id(userId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public void removeAttendee(String attendeeId) {
         TrialAttendee attendee = attendeeRepository.findById(attendeeId)
                 .orElseThrow(() -> new NotFoundException("Attendee not found"));
