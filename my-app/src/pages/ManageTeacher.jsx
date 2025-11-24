@@ -316,10 +316,10 @@ const ManageTeacher = () => {
             </button>
             <h1 className="page-title">Quản lý Giáo viên</h1>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="content-actions">
             <button 
               onClick={() => setShowExportImportModal(true)} 
-              className="btn btn-success"
+              className="btn btn-success btn-export-import"
               disabled={loading || !hasLoaded}
               style={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -328,11 +328,11 @@ const ManageTeacher = () => {
               }}
             >
               <i className="bi bi-file-earmark-spreadsheet"></i>
-              Xuất / Nhập Excel
+              <span className="btn-text">Xuất / Nhập Excel</span>
             </button>
             <Link to="/add-teacher" className="btn btn-primary">
               <i className="bi bi-plus-circle"></i>
-              Thêm Giáo viên
+              <span className="btn-text">Thêm Giáo viên</span>
             </Link>
           </div>
         </div>

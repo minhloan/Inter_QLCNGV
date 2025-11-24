@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
@@ -11,7 +11,8 @@ import { downloadTrialReport } from '../../api/file';
 const TeacherTrialTeachingDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const location = useLocation();
+    const { user, isManageLeader } = useAuth();
     const [trial, setTrial] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
     const [attendees, setAttendees] = useState([]);
@@ -29,7 +30,39 @@ const TeacherTrialTeachingDetail = () => {
             const trialData = await getTrialById(id);
             setTrial(trialData);
 
-            if (trialData.evaluation) setEvaluation(trialData.evaluation);
+            // Tính toán evaluation từ trial.evaluations và trial.finalResult
+            if (trialData.evaluations && trialData.evaluations.length > 0) {
+                // Tính điểm trung bình từ các đánh giá
+                const totalScore = trialData.evaluations.reduce((sum, evaluationItem) => sum + (evaluationItem.score || 0), 0);
+                const avgScore = Math.round(totalScore / trialData.evaluations.length);
+                
+                // Lấy comments từ tất cả evaluations (hoặc chỉ lấy từ evaluation đầu tiên)
+                const allComments = trialData.evaluations
+                    .map(evaluationItem => evaluationItem.comments)
+                    .filter(c => c && c.trim())
+                    .join('; ');
+                
+                // Tìm imageFileId từ evaluation đầu tiên có file
+                const firstEvaluationWithFile = trialData.evaluations.find(evaluationItem => evaluationItem.imageFileId);
+                
+                setEvaluation({
+                    score: avgScore,
+                    conclusion: trialData.finalResult,
+                    comments: allComments || null,
+                    imageFileId: firstEvaluationWithFile?.imageFileId || null
+                });
+            } else if (trialData.finalResult) {
+                // Nếu có finalResult nhưng chưa có evaluations chi tiết
+                setEvaluation({
+                    score: null,
+                    conclusion: trialData.finalResult,
+                    comments: null,
+                    imageFileId: null
+                });
+            } else {
+                setEvaluation(null);
+            }
+            
             if (trialData.attendees) setAttendees(trialData.attendees);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu giảng thử', 'danger');
@@ -119,13 +152,32 @@ const TeacherTrialTeachingDetail = () => {
             FAIL: { label: 'Không đạt yêu cầu', class: 'danger' }
         };
         const conclusionInfo = conclusionMap[conclusion] || { label: conclusion, class: 'secondary' };
-        return <span className={`badge badge-${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
+        return <span className={`badge badge-status ${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
+    };
+
+    // Kiểm tra xem user hiện tại có phải là teacher được đánh giá không
+    const isCurrentUserTheTeacher = () => {
+        if (!user?.userId || !trial?.teacherId) return false;
+        // So sánh cả string và number để đảm bảo chính xác
+        const userIdStr = String(user.userId);
+        const teacherIdStr = String(trial.teacherId);
+        return userIdStr === teacherIdStr;
     };
 
     // Kiểm tra xem user hiện tại có được phân công đánh giá không (không chỉ CHỦ TỌA)
     const isCurrentUserAssigned = () => {
         if (!user?.userId || !attendees || attendees.length === 0) return false;
         return attendees.some(attendee => attendee.attendeeUserId === user.userId);
+    };
+
+    // Kiểm tra xem user có quyền xem và export file không
+    // - Admin/Manager: luôn có quyền
+    // - Người đánh giá (có trong attendees): có quyền
+    // - Teacher được đánh giá: KHÔNG có quyền
+    const canExportDocuments = () => {
+        if (isManageLeader) return true; // Admin/Manager luôn có quyền
+        if (isCurrentUserTheTeacher()) return false; // Teacher được đánh giá không có quyền
+        return isCurrentUserAssigned(); // Người đánh giá có quyền
     };
 
     // Lấy attendeeId của user hiện tại (nếu được phân công)
@@ -146,7 +198,10 @@ const TeacherTrialTeachingDetail = () => {
                             <div className="card">
                                 <div className="card-body text-center">
                                     <h4>Không tìm thấy dữ liệu giảng thử</h4>
-                                    <button className="btn btn-primary mt-3" onClick={() => navigate('/teacher-trial-teaching')}>
+                                    <button className="btn btn-primary mt-3" onClick={() => {
+                                        const fromPage = location.state?.fromPage;
+                                        navigate(fromPage === 'my-reviews' ? '/my-reviews' : '/teacher-trial-teaching');
+                                    }}>
                                         Quay lại danh sách
                                     </button>
                                 </div>
@@ -158,12 +213,21 @@ const TeacherTrialTeachingDetail = () => {
         );
     }
 
+    // Xác định trang quay lại dựa trên location.state
+    const getBackPath = () => {
+        const fromPage = location.state?.fromPage;
+        if (fromPage === 'my-reviews') {
+            return '/my-reviews';
+        }
+        return '/teacher-trial-teaching';
+    };
+
     return (
         <MainLayout>
             <div className="page-admin-trial">
                 <div className="content-header">
                     <div className="content-title">
-                        <button className="back-button" onClick={() => navigate('/teacher-trial-teaching')}>
+                        <button className="back-button" onClick={() => navigate(getBackPath())}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
                         <h1 className="page-title">Chi tiết buổi giảng thử</h1>
@@ -201,14 +265,18 @@ const TeacherTrialTeachingDetail = () => {
                             </div>
                             <div className="col-md-6 detail-section">
                                 <h5>Kết quả đánh giá</h5>
-                                {evaluation ? (
+                                {evaluation || (trial?.finalResult) ? (
                                     <div className="table-responsive">
                                         <table className="table table-borderless detail-table mb-0">
                                             <tbody>
-                                            <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
-                                            <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
-                                            {evaluation.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
-                                            {evaluation.imageFileId && (
+                                            {evaluation?.score !== null && evaluation?.score !== undefined && (
+                                                <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
+                                            )}
+                                            {(evaluation?.conclusion || trial?.finalResult) && (
+                                                <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation?.conclusion || trial?.finalResult)}</td></tr>
+                                            )}
+                                            {evaluation?.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
+                                            {evaluation?.imageFileId && canExportDocuments() && (
                                                 <tr>
                                                     <td>Biên bản:</td>
                                                     <td>
@@ -249,7 +317,7 @@ const TeacherTrialTeachingDetail = () => {
                                             <tr key={a.id}>
                                                 <td>{a.attendeeName}</td>
                                                 <td>
-                                                        <span className="badge badge-secondary">
+                                                        <span className="badge badge-status secondary">
                                                             {a.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' :
                                                                 a.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}
                                                         </span>
@@ -262,67 +330,69 @@ const TeacherTrialTeachingDetail = () => {
                             </div>
                         )}
 
-                        {/* Export Documents Section */}
-                        <div className="card mb-4">
-                            <div className="card-header">
-                                <h5 className="mb-0">
-                                    <i className="bi bi-file-earmark-arrow-down me-2"></i>
-                                    Xuất biểu mẫu đánh giá
-                                </h5>
-                            </div>
-                            <div className="card-body">
-                                <div className="row g-3">
-                                    <div className="col-md-6">
-                                        <button 
-                                            className="btn btn-outline-primary w-100" 
-                                            onClick={() => handleExportDocument('assignment')}
-                                            disabled={loading}
-                                        >
-                                            <i className="bi bi-file-earmark-word me-2"></i>
-                                            BM06.39 - Phân công đánh giá (Word)
-                                        </button>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <button 
-                                            className="btn btn-outline-success w-100" 
-                                            onClick={() => handleExportDocument('minutes')}
-                                            disabled={loading}
-                                        >
-                                            <i className="bi bi-file-earmark-word me-2"></i>
-                                            BM06.41 - Biên bản đánh giá (Word)
-                                        </button>
-                                    </div>
-                                    {trial?.evaluations && trial.evaluations.length > 0 && (
+                        {/* Export Documents Section - Chỉ hiển thị nếu user có quyền */}
+                        {canExportDocuments() && (
+                            <div className="card mb-4">
+                                <div className="card-header">
+                                    <h5 className="mb-0">
+                                        <i className="bi bi-file-earmark-arrow-down me-2"></i>
+                                        Xuất biểu mẫu đánh giá
+                                    </h5>
+                                </div>
+                                <div className="card-body">
+                                    <div className="row g-3">
                                         <div className="col-md-6">
-                                            <div className="dropdown">
-                                                <button 
-                                                    className="btn btn-outline-info w-100 dropdown-toggle" 
-                                                    type="button" 
-                                                    data-bs-toggle="dropdown"
-                                                    disabled={loading}
-                                                >
-                                                    <i className="bi bi-file-earmark-excel me-2"></i>
-                                                    BM06.40 - Phiếu đánh giá (Excel)
-                                                </button>
-                                                <ul className="dropdown-menu w-100">
-                                                    {trial.evaluations.map((evaluation) => (
-                                                        <li key={evaluation.id}>
-                                                            <button 
-                                                                className="dropdown-item" 
-                                                                onClick={() => handleExportDocument('evaluation-form', evaluation.attendeeId)}
-                                                            >
-                                                                {evaluation.attendeeName || 'Người đánh giá'} 
-                                                                {evaluation.attendeeRole && ` (${evaluation.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' : evaluation.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'})`}
-                                                            </button>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
+                                            <button 
+                                                className="btn btn-outline-primary w-100" 
+                                                onClick={() => handleExportDocument('assignment')}
+                                                disabled={loading}
+                                            >
+                                                <i className="bi bi-file-earmark-word me-2"></i>
+                                                - Phân công đánh giá (Word)
+                                            </button>
                                         </div>
-                                    )}
+                                        <div className="col-md-6">
+                                            <button 
+                                                className="btn btn-outline-success w-100" 
+                                                onClick={() => handleExportDocument('minutes')}
+                                                disabled={loading}
+                                            >
+                                                <i className="bi bi-file-earmark-word me-2"></i>
+                                                - Biên bản đánh giá (Word)
+                                            </button>
+                                        </div>
+                                        {/* {trial?.evaluations && trial.evaluations.length > 0 && (
+                                            <div className="col-md-6">
+                                                <div className="dropdown">
+                                                    <button 
+                                                        className="btn btn-outline-info w-100 dropdown-toggle" 
+                                                        type="button" 
+                                                        data-bs-toggle="dropdown"
+                                                        disabled={loading}
+                                                    >
+                                                        <i className="bi bi-file-earmark-excel me-2"></i>
+                                                        BM06.40 - Phiếu đánh giá (Excel)
+                                                    </button>
+                                                    <ul className="dropdown-menu w-100">
+                                                        {trial.evaluations.map((evaluation) => (
+                                                            <li key={evaluation.id}>
+                                                                <button 
+                                                                    className="dropdown-item" 
+                                                                    onClick={() => handleExportDocument('evaluation-form', evaluation.attendeeId)}
+                                                                >
+                                                                    {evaluation.attendeeName || 'Người đánh giá'} 
+                                                                    {evaluation.attendeeRole && ` (${evaluation.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' : evaluation.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'})`}
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        )} */}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 

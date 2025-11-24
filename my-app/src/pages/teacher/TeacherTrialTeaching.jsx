@@ -51,12 +51,15 @@ const TeacherTrialTeaching = () => {
     const downloadReport = async (trialId) => {
         try {
             const trial = trials.find(t => t.id === trialId);
-            if (!trial || !trial.evaluation?.fileReportId) {
+            // Tìm imageFileId từ evaluations
+            const evaluationWithFile = trial?.evaluations?.find(evaluation => evaluation.imageFileId);
+            if (!trial || !evaluationWithFile?.imageFileId) {
                 showToast('Lỗi', 'Biên bản chưa có sẵn', 'warning');
                 return;
             }
 
-            const blob = await downloadTrialReport(trial.evaluation.fileReportId);
+            const response = await downloadTrialReport(evaluationWithFile.imageFileId);
+            const blob = response.data;
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -94,6 +97,27 @@ const TeacherTrialTeaching = () => {
         };
         const conclusionInfo = conclusionMap[conclusion] || { label: conclusion, class: 'secondary' };
         return <span className={`badge badge-status ${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
+    };
+
+    const getAverageScore = (trial) => {
+        if (trial.evaluations && trial.evaluations.length > 0) {
+            const totalScore = trial.evaluations.reduce((sum, evaluation) => sum + (evaluation.score || 0), 0);
+            const avgScore = Math.round(totalScore / trial.evaluations.length);
+            return avgScore;
+        }
+        return null;
+    };
+
+    const renderScore = (trial) => {
+        const avgScore = getAverageScore(trial);
+        if (avgScore !== null) {
+            return (
+                <span className={avgScore >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                    {avgScore}
+                </span>
+            );
+        }
+        return '-';
     };
 
     const totalPages = Math.ceil(filteredTrials.length / pageSize);
@@ -175,19 +199,13 @@ const TeacherTrialTeaching = () => {
                                             <td>{trial.teachingDate || 'N/A'}</td>
                                             <td>{trial.location || 'N/A'}</td>
                                             <td>
-                                                {trial.evaluation?.score !== null && trial.evaluation?.score !== undefined ? (
-                                                    <span className={trial.evaluation.score >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
-                          {trial.evaluation.score}
-                        </span>
-                                                ) : (
-                                                    '-'
-                                                )}
+                                                {renderScore(trial)}
                                             </td>
                                             <td>{getStatusBadge(trial.status)}</td>
-                                            <td>{getConclusionBadge(trial.evaluation?.conclusion)}</td>
+                                            <td>{getConclusionBadge(trial.finalResult)}</td>
                                             <td className="text-center">
                                                 <div className="action-buttons">
-                                                    {trial.status === 'REVIEWED' && trial.evaluation?.fileReportId && (
+                                                    {trial.status === 'REVIEWED' && trial.evaluations?.some(evaluation => evaluation.imageFileId) && (
                                                         <button
                                                             className="btn btn-sm btn-info btn-action"
                                                             onClick={() => downloadReport(trial.id)}

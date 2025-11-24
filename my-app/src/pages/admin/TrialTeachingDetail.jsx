@@ -6,9 +6,8 @@ import Loading from '../../components/Common/Loading';
 import TrialEvaluationModal from '../../components/TrialEvaluationModal';
 import TrialAttendeeModal from '../../components/TrialAttendeeModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { getTrialById, updateTrialStatus, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes, exportTrialStatistics, getAllTrials } from '../../api/trial';
+import { getTrialById, updateTrialStatus, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes, exportTrialStatistics } from '../../api/trial';
 import { downloadTrialReport } from '../../api/file';
-import { exportTrialAssignment as exportTrialAssignmentTemplate, exportTrialMinutes as exportTrialMinutesTemplate, exportTrialEvaluationForm as exportTrialEvaluationFormTemplate, exportTrialStatistics as exportTrialStatisticsTemplate } from '../../utils/trialExportUtils';
 
 const TrialTeachingDetail = () => {
     const { id } = useParams();
@@ -79,42 +78,44 @@ const TrialTeachingDetail = () => {
     const handleExportDocument = async (exportType, attendeeId = null) => {
         try {
             setLoading(true);
+            let blob;
+            let filename;
 
             switch (exportType) {
                 case 'assignment':
-                    // Sử dụng frontend template với docxtemplater
-                    await exportTrialAssignmentTemplate(trial);
-                    showToast('Thành công', 'Xuất file BM06.39 thành công', 'success');
+                    blob = await exportTrialAssignment(id);
+                    filename = `BM06.39-Phan_cong_danh_gia_GV_giang_thu_${id}.docx`;
                     break;
                 case 'evaluation-form':
                     if (!attendeeId) {
                         showToast('Lỗi', 'Vui lòng chọn người đánh giá', 'warning');
                         return;
                     }
-                    // Tìm evaluation tương ứng với attendeeId
-                    const evaluation = trial.evaluations?.find(e => e.attendeeId === attendeeId);
-                    if (!evaluation) {
-                        showToast('Lỗi', 'Không tìm thấy đánh giá cho người này. Vui lòng đánh giá trước khi xuất file.', 'warning');
-                        return;
-                    }
-                    // Sử dụng frontend template (không fallback về backend để đảm bảo format đúng)
-                    await exportTrialEvaluationFormTemplate(trial, evaluation);
-                    showToast('Thành công', 'Xuất file BM06.40 thành công', 'success');
+                    blob = await exportTrialEvaluationForm(id, attendeeId);
+                    filename = `BM06.40-Phieu_danh_gia_giang_thu_${id}_${attendeeId}.xlsx`;
                     break;
                 case 'minutes':
-                    // Sử dụng frontend template với docxtemplater
-                    await exportTrialMinutesTemplate(trial);
-                    showToast('Thành công', 'Xuất file BM06.41 thành công', 'success');
+                    blob = await exportTrialMinutes(id);
+                    filename = `BM06.41-BB_danh_gia_giang_thu_${id}.docx`;
                     break;
                 case 'statistics':
-                    // Sử dụng frontend template (không fallback về backend để đảm bảo format đúng)
-                    const allTrials = await getAllTrials();
-                    await exportTrialStatisticsTemplate(allTrials || []);
-                    showToast('Thành công', 'Xuất file BM06.42 thành công', 'success');
+                    blob = await exportTrialStatistics();
+                    filename = `BM06.42-Thong_ke_danh_gia_giang_thu.xlsx`;
                     break;
                 default:
                     return;
             }
+
+            const url = window.URL.createObjectURL(blob.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showToast('Thành công', 'Xuất file thành công', 'success');
         } catch (error) {
             console.error('Error exporting document:', error);
             const errorMessage = error.message || 'Không thể xuất file';
@@ -256,14 +257,14 @@ const TrialTeachingDetail = () => {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="d-flex gap-2 flex-wrap mb-4">
+                        <div className="trial-action-buttons">
                             {canEvaluate() && (
-                                <button className="btn btn-primary" onClick={() => setShowEvaluationModal(true)}>
-                                    <i className="bi bi-star"></i> Đánh giá giảng thử
+                                <button className="btn btn-trial-evaluate" onClick={() => setShowEvaluationModal(true)}>
+                                    <i className="bi bi-star"></i> ĐÁNH GIÁ GIẢNG THỬ
                                 </button>
                             )}
                             {isManageLeader && (
-                                <button className="btn btn-info" onClick={() => setShowAttendeeModal(true)}>
+                                <button className="btn btn-trial-attendee" onClick={() => setShowAttendeeModal(true)}>
                                     <i className="bi bi-people"></i> Quản lý người tham dự
                                 </button>
                             )}
@@ -286,7 +287,7 @@ const TrialTeachingDetail = () => {
                                             disabled={loading}
                                         >
                                             <i className="bi bi-file-earmark-word me-2"></i>
-                                            BM06.39 - Phân công đánh giá (Word)
+                                            - Phân công đánh giá (Word)
                                         </button>
                                     </div>
                                     <div className="col-md-6">
@@ -296,10 +297,10 @@ const TrialTeachingDetail = () => {
                                             disabled={loading}
                                         >
                                             <i className="bi bi-file-earmark-word me-2"></i>
-                                            BM06.41 - Biên bản đánh giá (Word)
+                                            - Biên bản đánh giá (Word)
                                         </button>
                                     </div>
-                                    {trial?.evaluations && trial.evaluations.length > 0 && (
+                                    {/* {trial?.evaluations && trial.evaluations.length > 0 && (
                                         <div className="col-md-6">
                                             <div className="dropdown">
                                                 <button 
@@ -309,7 +310,7 @@ const TrialTeachingDetail = () => {
                                                     disabled={loading}
                                                 >
                                                     <i className="bi bi-file-earmark-excel me-2"></i>
-                                                    BM06.40 - Phiếu đánh giá (Excel)
+                                                    - Phiếu đánh giá (Excel)
                                                 </button>
                                                 <ul className="dropdown-menu w-100">
                                                     {trial.evaluations.map((evaluation) => (
@@ -326,8 +327,8 @@ const TrialTeachingDetail = () => {
                                                 </ul>
                                             </div>
                                         </div>
-                                    )}
-                                    <div className="col-md-6">
+                                    )} */}
+                                    {/* <div className="col-md-6">
                                         <button 
                                             className="btn btn-outline-warning w-100" 
                                             onClick={() => handleExportDocument('statistics')}
@@ -336,7 +337,7 @@ const TrialTeachingDetail = () => {
                                             <i className="bi bi-file-earmark-excel me-2"></i>
                                             BM06.42 - Thống kê đánh giá (Excel)
                                         </button>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         </div>
@@ -355,7 +356,7 @@ const TrialTeachingDetail = () => {
                                             <tr key={a.id}>
                                                 <td>{a.attendeeName}</td>
                                                 <td>
-                                                        <span className="badge badge-secondary">
+                                                        <span className="badge badge-status secondary">
                                                             {a.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' :
                                                                 a.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}
                                                         </span>

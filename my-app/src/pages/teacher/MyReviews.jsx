@@ -228,7 +228,9 @@ const MyReviews = () => {
                                                         <div className="d-flex gap-2">
                                                             <button
                                                                 className="btn btn-sm btn-outline-primary"
-                                                                onClick={() => navigate(`/teacher-trial-teaching-detail/${trial.id}`)}
+                                                                onClick={() => navigate(`/teacher-trial-teaching-detail/${trial.id}`, {
+                                                                    state: { fromPage: 'my-reviews' }
+                                                                })}
                                                                 title="Xem chi tiết"
                                                             >
                                                                 <i className="bi bi-eye"></i>

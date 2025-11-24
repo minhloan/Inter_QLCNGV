@@ -1993,6 +1993,72 @@ body {
     margin: 0;
 }
 
+/* Trial Teaching Detail - Large Action Buttons */
+.trial-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.trial-action-buttons .btn {
+    width: 100%;
+    padding: 18px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    justify-content: center;
+    text-transform: none;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.trial-action-buttons .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.trial-action-buttons .btn:active {
+    transform: translateY(0);
+}
+
+.btn-trial-evaluate {
+    background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+    color: white;
+    border: none;
+}
+
+.btn-trial-evaluate:hover,
+.btn-trial-evaluate:focus {
+    background: linear-gradient(135deg, #ff7a2e 0%, #ff5722 100%);
+    color: white;
+}
+
+.btn-trial-attendee {
+    background: #17a2b8;
+    color: white;
+    border: none;
+}
+
+.btn-trial-attendee:hover,
+.btn-trial-attendee:focus {
+    background: #138496;
+    color: white;
+}
+
+@media (min-width: 768px) {
+    .trial-action-buttons {
+        flex-direction: row;
+        gap: 16px;
+    }
+
+    .trial-action-buttons .btn {
+        flex: 1;
+        width: auto;
+        min-width: 200px;
+    }
+}
 
 /* Table Styles */
 .table-container {
@@ -2521,12 +2587,40 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 15px;
+    min-height: 60px;
+    flex-shrink: 0;
 }
 
 .modal-title {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.5;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.2s ease;
+}
+
+.modal-close:hover {
+    opacity: 1;
 }
 
 .modal-body {
@@ -2759,7 +2853,7 @@ body {
 
     .content-header {
         flex-direction: row;
-        align-items: center;
+        align-items: flex-start;
         gap: 15px;
         padding: 0;
         margin-top: 0;
@@ -2777,10 +2871,48 @@ body {
         flex-wrap: wrap;
     }
 
+    .content-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+        flex-shrink: 0;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 0;
+    }
+
+    .content-actions .btn {
+        white-space: nowrap;
+        padding: 10px 16px;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
     .btn-primary {
         flex-shrink: 0;
-        padding: 10px 20px;
+        padding: 10px 16px;
         font-size: 13px;
+    }
+
+    .btn-export-import {
+        flex-shrink: 0;
+    }
+
+    /* Khi màn hình quá nhỏ, stack các nút */
+    @media (max-width: 640px) {
+        .content-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .content-actions {
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .content-actions .btn {
+            flex: 1;
+            min-width: 0;
+        }
     }
 
     .back-button {
@@ -2850,6 +2982,48 @@ body {
     .action-buttons .btn {
         width: 100%;
     }
+
+    /* Modal responsive fixes */
+    .modal-header {
+        padding: 15px;
+        gap: 10px;
+        min-height: 56px;
+    }
+
+    .modal-title {
+        font-size: 16px;
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.4;
+    }
+
+    .modal-close {
+        width: 28px;
+        height: 28px;
+        font-size: 20px;
+    }
+
+    .modal-body {
+        padding: 15px;
+    }
+
+    .modal-footer {
+        padding: 15px;
+    }
+
+    /* Attendee modal table fixes */
+    .attendee-modal .table thead th,
+    .attendee-modal .table tbody td {
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+
+    .attendee-modal .table thead th:last-child,
+    .attendee-modal .table tbody td:last-child {
+        width: 30% !important;
+        min-width: 60px;
+    }
 }
 
 /* Extra small devices */
@@ -2883,11 +3057,43 @@ body {
         word-wrap: normal;
     }
 
+    .content-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .content-title {
+        width: 100%;
+    }
+
+    .content-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .content-actions .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px;
+        font-size: 14px;
+        min-width: auto;
+    }
+
     .btn-primary {
         width: 100%;
         justify-content: center;
         padding: 12px 20px;
         font-size: 14px;
+    }
+
+    .btn-export-import {
+        width: 100%;
+    }
+
+    .btn-text {
+        display: inline;
     }
 
     .back-button {
@@ -2899,6 +3105,48 @@ body {
 
     .back-button i {
         font-size: 14px;
+    }
+
+    /* Modal extra small fixes */
+    .modal-header {
+        padding: 12px;
+        gap: 8px;
+        min-height: 52px;
+    }
+
+    .modal-title {
+        font-size: 14px;
+    }
+
+    .modal-close {
+        width: 24px;
+        height: 24px;
+        font-size: 18px;
+    }
+
+    .modal-body {
+        padding: 12px;
+    }
+
+    .modal-footer {
+        padding: 12px;
+    }
+
+    /* Attendee modal table extra small */
+    .attendee-modal .table {
+        font-size: 11px;
+    }
+
+    .attendee-modal .table thead th,
+    .attendee-modal .table tbody td {
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
+    .attendee-modal .table thead th:last-child,
+    .attendee-modal .table tbody td:last-child {
+        width: 35% !important;
+        min-width: 50px;
     }
 }
 
