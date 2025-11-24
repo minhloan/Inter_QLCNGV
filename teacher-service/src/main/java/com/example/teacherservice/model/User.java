@@ -30,6 +30,9 @@ public class User extends BaseEntity {
     @Column(name = "teacher_code", length = 20, unique = true)
     private String teacherCode;
 
+    @Column(name = "academic_rank", length = 255)
+    private String academicRank; // Học hàm/Học vị (chức vụ)
+
     @Enumerated(EnumType.STRING)
     private Active active = Active.ACTIVE;
 

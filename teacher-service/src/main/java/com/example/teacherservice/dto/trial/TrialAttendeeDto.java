@@ -12,4 +12,5 @@ public class TrialAttendeeDto {
     private String attendeeUserId;
     private String attendeeName;
     private TrialAttendeeRole attendeeRole;
+    private String position; // Chức vụ của người đánh giá
 }

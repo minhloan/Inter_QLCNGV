@@ -46,7 +46,8 @@ public class TrialAttendeeServiceImpl implements TrialAttendeeService {
 
     @Override
     public List<TrialAttendeeDto> getAttendeesByTrial(String trialId) {
-        return attendeeRepository.findByTrial_Id(trialId)
+        // Sử dụng query với join fetch để load attendeeUser và tránh N+1 queries
+        return attendeeRepository.findByTrial_IdWithUser(trialId)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -68,12 +69,19 @@ public class TrialAttendeeServiceImpl implements TrialAttendeeService {
     }
 
     private TrialAttendeeDto toDto(TrialAttendee attendee) {
+        // Lấy chức vụ từ User nếu có
+        String position = null;
+        if (attendee.getAttendeeUser() != null) {
+            position = attendee.getAttendeeUser().getAcademicRank();
+        }
+        
         return TrialAttendeeDto.builder()
                 .id(attendee.getId())
                 .trialId(attendee.getTrial().getId())
                 .attendeeName(attendee.getAttendeeName())
                 .attendeeRole(attendee.getAttendeeRole())
                 .attendeeUserId(attendee.getAttendeeUser() != null ? attendee.getAttendeeUser().getId() : null)
+                .position(position)
                 .build();
     }
 }
