@@ -29,17 +29,14 @@ public class TrialEvaluationExportService {
 
     /**
      * BM06.39 - Phân công đánh giá giáo viên giảng thử (Word)
-     * Load từ Template: templates/BM06.39-template.docx
      */
     public byte[] generateAssignmentDocument(TrialTeachingDto trial) throws IOException {
-        // 1. Load file mẫu
         ClassPathResource resource = new ClassPathResource("templates/BM06.39-template.docx");
 
         try (InputStream is = resource.getInputStream();
              XWPFDocument document = new XWPFDocument(is);
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
-            // 2. Chuẩn bị dữ liệu thay thế các biến đơn (${date}, ${time}...)
             Map<String, String> data = new HashMap<>();
             data.put("${date}", trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "................");
             data.put("${time}", trial.getTeachingTime() != null ? trial.getTeachingTime() : "................");
@@ -48,25 +45,20 @@ public class TrialEvaluationExportService {
             data.put("${subjectName}", trial.getSubjectName() != null ? trial.getSubjectName() : "");
             data.put("${teachingTime}", trial.getTeachingTime() != null ? trial.getTeachingTime() : "");
 
-            // 3. Thay thế text trong các đoạn văn (Paragraphs)
             replaceTextInParagraphs(document.getParagraphs(), data);
 
-            // 4. Xử lý các bảng (Tables)
             List<XWPFTable> tables = document.getTables();
 
-            // Tìm bảng "Thành phần tham dự" (có header chứa chữ HỌ TÊN)
             XWPFTable attendeeTable = findTableByHeader(tables, "HỌ TÊN");
             if (attendeeTable != null) {
                 fillAttendeeTable(attendeeTable, trial.getAttendees());
             }
 
-            // Tìm bảng "Giáo viên giảng dạy" (có header chứa chữ MÔN DẠY)
             XWPFTable teacherTable = findTableByHeader(tables, "MÔN DẠY");
             if (teacherTable != null) {
                 fillTeacherTable(teacherTable, trial);
             }
 
-            // Thay thế text còn sót lại trong các ô bảng (ví dụ ngày tháng ở footer)
             replaceTextInTables(tables, data);
 
             document.write(outputStream);
@@ -76,7 +68,6 @@ public class TrialEvaluationExportService {
 
     /**
      * BM06.41 - Biên bản đánh giá giảng thử (Word)
-     * Load từ Template: templates/BM06.41-template.doc
      */
     public byte[] generateMinutesDocument(TrialTeachingDto trial) throws IOException {
         ClassPathResource resource = new ClassPathResource("templates/BM06.41-template.docx");
@@ -96,21 +87,18 @@ public class TrialEvaluationExportService {
             if (trial.getFinalResult() != null) {
                 result = trial.getFinalResult() == TrialConclusion.PASS ? "ĐẠT" : "KHÔNG ĐẠT";
             }
-            data.put("${conclusion}", result); // Cần đảm bảo template có placeholder ${conclusion} hoặc code tự điền
+            data.put("${conclusion}", result);
 
-            // Thay thế text cơ bản
+            // Thay thế text ở đoạn văn thường (bao gồm cả phần III. Nội dung)
             replaceTextInParagraphs(document.getParagraphs(), data);
 
-            // Xử lý bảng thành phần tham dự
             XWPFTable attendeeTable = findTableByHeader(document.getTables(), "HỌ TÊN");
             if (attendeeTable != null) {
                 fillAttendeeTable(attendeeTable, trial.getAttendees());
             }
 
-            // Xử lý phần Góp ý (Tìm và điền comments)
             fillCommentsSection(document, trial.getEvaluations());
 
-            // Thay thế text trong bảng (footer ngày tháng...)
             replaceTextInTables(document.getTables(), data);
 
             document.write(outputStream);
@@ -119,20 +107,18 @@ public class TrialEvaluationExportService {
     }
 
     /**
-     * - Phiếu đánh giá giảng thử (Excel) - Giữ nguyên logic cũ vì Excel tạo mới dễ hơn
+     * - Phiếu đánh giá giảng thử (Excel)
      */
     public byte[] generateEvaluationForm(TrialTeachingDto trial, TrialEvaluationDto evaluation) throws IOException {
         Workbook workbook = WorkbookFactory.create(true);
         Sheet sheet = workbook.createSheet("Phiếu đánh giá");
 
-        // Styles
         CellStyle titleStyle = createTitleStyle(workbook);
         CellStyle normalStyle = createNormalStyle(workbook);
         CellStyle boldStyle = createBoldStyle(workbook);
 
         int rowNum = 0;
 
-        // Title
         Row titleRow = sheet.createRow(rowNum++);
         Cell titleCell = titleRow.createCell(0);
         titleCell.setCellValue("PHIẾU ĐÁNH GIÁ GIẢNG THỬ");
@@ -142,7 +128,6 @@ public class TrialEvaluationExportService {
 
         rowNum++;
 
-        // Trial information
         rowNum = addExcelInfoRow(sheet, rowNum, "Giảng viên:", trial.getTeacherName() + (trial.getTeacherCode() != null ? " (" + trial.getTeacherCode() + ")" : ""), normalStyle, boldStyle);
         rowNum = addExcelInfoRow(sheet, rowNum, "Môn học:", trial.getSubjectName(), normalStyle, boldStyle);
         rowNum = addExcelInfoRow(sheet, rowNum, "Ngày giảng:", trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "", normalStyle, boldStyle);
@@ -151,7 +136,6 @@ public class TrialEvaluationExportService {
 
         rowNum++;
 
-        // Evaluation information
         if (evaluation != null) {
             rowNum = addExcelInfoRow(sheet, rowNum, "Người đánh giá:", evaluation.getAttendeeName() != null ? evaluation.getAttendeeName() : "", normalStyle, boldStyle);
             rowNum = addExcelInfoRow(sheet, rowNum, "Vai trò:", getRoleName(evaluation.getAttendeeRole() != null ?
@@ -271,9 +255,58 @@ public class TrialEvaluationExportService {
     // CÁC HÀM HỖ TRỢ XỬ LÝ WORD (HELPER METHODS)
     // =================================================================================
 
+    /**
+     * FIX: Thay vì replace từng Run, hàm này lấy toàn bộ Text của Paragraph, replace xong ghi lại từ đầu.
+     * Cách này xử lý được trường hợp Word tự tách biến ${variable} thành nhiều run lẻ (${ + variable + }).
+     */
     private void replaceTextInParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> data) {
         for (XWPFParagraph p : paragraphs) {
-            replaceTextInRuns(p.getRuns(), data);
+            String fullText = p.getText(); // Lấy toàn bộ text gộp
+
+            // Kiểm tra nhanh xem có placeholder nào trong dòng này không
+            boolean hasMatch = false;
+            for (String key : data.keySet()) {
+                if (fullText.contains(key)) {
+                    hasMatch = true;
+                    break;
+                }
+            }
+
+            if (hasMatch) {
+                // 1. Lưu lại style của run đầu tiên để áp dụng lại sau khi replace
+                String fontFamily = "Times New Roman";
+                int fontSize = 12;
+                boolean isBold = false;
+                boolean isItalic = false;
+
+                if (!p.getRuns().isEmpty()) {
+                    XWPFRun firstRun = p.getRuns().get(0);
+                    if (firstRun.getFontFamily() != null) fontFamily = firstRun.getFontFamily();
+                    if (firstRun.getFontSize() != -1) fontSize = firstRun.getFontSize();
+                    isBold = firstRun.isBold();
+                    isItalic = firstRun.isItalic();
+                }
+
+                // 2. Thực hiện replace trên chuỗi full
+                for (Map.Entry<String, String> entry : data.entrySet()) {
+                    if (fullText.contains(entry.getKey())) {
+                        fullText = fullText.replace(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                // 3. Xóa toàn bộ run cũ (để tránh text cũ còn sót lại)
+                while (p.getRuns().size() > 0) {
+                    p.removeRun(0);
+                }
+
+                // 4. Tạo run mới với text đã replace và style cũ
+                XWPFRun newRun = p.createRun();
+                newRun.setText(fullText);
+                newRun.setFontFamily(fontFamily);
+                newRun.setFontSize(fontSize);
+                newRun.setBold(isBold);
+                newRun.setItalic(isItalic);
+            }
         }
     }
 
@@ -282,21 +315,6 @@ public class TrialEvaluationExportService {
             for (XWPFTableRow row : table.getRows()) {
                 for (XWPFTableCell cell : row.getTableCells()) {
                     replaceTextInParagraphs(cell.getParagraphs(), data);
-                }
-            }
-        }
-    }
-
-    private void replaceTextInRuns(List<XWPFRun> runs, Map<String, String> data) {
-        if (runs == null || runs.isEmpty()) return;
-        for (XWPFRun run : runs) {
-            String text = run.getText(0);
-            if (text != null && !text.isEmpty()) {
-                for (Map.Entry<String, String> entry : data.entrySet()) {
-                    if (text.contains(entry.getKey())) {
-                        text = text.replace(entry.getKey(), entry.getValue());
-                        run.setText(text, 0);
-                    }
                 }
             }
         }
@@ -319,42 +337,27 @@ public class TrialEvaluationExportService {
     private void fillAttendeeTable(XWPFTable table, List<TrialAttendeeDto> attendees) {
         if (attendees == null || attendees.isEmpty()) return;
 
-        // Sắp xếp: Chủ tọa -> Thư ký -> Thành viên
         attendees.sort(Comparator.comparing((TrialAttendeeDto a) -> {
             if (a.getAttendeeRole() == TrialAttendeeRole.CHU_TOA) return 1;
             if (a.getAttendeeRole() == TrialAttendeeRole.THU_KY) return 2;
             return 3;
         }));
 
-        // Giả sử dòng template là dòng thứ 2 (index 1)
         int startRowIndex = 1;
-
-        // Nếu bảng chỉ có 1 dòng header, ta phải tạo dòng mới từ đầu
-        if (table.getRows().size() < 2) {
+        while (table.getRows().size() < startRowIndex + attendees.size()) {
             table.createRow();
         }
 
         for (int i = 0; i < attendees.size(); i++) {
             TrialAttendeeDto att = attendees.get(i);
-            XWPFTableRow row;
+            XWPFTableRow row = table.getRow(i + startRowIndex);
 
-            // Nếu dòng đã tồn tại (dòng mẫu hoặc dòng cũ), dùng nó. Nếu không, tạo mới.
-            if (i + startRowIndex < table.getRows().size()) {
-                row = table.getRow(i + startRowIndex);
-            } else {
-                row = table.createRow();
-            }
-
-            // Điền dữ liệu
-            setCellTextPreserveStyle(row.getCell(0), String.valueOf(i + 1));
-            setCellTextPreserveStyle(row.getCell(1), att.getAttendeeName() != null ? att.getAttendeeName() : "");
-            // CHỨC VỤ: Lấy từ attendeeRole (Chủ tọa, Thư ký, Thành viên)
-            setCellTextPreserveStyle(row.getCell(2), getRoleName(att.getAttendeeRole()));
-            // CÔNG VIỆC: Giữ nguyên "Đánh giá giảng thử" + attendeeRole
-            setCellTextPreserveStyle(row.getCell(3), getWorkTask(att.getAttendeeRole()));
+            styleTableCell(row.getCell(0), String.valueOf(i + 1));
+            styleTableCell(row.getCell(1), att.getAttendeeName());
+            styleTableCell(row.getCell(2), getRoleName(att.getAttendeeRole()));
+            styleTableCell(row.getCell(3), getWorkTask(att.getAttendeeRole()));
         }
 
-        // Xóa các dòng thừa (nếu template có nhiều dòng trống sẵn)
         int totalDataRows = attendees.size() + startRowIndex;
         while (table.getRows().size() > totalDataRows) {
             table.removeRow(table.getRows().size() - 1);
@@ -362,41 +365,43 @@ public class TrialEvaluationExportService {
     }
 
     private void fillTeacherTable(XWPFTable table, TrialTeachingDto trial) {
-        // Đảm bảo có dòng dữ liệu (index 1)
         if (table.getRows().size() < 2) table.createRow();
         XWPFTableRow row = table.getRow(1);
 
-        setCellTextPreserveStyle(row.getCell(0), "1");
-        setCellTextPreserveStyle(row.getCell(1), trial.getTeacherName());
-        setCellTextPreserveStyle(row.getCell(2), trial.getSubjectName());
-        setCellTextPreserveStyle(row.getCell(3), trial.getTeachingTime());
+        styleTableCell(row.getCell(0), "1");
+        styleTableCell(row.getCell(1), trial.getTeacherName());
+        styleTableCell(row.getCell(2), trial.getSubjectName());
+        styleTableCell(row.getCell(3), trial.getTeachingTime());
     }
 
-    private void setCellTextPreserveStyle(XWPFTableCell cell, String text) {
+    private void styleTableCell(XWPFTableCell cell, String text) {
         if (cell == null) return;
 
-        // Nếu ô đã có paragraph/run (do copy từ template), hãy dùng lại style đó
+        cell.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
+
+        XWPFParagraph p;
         if (!cell.getParagraphs().isEmpty()) {
-            XWPFParagraph p = cell.getParagraphs().get(0);
-            if (!p.getRuns().isEmpty()) {
-                // Set text cho run đầu tiên, xóa các run sau để tránh text bị đè
-                XWPFRun r = p.getRuns().get(0);
-                r.setText(text, 0);
-                for (int i = p.getRuns().size() - 1; i > 0; i--) {
-                    p.removeRun(i);
-                }
-            } else {
-                p.createRun().setText(text);
+            p = cell.getParagraphs().get(0);
+            while (!p.getRuns().isEmpty()) {
+                p.removeRun(0);
             }
         } else {
-            cell.addParagraph().createRun().setText(text);
+            p = cell.addParagraph();
         }
+
+        p.setAlignment(ParagraphAlignment.CENTER);
+        p.setSpacingBefore(60);
+        p.setSpacingAfter(60);
+
+        XWPFRun run = p.createRun();
+        run.setText(text != null ? text : "");
+        run.setFontFamily("Times New Roman");
+        run.setFontSize(12);
     }
 
     private void fillCommentsSection(XWPFDocument document, List<TrialEvaluationDto> evaluations) {
         if (evaluations == null || evaluations.isEmpty()) return;
 
-        // Tìm dòng "IV. Góp ý" hoặc "Góp ý:"
         XWPFParagraph targetPara = null;
         for (XWPFParagraph p : document.getParagraphs()) {
             if (p.getText().contains("IV. Góp ý") || p.getText().contains("Góp ý:")) {
@@ -406,23 +411,9 @@ public class TrialEvaluationExportService {
         }
 
         if (targetPara != null) {
-            // Append comments vào ngay sau dòng title này (đây là cách đơn giản nhất với POI basic)
-            // Hoặc nếu template đã có sẵn dòng trống bên dưới, ta tìm và điền vào
-
-            // Cách an toàn: Tạo các dòng mới ngay dưới document (POI không hỗ trợ insert after paragraph tốt)
-            // Nhưng vì ta load template, ta có thể dùng XmlCursor nếu muốn chính xác (phức tạp).
-            // Cách đơn giản chấp nhận được: Tìm các dòng trống ngay sau Title và điền vào.
-
             int index = document.getParagraphs().indexOf(targetPara);
-
-            // Xóa các dòng trống giữ chỗ cũ nếu có (ví dụ 3 dòng ...)
-            // Logic đơn giản: Cộng dồn chuỗi comments và replace vào 1 placeholder nếu có,
-            // hoặc chèn text vào các dòng tiếp theo.
-
-            // Ở đây tôi chọn giải pháp: Gom comments thành 1 chuỗi xuống dòng và add vào paragraph tiếp theo
             if (index + 1 < document.getParagraphs().size()) {
                 XWPFParagraph commentPara = document.getParagraphs().get(index + 1);
-                // Xóa nội dung cũ
                 while (!commentPara.getRuns().isEmpty()) {
                     commentPara.removeRun(0);
                 }
@@ -431,7 +422,7 @@ public class TrialEvaluationExportService {
                     if (eval.getComments() != null && !eval.getComments().isEmpty()) {
                         XWPFRun run = commentPara.createRun();
                         run.setText("- " + eval.getComments());
-                        run.addBreak(); // Xuống dòng
+                        run.addBreak();
                         run.setFontFamily("Times New Roman");
                         run.setFontSize(12);
                     }
