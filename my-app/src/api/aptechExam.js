@@ -3,6 +3,17 @@ import createApiInstance from "./createApiInstance.js";
 const API_URL = "/v1/teacher/aptech-exam";
 const api = createApiInstance(API_URL);
 
+const buildQueryString = (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            query.append(key, value);
+        }
+    });
+    const qs = query.toString();
+    return qs ? `?${qs}` : "";
+};
+
 // =======================
 // TEACHER APIs
 // =======================
@@ -10,6 +21,11 @@ const api = createApiInstance(API_URL);
 // 1. Lấy danh sách kỳ thi của giáo viên hiện tại
 export const getTeacherAptechExams = async () => {
     const response = await api.get("");
+    return response.data;
+};
+
+export const getExamById = async (id) => {
+    const response = await api.get(`/${id}`);
     return response.data;
 };
 
@@ -98,4 +114,21 @@ export const adminUpdateExamStatus = async (id, status) => {
     return response.data;
 };
 
+// Export endpoints (server-generated documents)
+export const exportSummary = async (options = {}) => {
+    const adminApi = createApiInstance(`${API_URL}`);
+    const query = buildQueryString(options);
+    return adminApi.get(`/export/summary${query}`, { responseType: 'blob' });
+};
 
+export const exportList = async (options = {}) => {
+    const adminApi = createApiInstance(`${API_URL}`);
+    const query = buildQueryString(options);
+    return adminApi.get(`/export/list${query}`, { responseType: 'blob' });
+};
+
+export const exportStats = async (options = {}) => {
+    const adminApi = createApiInstance(`${API_URL}`);
+    const query = buildQueryString(options);
+    return adminApi.get(`/export/stats${query}`, { responseType: 'blob' });
+};

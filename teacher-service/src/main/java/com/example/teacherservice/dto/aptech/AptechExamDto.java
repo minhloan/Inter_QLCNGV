@@ -23,6 +23,7 @@ public class AptechExamDto {
     private String teacherCode;
     private String teacherName;
     private String subjectId;
+    private String subjectCode;
     private String subjectName;
     private Integer attempt;
     private Integer score;

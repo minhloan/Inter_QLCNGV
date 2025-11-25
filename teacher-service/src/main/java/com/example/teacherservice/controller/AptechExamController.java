@@ -11,7 +11,7 @@ import com.example.teacherservice.service.file.FileService;
 import com.example.teacherservice.dto.aptech.AptechExamScoreUpdateDto;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,11 +19,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
 @RequestMapping("/v1/teacher/aptech-exam")
 @RequiredArgsConstructor
+@Slf4j
 public class AptechExamController {
 
     private final AptechExamService examService;
@@ -33,14 +35,23 @@ public class AptechExamController {
     // ========================
     // TEACHER APIs
     // ========================
-    @Autowired
-    private AptechExamService aptechExamService;
-
-
     @GetMapping
     public ResponseEntity<List<AptechExamDto>> getExamsByTeacher(HttpServletRequest request) {
         String teacherId = jwtUtil.ExtractUserId(request);
         return ResponseEntity.ok(examService.getExamsByTeacher(teacherId));
+    }
+
+    @GetMapping("/{examId}")
+    public ResponseEntity<AptechExamDto> getExamById(
+            @PathVariable String examId,
+            HttpServletRequest request) {
+        String teacherId = jwtUtil.ExtractUserId(request);
+        try {
+            AptechExamDto exam = examService.getExamForTeacher(examId, teacherId);
+            return ResponseEntity.ok(exam);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping("/history/{subjectId}")
@@ -140,9 +151,63 @@ public class AptechExamController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @GetMapping("/export/list")
+    public ResponseEntity<?> exportExamList(
+            @RequestParam(required = false) String sessionId,
+            @RequestParam(required = false) String generatedBy) {
+        try {
+            byte[] document = examService.exportExamListDocument(sessionId, generatedBy);
+            HttpHeaders headers = buildDocxHeaders("BM06.35-Danh_sach_thi_chung_nhan.docx");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(document);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IOException e) {
+            log.error("Failed to export Aptech exam list document", e);
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/export/summary")
+    public ResponseEntity<?> exportExamSummary(
+            @RequestParam(required = false) String sessionId,
+            @RequestParam(required = false) String generatedBy) {
+        try {
+            byte[] document = examService.exportExamSummaryDocument(sessionId, generatedBy);
+            HttpHeaders headers = buildDocxHeaders("BM06.36-Tong_hop_ket_qua_thi.docx");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(document);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IOException e) {
+            log.error("Failed to export Aptech exam summary document", e);
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/export/stats")
+    public ResponseEntity<?> exportExamStats(
+            @RequestParam(required = false) String sessionId,
+            @RequestParam(required = false) String generatedBy) {
+        try {
+            byte[] document = examService.exportExamStatsDocument(sessionId, generatedBy);
+            HttpHeaders headers = buildDocxHeaders("BM06.37-Thong_ke_giao_vien_thi.docx");
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(document);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (IOException e) {
+            log.error("Failed to export Aptech exam stats document", e);
+            return ResponseEntity.internalServerError().body(e.getMessage());
+        }
+    }
     @PutMapping("/{id}/score")
     public ResponseEntity<?> updateScore(@PathVariable String id, @RequestBody AptechExamScoreUpdateDto request) {
-        aptechExamService.updateScore(id, request.getScore(), request.getResult());
+        examService.updateScore(id, request.getScore(), request.getResult());
         return ResponseEntity.ok("Score updated");
     }
 
@@ -150,10 +215,16 @@ public class AptechExamController {
     public ResponseEntity<?> adminUpdateStatus(@PathVariable String id, @RequestBody java.util.Map<String, String> req) {
         String status = req.get("status");
         if (status == null) return ResponseEntity.badRequest().body("Missing status");
-        aptechExamService.updateStatus(id, status);
+        examService.updateStatus(id, status);
         return ResponseEntity.ok("Status updated");
     }
 
-
+    private HttpHeaders buildDocxHeaders(String filename) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"");
+        return headers;
+    }
 
 }

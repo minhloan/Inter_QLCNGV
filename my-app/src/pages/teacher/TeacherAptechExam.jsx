@@ -68,13 +68,12 @@ const TeacherAptechExam = () => {
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     };
 
-    const getResultBadge = (result) => {
-        const resultMap = {
-            PASS: { label: 'ĐẠT', class: 'success' },
-            FAIL: { label: 'KHÔNG ĐẠT', class: 'danger' }
-        };
-        const resultInfo = resultMap[result] || { label: result, class: 'secondary' };
-        return <span className={`badge badge-status ${resultInfo.class}`}>{resultInfo.label}</span>;
+    const getResultBadge = (exam) => {
+        const s = exam && (exam.score !== null && exam.score !== undefined) ? Number(exam.score) : null;
+        if (s === null) return <span className={`badge badge-status warning`}>Chờ thi</span>;
+        if (s >= 80) return <span className={`badge badge-status success`}>Đạt (Có thể cấp chứng nhận)</span>;
+        if (s >= 60) return <span className={`badge badge-status warning`}>Đạt</span>;
+        return <span className={`badge badge-status danger`}>Không đạt</span>;
     };
 
     const totalPages = Math.ceil(filteredExams.length / pageSize);
@@ -96,10 +95,16 @@ const TeacherAptechExam = () => {
                         <h1 className="page-title">Kỳ thi Aptech</h1>
                     </div>
 
-                    <button className="btn btn-primary" onClick={() => navigate('/teacher/aptech-exam-add')}>
-                        <i className="bi bi-plus-circle"></i>
-                        Đăng ký thi
-                    </button>
+                    <div className="aptech-header-actions">
+                        <button className="btn btn-primary" onClick={() => navigate('/teacher/aptech-exam-add')}>
+                            <i className="bi bi-plus-circle"></i>
+                            <span>Đăng ký thi</span>
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => navigate('/teacher/aptech-exam-take')}>
+                            <i className="bi bi-play-circle"></i>
+                            <span>Tham gia thi</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="filter-table-wrapper">
@@ -166,72 +171,30 @@ const TeacherAptechExam = () => {
                                     pageExams.map((exam, index) => (
                                         <tr key={exam.id} className="fade-in">
                                             <td>{startIndex + index + 1}</td>
-                                            <td>{exam.subjectName || 'N/A'}</td>
+                                            <td>{(exam.subjectCode ? `${exam.subjectCode} - ` : '') + (exam.subjectName || 'N/A')}</td>
                                             <td>{exam.examDate || 'N/A'}</td>
                                             <td>{exam.examTime || 'N/A'}</td>
                                             <td>{exam.room || 'N/A'}</td>
                                             <td>{exam.attempt || 1}</td>
                                             <td>
                                                 {exam.score !== null && exam.score !== undefined ? (
-                                                    <span className={exam.score >= 80 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                                                    <span className={exam.score >= 80 ? 'text-success fw-bold' : exam.score >= 60 ? 'text-warning fw-bold' : 'text-danger fw-bold'}>
                               {exam.score}
                             </span>
                                                 ) : (
                                                     'N/A'
                                                 )}
                                             </td>
-                                            <td>{getResultBadge(exam.result)}</td>
+                                            <td>{getResultBadge(exam)}</td>
                                             <td className="text-center">
                                                 <div className="action-buttons">
-                                                    {exam.score == null ? (
-                                                        <button
-                                                            className="btn btn-sm btn-warning btn-action"
-                                                            onClick={() => showToast('Thông tin', 'Bài thi chưa chấm điểm', 'info')}
-                                                            title="Chưa chấm điểm"
-                                                        >
-                                                            <i className="bi bi-exclamation-circle"></i>
-                                                        </button>
-                                                    ) : (exam.score < 80) ? (
-                                                        <button
-                                                            className="btn btn-sm btn-warning btn-action"
-                                                            onClick={() => showToast('Thông tin', 'Có thể đăng ký thi lại', 'info')}
-                                                            title="Có thể đăng ký thi lại"
-                                                        >
-                                                            <i className="bi bi-exclamation-triangle"></i>
-                                                        </button>
-                                                    ) : (exam.score >= 80) ? (
-                                                        exam.aptechStatus === 'PENDING' ? (
-                                                            <button
-                                                                className="btn btn-sm btn-warning btn-action"
-                                                                onClick={() => showToast('Thông tin', 'Chứng chỉ bài thi chưa được phê duyệt', 'warning')}
-                                                                title="Chờ phê duyệt chứng chỉ"
-                                                            >
-                                                                <i className="bi bi-hourglass-split"></i>
-                                                            </button>
-                                                        ) : exam.aptechStatus === 'REJECTED' ? (
-                                                            <button
-                                                                className="btn btn-sm btn-danger btn-action"
-                                                                onClick={() => showToast('Lỗi', 'Bài thi bị từ chối cấp chứng chỉ', 'danger')}
-                                                                title="Bị từ chối cấp chứng chỉ"
-                                                            >
-                                                                <i className="bi bi-x-circle"></i>
-                                                            </button>
-                                                        ) : exam.aptechStatus === 'APPROVED' ? (
-                                                            <button
-                                                                className="btn btn-sm btn-success btn-action"
-                                                                onClick={() => {
-                                                                    if (exam.certificateFileId) {
-                                                                        handleDownloadCertificate(exam.id);
-                                                                    } else {
-                                                                        showToast('Lỗi', 'Chưa có chứng chỉ để tải về', 'danger');
-                                                                    }
-                                                                }}
-                                                                title="Tải chứng chỉ"
-                                                            >
-                                                                <i className="bi bi-download"></i>
-                                                            </button>
-                                                        ) : null
-                                                    ) : null}
+                                                    <button
+                                                        className="btn btn-sm btn-info"
+                                                        onClick={() => navigate(`/teacher/aptech-exam-detail/${exam.id}`)}
+                                                        title="Chi tiết"
+                                                    >
+                                                        <i className="bi bi-eye"></i>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>

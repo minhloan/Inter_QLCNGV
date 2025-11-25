@@ -14,7 +14,6 @@ import ModuleSelection from './pages/ModuleSelection';
 
 // Admin pages
 import SubjectRegistrationManagement from './pages/admin/SubjectRegistrationManagement';
-import AptechExamManagement from './pages/admin/AptechExamManagement';
 import TrialTeachingManagement from './pages/admin/TrialTeachingManagement';
 import EvidenceManagement from './pages/admin/EvidenceManagement';
 import TeachingAssignmentManagement from './pages/admin/TeachingAssignmentManagement';
@@ -52,6 +51,8 @@ import AptechExamDetail from "./pages/admin/AptechExamDetail.jsx";
 import AptechExamAdd from "./pages/teacher/AptechExamAdd.jsx";
 import MyReviews from "./pages/teacher/MyReviews.jsx";
 import TrialEvaluationForm from "./pages/teacher/TrialEvaluationForm.jsx";
+import AptechExamTake from "./pages/teacher/AptechExamTake.jsx";
+import AptechExamManagement from "./pages/admin/AptechExamManagement.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -173,6 +174,14 @@ function AppRoutes() {
             element={
                 <ProtectedRoute requiredRole="Manage-Leader">
                     <AptechExamManagement />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/teacher/aptech-exam-detail/:id"
+            element={
+                <ProtectedRoute allowedRoles={["Manage-Leader", "Teacher"]}>
+                    <AptechExamDetail />
                 </ProtectedRoute>
             }
         />
@@ -320,6 +329,14 @@ function AppRoutes() {
             element={
                 <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
                     <AptechExamAdd />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/teacher/aptech-exam-take"
+            element={
+                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+                    <AptechExamTake />
                 </ProtectedRoute>
             }
         />

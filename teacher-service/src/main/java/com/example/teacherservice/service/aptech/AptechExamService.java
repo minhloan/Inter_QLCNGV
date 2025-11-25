@@ -11,6 +11,7 @@ public interface AptechExamService {
     List<AptechExamSessionDto> getAllSessions();
     List<AptechExamDto> getAllExams();
     List<AptechExamDto> getExamsByTeacher(String teacherId);
+    AptechExamDto getExamForTeacher(String examId, String teacherId);
     List<AptechExamHistoryDto> getExamHistory(String teacherId, String subjectId);
     void uploadCertificate(String examId, File certificateFile);
     File downloadCertificate(String examId);
@@ -19,4 +20,7 @@ public interface AptechExamService {
     AptechExamDto registerExam(String teacherId, String sessionId, String subjectId);
     void updateScore(String id, Integer score, String result);
     void updateStatus(String id, String status);
+    byte[] exportExamListDocument(String sessionId, String generatedBy) throws java.io.IOException;
+    byte[] exportExamSummaryDocument(String sessionId, String generatedBy) throws java.io.IOException;
+    byte[] exportExamStatsDocument(String sessionId, String generatedBy) throws java.io.IOException;
 }

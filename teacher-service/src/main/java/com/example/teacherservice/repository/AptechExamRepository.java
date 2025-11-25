@@ -4,6 +4,7 @@ import com.example.teacherservice.enums.ExamResult;
 import com.example.teacherservice.model.AptechExam;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.model.Subject;
+import com.example.teacherservice.model.AptechExamSession;
 import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -37,5 +38,7 @@ public interface AptechExamRepository extends JpaRepository<AptechExam, String> 
 
     @Query("SELECT ae FROM AptechExam ae WHERE ae.teacher.id = :teacherId")
     List<AptechExam> findByTeacherId(@Param("teacherId") String teacherId);
+
+    List<AptechExam> findBySession(AptechExamSession session);
 }
 
