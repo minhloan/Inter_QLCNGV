@@ -19,12 +19,14 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
         try {
             setLoadingTeachers(true);
             const response = await getAllUsers(1, 1000); // Load tất cả giáo viên
-            const teachersList = (response.content || []).map(user => ({
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                phoneNumber: user.phoneNumber
-            }));
+            const teachersList = (response.content || [])
+                .filter(user => user.active === 'ACTIVE')
+                .map(user => ({
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    phoneNumber: user.phoneNumber
+                }));
             setTeachers(teachersList);
         } catch (error) {
             console.error('Error loading teachers:', error);
@@ -112,8 +114,8 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div 
-                className="modal-content attendee-modal" 
+            <div
+                className="modal-content attendee-modal"
                 onClick={e => e.stopPropagation()}
                 style={{ maxWidth: '700px', width: '90%', overflow: 'hidden' }}
             >
@@ -194,18 +196,18 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                         {attendees.length === 0 ? (
                             <p className="text-muted">Chưa có người tham dự nào</p>
                         ) : (
-                            <div 
-                                className="table-responsive" 
-                                style={{ 
-                                    maxHeight: '400px', 
+                            <div
+                                className="table-responsive"
+                                style={{
+                                    maxHeight: '400px',
                                     overflowY: 'auto',
                                     overflowX: 'hidden',
                                     width: '100%'
                                 }}
                             >
-                                <table 
-                                    className="table table-sm table-hover" 
-                                    style={{ 
+                                <table
+                                    className="table table-sm table-hover"
+                                    style={{
                                         marginBottom: 0,
                                         minWidth: 'auto',
                                         width: '100%',
@@ -213,49 +215,49 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                                     }}
                                 >
                                     <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
-                                        <tr>
-                                            <th style={{ width: 'auto' }}>Tên</th>
-                                            <th style={{ width: 'auto' }}>Vai trò</th>
-                                            <th style={{ width: '80px', minWidth: '60px', textAlign: 'center' }}>Thao tác</th>
-                                        </tr>
+                                    <tr>
+                                        <th style={{ width: 'auto' }}>Tên</th>
+                                        <th style={{ width: 'auto' }}>Vai trò</th>
+                                        <th style={{ width: '80px', minWidth: '60px', textAlign: 'center' }}>Thao tác</th>
+                                    </tr>
                                     </thead>
                                     <tbody>
-                                        {attendees.map(attendee => (
-                                            <tr key={attendee.id}>
-                                                <td style={{ 
-                                                    wordBreak: 'break-word', 
-                                                    overflow: 'hidden', 
-                                                    textOverflow: 'ellipsis',
-                                                    maxWidth: 0
-                                                }}>
-                                                    {attendee.attendeeName}
-                                                </td>
-                                                <td style={{ whiteSpace: 'nowrap' }}>
+                                    {attendees.map(attendee => (
+                                        <tr key={attendee.id}>
+                                            <td style={{
+                                                wordBreak: 'break-word',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                maxWidth: 0
+                                            }}>
+                                                {attendee.attendeeName}
+                                            </td>
+                                            <td style={{ whiteSpace: 'nowrap' }}>
                                                     <span className="badge badge-status secondary">
                                                         {getRoleLabel(attendee.attendeeRole)}
                                                     </span>
-                                                </td>
-                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '80px', minWidth: '60px' }}>
-                                                    <button
-                                                        className="btn btn-sm btn-outline-danger"
-                                                        onClick={() => handleRemoveAttendee(attendee.id)}
-                                                        disabled={loading}
-                                                        style={{ 
-                                                            minWidth: '36px', 
-                                                            width: '36px',
-                                                            height: '36px',
-                                                            padding: '0',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}
-                                                        title="Xóa"
-                                                    >
-                                                        <i className="bi bi-trash"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                            </td>
+                                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '80px', minWidth: '60px' }}>
+                                                <button
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    onClick={() => handleRemoveAttendee(attendee.id)}
+                                                    disabled={loading}
+                                                    style={{
+                                                        minWidth: '36px',
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        padding: '0',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                    title="Xóa"
+                                                >
+                                                    <i className="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
                                     </tbody>
                                 </table>
                             </div>

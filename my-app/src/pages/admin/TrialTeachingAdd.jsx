@@ -68,7 +68,7 @@ const TrialTeachingAdd = () => {
             setCurrentUser(user);
 
             const teachersData = await getAllUsers(1, 1000);
-            setTeachers((teachersData?.content || []).filter(u => u.role === 'TEACHER'));
+            setTeachers((teachersData?.content || []).filter(u => u.role === 'TEACHER' && u.active === 'ACTIVE'));
 
             const subjectsData = await getAllSubjectsByTrial();
             setSubjects(subjectsData || []);
