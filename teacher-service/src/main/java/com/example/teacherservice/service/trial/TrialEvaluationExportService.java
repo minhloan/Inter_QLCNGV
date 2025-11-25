@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -107,7 +108,7 @@ public class TrialEvaluationExportService {
     }
 
     /**
-     * - Phiếu đánh giá giảng thử (Excel)
+     *  Phiếu đánh giá giảng thử (Excel)
      */
     public byte[] generateEvaluationForm(TrialTeachingDto trial, TrialEvaluationDto evaluation) throws IOException {
         Workbook workbook = WorkbookFactory.create(true);
@@ -130,7 +131,7 @@ public class TrialEvaluationExportService {
 
         rowNum = addExcelInfoRow(sheet, rowNum, "Giảng viên:", trial.getTeacherName() + (trial.getTeacherCode() != null ? " (" + trial.getTeacherCode() + ")" : ""), normalStyle, boldStyle);
         rowNum = addExcelInfoRow(sheet, rowNum, "Môn học:", trial.getSubjectName(), normalStyle, boldStyle);
-        rowNum = addExcelInfoRow(sheet, rowNum, "Ngày giảng:", trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "", normalStyle, boldStyle);
+        rowNum = addExcelInfoRow(sheet, rowNum, "Ngày giảng:", trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "", normalStyle,  boldStyle);
         rowNum = addExcelInfoRow(sheet, rowNum, "Giờ giảng:", trial.getTeachingTime() != null ? trial.getTeachingTime() : "", normalStyle, boldStyle);
         rowNum = addExcelInfoRow(sheet, rowNum, "Địa điểm:", trial.getLocation() != null ? trial.getLocation() : "", normalStyle, boldStyle);
 
@@ -170,95 +171,95 @@ public class TrialEvaluationExportService {
     }
 
     /**
-     * - Thống kê đánh giá GV giảng thử (Excel)
+     * BM06.42 - Thống kê đánh giá GV giảng thử (Excel) 
+     * Reads from template to preserve formatting
      */
     public byte[] generateStatisticsReport(List<TrialTeachingDto> trials) throws IOException {
-        Workbook workbook = WorkbookFactory.create(true);
-        Sheet sheet = workbook.createSheet("Thống kê");
-
-        CellStyle titleStyle = createTitleStyle(workbook);
-        CellStyle headerStyle = createHeaderStyle(workbook);
-        CellStyle normalStyle = createNormalStyle(workbook);
-        CellStyle numberStyle = createNumberStyle(workbook);
-
-        int rowNum = 0;
-        Row titleRow = sheet.createRow(rowNum++);
-        Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("THỐNG KÊ ĐÁNH GIÁ GIÁO VIÊN GIẢNG THỬ");
-        titleCell.setCellStyle(titleStyle);
-        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 8));
-        titleRow.setHeightInPoints(30);
-
-        rowNum++;
-        Row headerRow = sheet.createRow(rowNum++);
-        String[] headers = {"STT", "Giảng viên", "Mã GV", "Môn học", "Ngày giảng", "Điểm TB", "Kết luận", "Trạng thái", "Ghi chú"};
-        for (int i = 0; i < headers.length; i++) {
-            Cell cell = headerRow.createCell(i);
-            cell.setCellValue(headers[i]);
-            cell.setCellStyle(headerStyle);
-        }
-
-        int index = 1;
-        for (TrialTeachingDto trial : trials) {
-            Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(index++);
-            row.createCell(1).setCellValue(trial.getTeacherName() != null ? trial.getTeacherName() : "");
-            row.createCell(2).setCellValue(trial.getTeacherCode() != null ? trial.getTeacherCode() : "");
-            row.createCell(3).setCellValue(trial.getSubjectName() != null ? trial.getSubjectName() : "");
-            row.createCell(4).setCellValue(trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "");
-
-            if (trial.getEvaluations() != null && !trial.getEvaluations().isEmpty()) {
-                double avgScore = trial.getEvaluations().stream()
-                        .filter(e -> e.getScore() != null)
-                        .mapToInt(TrialEvaluationDto::getScore)
-                        .average().orElse(0.0);
-                Cell scoreCell = row.createCell(5);
-                scoreCell.setCellValue(avgScore);
-                scoreCell.setCellStyle(numberStyle);
-            } else {
-                row.createCell(5).setCellValue("-");
-            }
-
-            row.createCell(6).setCellValue(trial.getFinalResult() == TrialConclusion.PASS ? "ĐẠT" :
-                    (trial.getFinalResult() == TrialConclusion.FAIL ? "KHÔNG ĐẠT" : "Chưa có"));
-            row.createCell(7).setCellValue(getStatusName(trial.getStatus()));
-            row.createCell(8).setCellValue(trial.getNote() != null ? trial.getNote() : "");
-
-            for (int i = 0; i < 9; i++) {
-                if (i != 5) {
-                    Cell cell = row.getCell(i);
-                    if (cell != null) cell.setCellStyle(normalStyle);
+        ClassPathResource resource = new ClassPathResource("templates/BM06.42-template.xlsx");
+        
+        try (InputStream is = resource.getInputStream();
+             Workbook workbook = WorkbookFactory.create(is);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            
+            Sheet sheet = workbook.getSheetAt(0);
+            
+            int headerRowIndex = -1;
+            for (int i = 0; i <= 20; i++) {
+                Row row = sheet.getRow(i);
+                if (row != null) {
+                    Cell firstCell = row.getCell(0);
+                    if (firstCell != null) {
+                        String value = getCellValueAsString(firstCell).trim().toLowerCase();
+                        if (value.equals("no") || value.contains("teacher")) {
+                            headerRowIndex = i;
+                            break;
+                        }
+                    }
                 }
             }
+            
+            int dataStartRow = headerRowIndex > 0 ? headerRowIndex + 1 : 8;
+            
+            int lastRow = sheet.getLastRowNum();
+            for (int i = lastRow; i >= dataStartRow; i--) {
+                Row row = sheet.getRow(i);
+                if (row != null) {
+                    sheet.removeRow(row);
+                }
+            }
+            
+            int rowIndex = dataStartRow;
+            int stt = 1;
+            
+            for (TrialTeachingDto trial : trials) {
+                Row row = sheet.createRow(rowIndex++);
+                
+                // Column 0: No (STT)
+                row.createCell(0).setCellValue(stt++);
+                
+                // Column 1: Teacher Name
+                row.createCell(1).setCellValue(trial.getTeacherName() != null ? trial.getTeacherName() : "");
+                
+                // Column 2: Time (HH:mm dd/MM/yyyy)
+                String timeStr = "";
+                if (trial.getTeachingTime() != null && trial.getTeachingDate() != null) {
+                    timeStr = trial.getTeachingTime() + " " + trial.getTeachingDate().format(DATE_FORMATTER);
+                } else if (trial.getTeachingDate() != null) {
+                    timeStr = trial.getTeachingDate().format(DATE_FORMATTER);
+                }
+                row.createCell(2).setCellValue(timeStr);
+                
+                // Column 3: Skill No (subjectCode)
+                row.createCell(3).setCellValue(trial.getSubjectCode() != null ? trial.getSubjectCode() : "");
+                
+                // Column 4: Skill Name (description)
+                row.createCell(4).setCellValue(trial.getSubjectDescription() != null ? trial.getSubjectDescription() : trial.getSubjectName());
+                
+                // Column 5: ITT/ACCP (systemName)
+                row.createCell(5).setCellValue(trial.getSystemName() != null ? trial.getSystemName() : "");
+                
+                // Column 6: Evaluation (status)
+                row.createCell(6).setCellValue(getStatusName(trial.getStatus()));
+                
+                // Column 7: Note
+                row.createCell(7).setCellValue(trial.getNote() != null ? trial.getNote() : "");
+            }
+            
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
         }
-
-        rowNum++;
-        Row summaryRow = sheet.createRow(rowNum++);
-        Cell summaryLabelCell = summaryRow.createCell(0);
-        summaryLabelCell.setCellValue("Tổng số:");
-        summaryLabelCell.setCellStyle(headerStyle);
-        Cell summaryValueCell = summaryRow.createCell(1);
-        summaryValueCell.setCellValue(trials.size());
-        summaryValueCell.setCellStyle(headerStyle);
-
-        for (int i = 0; i < 9; i++) {
-            sheet.autoSizeColumn(i);
-        }
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        workbook.write(outputStream);
-        workbook.close();
-        return outputStream.toByteArray();
+    }
+    
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) return "";
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> String.valueOf((int) cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            default -> "";
+        };
     }
 
-    // =================================================================================
-    // CÁC HÀM HỖ TRỢ XỬ LÝ WORD (HELPER METHODS)
-    // =================================================================================
-
-    /**
-     * FIX: Thay vì replace từng Run, hàm này lấy toàn bộ Text của Paragraph, replace xong ghi lại từ đầu.
-     * Cách này xử lý được trường hợp Word tự tách biến ${variable} thành nhiều run lẻ (${ + variable + }).
-     */
     private void replaceTextInParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> data) {
         for (XWPFParagraph p : paragraphs) {
             String fullText = p.getText(); // Lấy toàn bộ text gộp
@@ -433,108 +434,79 @@ public class TrialEvaluationExportService {
 
     private String getWorkTask(TrialAttendeeRole role) {
         if (role == null) return "";
-        switch (role) {
-            case CHU_TOA: return "Đánh giá giảng thử, Chủ tọa";
-            case THU_KY: return "Đánh giá giảng thử, Thư ký";
-            default: return "Đánh giá giảng thử";
-        }
+        return switch (role) {
+            case CHU_TOA -> "Đánh giá giảng thử, Chủ tọa";
+            case THU_KY -> "Đánh giá giảng thử, Thư ký";
+            default -> "Đánh giá giảng thử";
+        };
     }
 
     private String getRoleName(TrialAttendeeRole role) {
         if (role == null) return "";
-        switch (role) {
-            case CHU_TOA: return "Chủ tọa";
-            case THU_KY: return "Thư ký";
-            case THANH_VIEN: return "Thành viên";
-            default: return "";
-        }
+        return switch (role) {
+            case CHU_TOA -> "Chủ tọa";
+            case THU_KY -> "Thư ký";
+            case THANH_VIEN -> "Thành viên";
+        };
     }
 
     private String getStatusName(TrialStatus status) {
         if (status == null) return "";
-        switch (status) {
-            case PENDING: return "Chờ chấm";
-            case REVIEWED: return "Đang chấm";
-            case PASSED: return "Đạt";
-            case FAILED: return "Không đạt";
-            default: return "";
-        }
+        return switch (status) {
+            case PENDING -> "Đang chờ";
+            case FAILED -> "Đã thất bại";
+            case REVIEWED -> "Đã đánh giá";
+            case PASSED -> "Đã hoàn thành";
+        };
     }
 
-    // =================================================================================
-    // CÁC HÀM HỖ TRỢ EXCEL (HELPER METHODS)
-    // =================================================================================
-
-    private int addExcelInfoRow(Sheet sheet, int rowNum, String label, String value, CellStyle normalStyle, CellStyle boldStyle) {
-        Row row = sheet.createRow(rowNum++);
-        Cell labelCell = row.createCell(0);
-        labelCell.setCellValue(label);
-        labelCell.setCellStyle(boldStyle);
-        Cell valueCell = row.createCell(1);
-        valueCell.setCellValue(value);
-        valueCell.setCellStyle(normalStyle);
-        sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 1, 5));
-        return rowNum;
-    }
-
+    // Excel styles
     private CellStyle createTitleStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setBold(true);
         font.setFontHeightInPoints((short) 16);
+        font.setFontName("Times New Roman");
         style.setFont(font);
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
-        return style;
-    }
-
-    private CellStyle createHeaderStyle(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        font.setFontHeightInPoints((short) 12);
-        style.setFont(font);
-        style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
-        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         return style;
     }
 
     private CellStyle createNormalStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
-        style.setAlignment(HorizontalAlignment.LEFT);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setBorderBottom(BorderStyle.THIN);
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 11);
+        font.setFontName("Times New Roman");
+        style.setFont(font);
         style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
         style.setBorderLeft(BorderStyle.THIN);
         style.setBorderRight(BorderStyle.THIN);
         return style;
     }
+
 
     private CellStyle createBoldStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setBold(true);
+        font.setFontHeightInPoints((short) 11);
+        font.setFontName("Times New Roman");
         style.setFont(font);
-        style.setAlignment(HorizontalAlignment.LEFT);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
         return style;
     }
 
-    private CellStyle createNumberStyle(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setDataFormat(workbook.createDataFormat().getFormat("0.00"));
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
-        return style;
+    private int addExcelInfoRow(Sheet sheet, int rowNum, String label, String value, CellStyle normalStyle, CellStyle boldStyle) {
+        Row row = sheet.createRow(rowNum);
+        Cell labelCell = row.createCell(0);
+        labelCell.setCellValue(label);
+        labelCell.setCellStyle(boldStyle);
+
+        Cell valueCell = row.createCell(1);
+        valueCell.setCellValue(value);
+        valueCell.setCellStyle(normalStyle);
+        sheet.addMergedRegion(new CellRangeAddress(rowNum, rowNum, 1, 5));
+        return rowNum + 1;
     }
 }

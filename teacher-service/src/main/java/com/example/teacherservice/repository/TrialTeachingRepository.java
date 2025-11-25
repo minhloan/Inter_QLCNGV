@@ -33,4 +33,14 @@ public interface TrialTeachingRepository extends JpaRepository<TrialTeaching, St
     @Query("SELECT tt FROM TrialTeaching tt WHERE tt.teacher.id = :teacherId")
     List<TrialTeaching> findByTeacherId(@Param("teacherId") String teacherId);
 
+    // Date range filtering for statistics
+    @Query("SELECT tt FROM TrialTeaching tt WHERE tt.teachingDate BETWEEN :startDate AND :endDate")
+    List<TrialTeaching> findByTeachingDateBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT tt FROM TrialTeaching tt WHERE YEAR(tt.teachingDate) = :year AND MONTH(tt.teachingDate) = :month")
+    List<TrialTeaching> findByYearAndMonth(@Param("year") Integer year, @Param("month") Integer month);
+
+    @Query("SELECT tt FROM TrialTeaching tt WHERE YEAR(tt.teachingDate) = :year")
+    List<TrialTeaching> findByYear(@Param("year") Integer year);
+
 }

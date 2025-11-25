@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import { getExamById, updateExamScore } from '../../api/aptechExam';
+import { getExamById, updateExamScore, uploadCertificate } from '../../api/aptechExam';
 
 const AptechExamDetail = () => {
     const navigate = useNavigate();
@@ -29,9 +29,26 @@ const AptechExamDetail = () => {
 
     const saveScore = async () => {
         try {
+            // Prevent editing after approval/rejection
             if (exam && exam.aptechStatus && exam.aptechStatus !== 'PENDING') {
                 showToast('Lỗi', 'Không thể sửa điểm sau khi phê duyệt hoặc từ chối', 'danger');
                 return;
+            }
+
+            // Prevent saving score before exam started
+            if (exam) {
+                let date = exam.examDate || '';
+                let time = exam.examTime || '00:00';
+                if (date.includes('/')) {
+                    const [d, m, y] = date.split('/');
+                    date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                }
+                const start = new Date(`${date}T${time}`);
+                const now = new Date();
+                if (start && !isNaN(start.getTime()) && now.getTime() < start.getTime()) {
+                    showToast('Lỗi', 'Kỳ thi chưa bắt đầu', 'danger');
+                    return;
+                }
             }
 
             const numeric = Number(score);
@@ -174,7 +191,29 @@ const AptechExamDetail = () => {
                                     <div className="info-row">
                                         <span className="label">Hình ảnh điểm</span>
                                         <div>
-                                            <button className="btn btn-sm btn-secondary">Upload ảnh (chưa có chức năng)</button>
+                                            <input
+                                                type="file"
+                                                id="upload-screenshot"
+                                                accept="image/*"
+                                                style={{ display: 'none' }}
+                                                onChange={async (e) => {
+                                                    const f = e.target.files && e.target.files[0];
+                                                    if (!f) return;
+                                                    try {
+                                                        setLoading(true);
+                                                        await uploadCertificate(id, f);
+                                                        showToast('Thành công', 'Đã tải ảnh lên', 'success');
+                                                        await loadExamDetail();
+                                                    } catch (err) {
+                                                        showToast('Lỗi', 'Không thể tải ảnh lên', 'danger');
+                                                    } finally {
+                                                        setLoading(false);
+                                                    }
+                                                }}
+                                            />
+                                            <button className="btn btn-sm btn-secondary" onClick={() => document.getElementById('upload-screenshot').click()}>
+                                                Upload ảnh điểm
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

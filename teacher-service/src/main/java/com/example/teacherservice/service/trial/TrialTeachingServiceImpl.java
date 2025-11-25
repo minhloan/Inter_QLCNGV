@@ -60,10 +60,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .note(request.getNote())
                 .build();
 
-        // Set AptechExam if provided
         if (request.getAptechExamId() != null && !request.getAptechExamId().isEmpty()) {
-            // Note: This would need AptechExamRepository to be injected
-            // For now, we'll skip this as it's not implemented yet
         }
 
         TrialTeaching saved = trialTeachingRepository.save(trial);
@@ -98,7 +95,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
         } else if (finalResult == TrialConclusion.FAIL) {
             trial.setStatus(TrialStatus.FAILED);
         }
-        
+
         TrialTeaching updated = trialTeachingRepository.save(trial);
 
         notifyTeacherStatusUpdate(updated);
@@ -133,7 +130,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
     public List<TrialTeachingDto> getTrialsForEvaluation(String evaluatorUserId) {
         // Get all attendees for this evaluator
         List<TrialAttendee> attendees = trialAttendeeRepository.findByAttendeeUser_Id(evaluatorUserId);
-        
+
         // Get unique trials from attendees
         return attendees.stream()
                 .map(TrialAttendee::getTrial)
@@ -182,6 +179,9 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .teacherCode(trial.getTeacher().getTeacherCode())
                 .subjectId(trial.getSubject().getId())
                 .subjectName(trial.getSubject().getSubjectName())
+                .subjectCode(trial.getSubject().getSubjectCode())
+                .subjectDescription(trial.getSubject().getDescription())
+                .systemName(trial.getSubject().getSystem() != null ? trial.getSubject().getSystem().getSystemName() : "")
                 .teachingDate(trial.getTeachingDate())
                 .teachingTime(trial.getTeachingTime())
                 .status(trial.getStatus())
@@ -265,5 +265,29 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 "TrialTeaching",
                 trial.getId()
         );
+    }
+
+    @Override
+    public List<TrialTeachingDto> getTrialsByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return trialTeachingRepository.findByTeachingDateBetween(startDate, endDate)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TrialTeachingDto> getTrialsByMonth(Integer year, Integer month) {
+        return trialTeachingRepository.findByYearAndMonth(year, month)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TrialTeachingDto> getTrialsByYear(Integer year) {
+        return trialTeachingRepository.findByYear(year)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 }

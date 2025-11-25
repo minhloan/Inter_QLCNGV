@@ -21,6 +21,9 @@ public class TrialTeachingDto {
     private String teacherCode;
     private String subjectId;
     private String subjectName;
+    private String subjectCode;        // For Skill No column
+    private String subjectDescription;  // For Skill Name column  
+    private String systemName;          // For ITT/ACCP column
     private LocalDate teachingDate;
     private String teachingTime;
     private TrialStatus status;

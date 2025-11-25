@@ -17,4 +17,9 @@ public interface TrialTeachingService {
     List<TrialTeachingDto> getTrialsByTeacher(String teacherId);
     List<TrialTeachingDto> getTrialsForEvaluation(String evaluatorUserId);
     TrialTeachingDto getTrialById(String id);
+    
+    // Date filtering methods for statistics
+    List<TrialTeachingDto> getTrialsByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate);
+    List<TrialTeachingDto> getTrialsByMonth(Integer year, Integer month);
+    List<TrialTeachingDto> getTrialsByYear(Integer year);
 }

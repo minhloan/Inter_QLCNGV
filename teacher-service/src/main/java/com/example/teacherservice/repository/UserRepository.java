@@ -21,10 +21,13 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByUsernameIgnoreCase(String username);
 
-
     List<User> findAllByActive(Active active);
     long countByActive(Active active);
     @Query("SELECT COUNT(u) FROM users u WHERE u.primaryRole = 'TEACHER' AND u.active = 'ACTIVE'")
     long countActiveTeachers();
+    @Query("SELECT u FROM users u where u.active = 'ACTIVE'")
+    List<User> findAll(Active active);
+    
+    List<User> findAllByActiveAndIdNot(Active active, String excludedUserId);
 }
 

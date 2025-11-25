@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import { getAllTrials } from '../../api/trial';
+import { getAllTrials, exportTrialStatistics } from '../../api/trial';
 
 const TrialTeachingManagement = () => {
     const navigate = useNavigate();
@@ -15,6 +15,17 @@ const TrialTeachingManagement = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
+
+    // Export modal states
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportFilterType, setExportFilterType] = useState('all'); // all, dateRange, monthly, yearly
+    const [exportFilters, setExportFilters] = useState({
+        startDate: '',
+        endDate: '',
+        year: new Date().getFullYear(),
+        month: new Date().getMonth() + 1
+    });
+    const [exporting, setExporting] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -73,6 +84,63 @@ const TrialTeachingManagement = () => {
 
     const formatTime = (timeStr) => timeStr ? timeStr.slice(0, 5) : 'N/A';
 
+    const handleExportStatistics = async () => {
+        try {
+            setExporting(true);
+            let params = {};
+
+            if (exportFilterType === 'dateRange') {
+                if (!exportFilters.startDate || !exportFilters.endDate) {
+                    showToast('Lỗi', 'Vui lòng chọn khoảng ngày', 'danger');
+                    return;
+                }
+                params.startDate = exportFilters.startDate;
+                params.endDate = exportFilters.endDate;
+            } else if (exportFilterType === 'monthly') {
+                params.year = exportFilters.year;
+                params.month = exportFilters.month;
+            } else if (exportFilterType === 'yearly') {
+                params.year = exportFilters.year;
+            }
+            // exportFilterType === 'all' => no params
+
+            const response = await exportTrialStatistics(params);
+
+            // Create download link
+            const blob = new Blob([response.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Extract filename from Content-Disposition header
+            let filename = 'BM06.42-Thong_ke_danh_gia_GV_giang_thu.xlsx';
+            const contentDisposition = response.headers['content-disposition'];
+            if (contentDisposition) {
+                // Match filename="value" or filename=value (handle quotes properly)
+                const matches = /filename[^;=\n]*=(["']?)(.+?)\1(?:;|$)/i.exec(contentDisposition);
+                if (matches && matches[2]) {
+                    filename = matches[2];
+                }
+            }
+
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            showToast('Thành công', 'Xuất thống kê BM06.42 thành công', 'success');
+            setShowExportModal(false);
+        } catch (error) {
+            console.error('Export error:', error);
+            showToast('Lỗi', 'Không thể xuất thống kê', 'danger');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     const getStatusBadge = (status) => {
         const map = {
             PENDING: { label: 'Chờ đánh giá', class: 'warning' },
@@ -98,9 +166,14 @@ const TrialTeachingManagement = () => {
                         </button>
                         <h1 className="page-title">Quản lý Giảng thử</h1>
                     </div>
-                    <button className="btn btn-primary" onClick={() => navigate('/trial-teaching-add')}>
-                        <i className="bi bi-plus-circle"></i> Thêm Lịch Giảng thử
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className="btn btn-success" onClick={() => setShowExportModal(true)}>
+                            <i className="bi bi-file-earmark-excel"></i> Xuất thống kê BM06.42
+                        </button>
+                        <button className="btn btn-primary" onClick={() => navigate('/trial-teaching-add')}>
+                            <i className="bi bi-plus-circle"></i> Thêm Lịch Giảng thử
+                        </button>
+                    </div>
                 </div>
 
                 <div className="filter-table-wrapper">
@@ -148,62 +221,62 @@ const TrialTeachingManagement = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Mã GV</th>
-                                    <th>Tên Giáo viên</th>
-                                    <th>Môn học</th>
-                                    <th>Ngày giảng thử</th>
-                                    <th>Giờ</th>
-                                    <th>Điểm</th>
-                                    <th>Kết luận</th>
-                                    <th>Trạng thái</th>
-                                    <th className="text-center">Thao tác</th>
-                                </tr>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Mã GV</th>
+                                        <th>Tên Giáo viên</th>
+                                        <th>Môn học</th>
+                                        <th>Ngày giảng thử</th>
+                                        <th>Giờ</th>
+                                        <th>Điểm</th>
+                                        <th>Kết luận</th>
+                                        <th>Trạng thái</th>
+                                        <th className="text-center">Thao tác</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {pageTrials.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="10" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không tìm thấy giảng thử nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageTrials.map((trial, index) => (
-                                        <tr key={trial.id}>
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>{trial.teacherCode || 'N/A'}</td>
-                                            <td>{trial.teacherName || 'N/A'}</td>
-                                            <td>{trial.subjectName || 'N/A'}</td>
-                                            <td>{formatDate(trial.teachingDate)}</td>
-                                            <td>{formatTime(trial.teachingTime)}</td>
-                                            <td>{trial.score != null ? (
-                                                <span className={trial.score >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
-                                                        {trial.score}
-                                                    </span>
-                                            ) : 'N/A'}</td>
-                                            <td>
-                                                {trial.evaluation?.conclusion ? (
-                                                    <span className={`badge ${trial.evaluation.conclusion === 'PASS' ? 'badge-success' : 'badge-danger'}`}>
-                                                        {trial.evaluation.conclusion === 'PASS' ? 'Đạt' : 'Không đạt'}
-                                                    </span>
-                                                ) : 'N/A'}
-                                            </td>
-                                            <td>{getStatusBadge(trial.status)}</td>
-                                            <td className="text-center">
-                                                <button
-                                                    className="btn btn-sm btn-info"
-                                                    onClick={() => navigate(`/trial-teaching-detail/${trial.id}`)}
-                                                >
-                                                    <i className="bi bi-eye"></i>
-                                                </button>
+                                    {pageTrials.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="10" className="text-center">
+                                                <div className="empty-state">
+                                                    <i className="bi bi-inbox"></i>
+                                                    <p>Không tìm thấy giảng thử nào</p>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        pageTrials.map((trial, index) => (
+                                            <tr key={trial.id}>
+                                                <td>{startIndex + index + 1}</td>
+                                                <td>{trial.teacherCode || 'N/A'}</td>
+                                                <td>{trial.teacherName || 'N/A'}</td>
+                                                <td>{trial.subjectName || 'N/A'}</td>
+                                                <td>{formatDate(trial.teachingDate)}</td>
+                                                <td>{formatTime(trial.teachingTime)}</td>
+                                                <td>{trial.score != null ? (
+                                                    <span className={trial.score >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                                                        {trial.score}
+                                                    </span>
+                                                ) : 'N/A'}</td>
+                                                <td>
+                                                    {trial.evaluation?.conclusion ? (
+                                                        <span className={`badge ${trial.evaluation.conclusion === 'PASS' ? 'badge-success' : 'badge-danger'}`}>
+                                                            {trial.evaluation.conclusion === 'PASS' ? 'Đạt' : 'Không đạt'}
+                                                        </span>
+                                                    ) : 'N/A'}
+                                                </td>
+                                                <td>{getStatusBadge(trial.status)}</td>
+                                                <td className="text-center">
+                                                    <button
+                                                        className="btn btn-sm btn-info"
+                                                        onClick={() => navigate(`/trial-teaching-detail/${trial.id}`)}
+                                                    >
+                                                        <i className="bi bi-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -246,6 +319,187 @@ const TrialTeachingManagement = () => {
                     type={toast.type}
                     onClose={() => setToast(prev => ({ ...prev, show: false }))}
                 />
+            )}
+
+            {/* Export Statistics Modal */}
+            {showExportModal && (
+                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">
+                                    <i className="bi bi-file-earmark-excel text-success me-2"></i>
+                                    Xuất thống kê BM06.42
+                                </h5>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    onClick={() => setShowExportModal(false)}
+                                    disabled={exporting}
+                                ></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="mb-3">
+                                    <label className="form-label fw-bold">Lọc theo:</label>
+
+                                    <div className="form-check mb-2">
+                                        <input
+                                            className="form-check-input"
+                                            type="radio"
+                                            name="exportFilter"
+                                            id="filterAll"
+                                            checked={exportFilterType === 'all'}
+                                            onChange={() => setExportFilterType('all')}
+                                        />
+                                        <label className="form-check-label" htmlFor="filterAll">
+                                            Tất cả (không lọc)
+                                        </label>
+                                    </div>
+
+                                    <div className="form-check mb-2">
+                                        <input
+                                            className="form-check-input"
+                                            type="radio"
+                                            name="exportFilter"
+                                            id="filterDateRange"
+                                            checked={exportFilterType === 'dateRange'}
+                                            onChange={() => setExportFilterType('dateRange')}
+                                        />
+                                        <label className="form-check-label" htmlFor="filterDateRange">
+                                            Khoảng thời gian
+                                        </label>
+                                    </div>
+
+                                    {exportFilterType === 'dateRange' && (
+                                        <div className="ms-4 mb-3">
+                                            <div className="row g-2">
+                                                <div className="col-6">
+                                                    <label className="form-label small">Từ ngày:</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-control form-control-sm"
+                                                        value={exportFilters.startDate}
+                                                        onChange={(e) => setExportFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                                                    />
+                                                </div>
+                                                <div className="col-6">
+                                                    <label className="form-label small">Đến ngày:</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-control form-control-sm"
+                                                        value={exportFilters.endDate}
+                                                        onChange={(e) => setExportFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="form-check mb-2">
+                                        <input
+                                            className="form-check-input"
+                                            type="radio"
+                                            name="exportFilter"
+                                            id="filterMonthly"
+                                            checked={exportFilterType === 'monthly'}
+                                            onChange={() => setExportFilterType('monthly')}
+                                        />
+                                        <label className="form-check-label" htmlFor="filterMonthly">
+                                            Theo tháng
+                                        </label>
+                                    </div>
+
+                                    {exportFilterType === 'monthly' && (
+                                        <div className="ms-4 mb-3">
+                                            <div className="row g-2">
+                                                <div className="col-6">
+                                                    <label className="form-label small">Tháng:</label>
+                                                    <select
+                                                        className="form-select form-select-sm"
+                                                        value={exportFilters.month}
+                                                        onChange={(e) => setExportFilters(prev => ({ ...prev, month: parseInt(e.target.value) }))}
+                                                    >
+                                                        {[...Array(12)].map((_, i) => (
+                                                            <option key={i + 1} value={i + 1}>Tháng {i + 1}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="col-6">
+                                                    <label className="form-label small">Năm:</label>
+                                                    <input
+                                                        type="number"
+                                                        className="form-control form-control-sm"
+                                                        value={exportFilters.year}
+                                                        onChange={(e) => setExportFilters(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                                                        min="2000"
+                                                        max="2100"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="form-check">
+                                        <input
+                                            className="form-check-input"
+                                            type="radio"
+                                            name="exportFilter"
+                                            id="filterYearly"
+                                            checked={exportFilterType === 'yearly'}
+                                            onChange={() => setExportFilterType('yearly')}
+                                        />
+                                        <label className="form-check-label" htmlFor="filterYearly">
+                                            Theo năm
+                                        </label>
+                                    </div>
+
+                                    {exportFilterType === 'yearly' && (
+                                        <div className="ms-4 mb-3">
+                                            <label className="form-label small">Năm:</label>
+                                            <input
+                                                type="number"
+                                                className="form-control form-control-sm"
+                                                style={{ maxWidth: '150px' }}
+                                                value={exportFilters.year}
+                                                onChange={(e) => setExportFilters(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                                                min="2000"
+                                                max="2100"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => setShowExportModal(false)}
+                                    disabled={exporting}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-success"
+                                    onClick={handleExportStatistics}
+                                    disabled={exporting}
+                                >
+                                    {exporting ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2"></span>
+                                            Đang xuất...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="bi bi-download me-2"></i>
+                                            Xuất Excel
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </MainLayout>
     );

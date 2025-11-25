@@ -76,6 +76,42 @@ const TeacherAptechExam = () => {
         return <span className={`badge badge-status danger`}>Không đạt</span>;
     };
 
+    const parseExamStart = (exam) => {
+        if (!exam) return null;
+        let date = exam.examDate || '';
+        const time = exam.examTime || '00:00';
+        if (!date) return null;
+        if (date.includes('/')) {
+            const [d, m, y] = date.split('/');
+            date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        const dt = new Date(`${date}T${time}`);
+        return isNaN(dt.getTime()) ? null : dt;
+    };
+
+    const renderScoreCell = (exam) => {
+        const score = exam.score;
+        const start = parseExamStart(exam);
+        const now = new Date();
+
+        if (score !== null && score !== undefined) {
+            const cls = score >= 80 ? 'text-success fw-bold' : score >= 60 ? 'text-warning fw-bold' : 'text-danger fw-bold';
+            return <span className={cls}>{score}</span>;
+        }
+
+        // not yet scored
+        if (start && now.getTime() < start.getTime()) {
+            return <span className="text-warning fw-bold">Chờ thi</span>;
+        }
+
+        // more than 24 hours after start and still no score => Vắng thi
+        if (start && now.getTime() > (start.getTime() + 24 * 60 * 60 * 1000)) {
+            return <span className="text-danger fw-bold">Vắng thi</span>;
+        }
+
+        return 'N/A';
+    };
+
     const totalPages = Math.ceil(filteredExams.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const pageExams = filteredExams.slice(startIndex, startIndex + pageSize);
@@ -177,13 +213,7 @@ const TeacherAptechExam = () => {
                                             <td>{exam.room || 'N/A'}</td>
                                             <td>{exam.attempt || 1}</td>
                                             <td>
-                                                {exam.score !== null && exam.score !== undefined ? (
-                                                    <span className={exam.score >= 80 ? 'text-success fw-bold' : exam.score >= 60 ? 'text-warning fw-bold' : 'text-danger fw-bold'}>
-                              {exam.score}
-                            </span>
-                                                ) : (
-                                                    'N/A'
-                                                )}
+                                                {renderScoreCell(exam)}
                                             </td>
                                             <td>{getResultBadge(exam)}</td>
                                             <td className="text-center">

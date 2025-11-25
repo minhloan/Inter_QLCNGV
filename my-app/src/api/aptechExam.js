@@ -79,6 +79,20 @@ export const getAptechExamSessions = async () => {
     return response.data;
 };
 
+export const getUpcomingAptechExamSessions = async (params = {}) => {
+    const sessionApi = createApiInstance('/v1/teacher/aptech-exam-session');
+    const query = buildQueryString(params);
+    const response = await sessionApi.get(`/upcoming${query}`);
+    return response.data;
+};
+
+// 4. Tạo / quản lý phiên thi (admin) - tạo phiên thi mới
+export const createAptechExamSession = async (payload) => {
+    const sessionApi = createApiInstance('/v1/teacher/aptech-exam-session');
+    const response = await sessionApi.post('', payload);
+    return response.data;
+};
+
 // 3. Admin upload chứng chỉ cho bất kỳ exam
 export const adminUploadCertificate = async (examId, file) => {
     const formData = new FormData();

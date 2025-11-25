@@ -100,14 +100,33 @@ public class TrialExportController {
 
     /**
      * BM06.42 - Export Thống kê đánh giá GV giảng thử (Excel)
-     * Có thể filter theo teacherId hoặc lấy tất cả
+     * Supports filtering by:
+     * - Date range (startDate + endDate)
+     * - Month (year + month)
+     * - Year only
+     * - Teacher ID
+     * - All trials (no filters)
      */
     @GetMapping("/statistics")
     public ResponseEntity<byte[]> exportStatistics(
-            @RequestParam(required = false) String teacherId) {
+            @RequestParam(required = false) String teacherId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
         try {
             List<TrialTeachingDto> trials;
-            if (teacherId != null && !teacherId.isEmpty()) {
+            
+            // Priority: startDate/endDate > month > year > teacherId > all
+            if (startDate != null && endDate != null) {
+                java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+                java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+                trials = trialTeachingService.getTrialsByDateRange(start, end);
+            } else if (year != null && month != null) {
+                trials = trialTeachingService.getTrialsByMonth(year, month);
+            } else if (year != null) {
+                trials = trialTeachingService.getTrialsByYear(year);
+            } else if (teacherId != null && !teacherId.isEmpty()) {
                 trials = trialTeachingService.getTrialsByTeacher(teacherId);
             } else {
                 trials = trialTeachingService.getAllTrials();
@@ -115,12 +134,15 @@ public class TrialExportController {
             
             byte[] document = exportService.generateStatisticsReport(trials);
             
+            
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-            String filename = teacherId != null ? 
-                    "BM06.42-Thong_ke_danh_gia_GV_giang_thu_" + teacherId + ".xlsx" :
-                    "BM06.42-Thong_ke_danh_gia_GV_giang_thu_all.xlsx";
-            headers.setContentDispositionFormData("attachment", filename);
+            
+            // Generate filename based on filters
+            String filename = generateStatisticsFilename(teacherId, startDate, endDate, year, month);
+            
+            // Simple Content-Disposition header without complex encoding
+            headers.add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
             
             return ResponseEntity.ok()
                     .headers(headers)
@@ -129,6 +151,25 @@ public class TrialExportController {
             log.error("Error exporting statistics report", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+    
+    private String generateStatisticsFilename(String teacherId, String startDate, String endDate, Integer year, Integer month) {
+        StringBuilder filename = new StringBuilder("BM06.42-Thong_ke_danh_gia_GV_giang_thu");
+        
+        if (startDate != null && endDate != null) {
+            filename.append("_").append(startDate).append("_to_").append(endDate);
+        } else if (year != null && month != null) {
+            filename.append("_").append(String.format("%04d-%02d", year, month));
+        } else if (year != null) {
+            filename.append("_").append(year);
+        } else if (teacherId != null) {
+            filename.append("_").append(teacherId);
+        } else {
+            filename.append("_all");
+        }
+        
+        filename.append(".xlsx");
+        return filename.toString();
     }
 }
 

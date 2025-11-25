@@ -3,13 +3,19 @@ package com.example.teacherservice.service.aptech;
 import com.example.teacherservice.dto.aptech.AptechExamDto;
 import com.example.teacherservice.dto.aptech.AptechExamHistoryDto;
 import com.example.teacherservice.dto.aptech.AptechExamSessionDto;
+import com.example.teacherservice.dto.common.PagedResponse;
 import com.example.teacherservice.enums.ExamResult;
+import com.example.teacherservice.enums.NotificationType;
 import com.example.teacherservice.model.*;
 import com.example.teacherservice.repository.*;
+import com.example.teacherservice.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRow;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,16 +39,15 @@ public class AptechExamServiceImpl implements AptechExamService {
     private final AptechExamSessionRepository sessionRepo;
     private final UserRepository userRepo;
     private final SubjectRepository subjectRepo;
-    private final SubjectSystemRepository subjectSystemRepository;
-    private final FileRepository fileRepo;
+    private final NotificationService notificationService;
 
     private static final int MAX_ATTEMPTS = 3;
-    private static final int PASS_THRESHOLD = 70;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH'h'mm");
     private static final String DEFAULT_SIGNATURE = "....................................";
     private static final String DEFAULT_SECTION_LABEL = "APTECH";
     private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+    private static final String SESSION_NOTIFICATION_ENTITY = "APTECH_EXAM_SESSION";
 
     private final AptechExamRepository examRepository;
 
@@ -58,6 +63,98 @@ public class AptechExamServiceImpl implements AptechExamService {
         return sessionRepo.findAll().stream()
                 .map(this::toSessionDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PagedResponse<AptechExamSessionDto> getUpcomingSessions(int page, int size, String keyword) {
+        int safePage = Math.max(page, 0);
+        int requestedSize = size <= 0 ? 10 : size;
+        int safeSize = Math.min(Math.max(requestedSize, 5), 50);
+
+        Sort sort = Sort.by(Sort.Order.asc("examDate"), Sort.Order.asc("examTime"));
+        Pageable pageable = PageRequest.of(safePage, safeSize, sort);
+
+        LocalDate today = LocalDate.now();
+        String normalizedKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+
+        Page<AptechExamSession> result = sessionRepo.searchUpcomingSessions(today, normalizedKeyword, pageable);
+        List<AptechExamSessionDto> items = result.getContent().stream()
+                .map(this::toSessionDto)
+                .collect(Collectors.toList());
+
+        return PagedResponse.<AptechExamSessionDto>builder()
+                .items(items)
+                .page(result.getNumber())
+                .size(result.getSize())
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .hasNext(result.hasNext())
+                .build();
+    }
+
+    @Override
+    public AptechExamSessionDto createSession(AptechExamSessionDto dto, String createdBy) {
+        validateSessionPayload(dto);
+        String normalizedRoom = normalizeRoomLabel(dto.getRoom());
+
+        if (sessionRepo.existsByExamDateAndRoom(dto.getExamDate(), normalizedRoom)) {
+            String dateText = dto.getExamDate().format(DATE_FORMATTER);
+            throw new IllegalArgumentException(String.format("Phòng %s đã được đặt cho đợt thi ngày %s", normalizedRoom, dateText));
+        }
+
+        AptechExamSession session = AptechExamSession.builder()
+                .examDate(dto.getExamDate())
+                .examTime(dto.getExamTime())
+                .room(normalizedRoom)
+                .note(dto.getNote())
+                .build();
+
+        AptechExamSession saved = sessionRepo.save(session);
+        notifyUsersAboutNewSession(saved, createdBy);
+        return toSessionDto(saved);
+    }
+
+    private void validateSessionPayload(AptechExamSessionDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("Thông tin đợt thi không hợp lệ");
+        }
+        if (dto.getExamDate() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn ngày thi Aptech");
+        }
+        if (dto.getExamDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Ngày thi phải từ hôm nay trở đi");
+        }
+        if (dto.getExamTime() == null) {
+            throw new IllegalArgumentException("Vui lòng chọn giờ thi");
+        }
+        if (dto.getRoom() == null || dto.getRoom().isBlank()) {
+            throw new IllegalArgumentException("Phòng thi không được bỏ trống");
+        }
+        if (dto.getRoom().trim().length() > 50) {
+            throw new IllegalArgumentException("Tên phòng thi tối đa 50 ký tự");
+        }
+    }
+
+    private String normalizeRoomLabel(String room) {
+        return room != null ? room.trim().toUpperCase(Locale.ROOT) : null;
+    }
+
+    private void notifyUsersAboutNewSession(AptechExamSession session, String createdBy) {
+        if (session == null || notificationService == null) return;
+        String message = String.format(
+                "Đợt thi Aptech mới: %s | Giờ: %s | Phòng: %s",
+                formatExamDate(session),
+                formatExamTime(session),
+                session.getRoom() != null && !session.getRoom().isBlank() ? session.getRoom() : "........"
+        );
+        notificationService.broadcast(
+                createdBy,
+                "Đợt thi Aptech mới",
+                message,
+                NotificationType.ADMIN_NOTIFICATION,
+                SESSION_NOTIFICATION_ENTITY,
+                session.getId()
+        );
     }
 
     // =========================
@@ -298,7 +395,7 @@ public class AptechExamServiceImpl implements AptechExamService {
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
 
             String dateText = formatExamDate(context.getSession());
-            if (dateText != null && !dateText.isBlank()) {
+            if (!dateText.isBlank()) {
                 replaceTextEverywhere(document, "04/03/2025", dateText);
             }
 
@@ -511,7 +608,7 @@ public class AptechExamServiceImpl implements AptechExamService {
 
     private void populateTableWithSystemGroups(XWPFTable table,
                                                List<AptechExam> exams,
-                                        RowPopulator populator) {
+                                               RowPopulator populator) {
         if (table == null || table.getRows().isEmpty()) return;
 
         TableTemplates templates = prepareTableTemplates(table);
@@ -653,12 +750,12 @@ public class AptechExamServiceImpl implements AptechExamService {
         List<XWPFRun> runs = p.getRuns();
 
         if (runs != null && !runs.isEmpty()) {
-            runs.get(0).setText(newText != null ? newText : "", 0);
+            runs.get(0).setText(newText, 0);
             for (int i = runs.size() - 1; i > 0; i--) {
                 p.removeRun(i);
             }
         } else {
-            p.createRun().setText(newText != null ? newText : "");
+            p.createRun().setText(newText);
         }
     }
 
@@ -721,7 +818,7 @@ public class AptechExamServiceImpl implements AptechExamService {
 
     private void fillExamListTable(XWPFTable table, List<AptechExam> exams) {
         populateTableWithSystemGroups(table, exams, (row, exam, stt) ->
-                fillListRow(row, stt, safeTeacherName(exam), formatSubjectDisplay(exam), ""));
+                fillListRow(row, stt, safeTeacherName(exam), formatSubjectDisplay(exam)));
     }
 
     private void fillExamSummaryTable(XWPFTable table, List<AptechExam> exams) {
@@ -764,13 +861,13 @@ public class AptechExamServiceImpl implements AptechExamService {
     }
 
     // Cập nhật lại fillListRow
-    private void fillListRow(XWPFTableRow row, String stt, String teacher, String subject, String signature) {
+    private void fillListRow(XWPFTableRow row, String stt, String teacher, String subject) {
         ensureRowHasCells(row, 4);
         // Dùng hàm bảo toàn style thay vì setCellTextWithStyle cũ
         setTextForDataCell(row.getCell(0), stt);
         setTextForDataCell(row.getCell(1), teacher);
         setTextForDataCell(row.getCell(2), subject);
-        setTextForDataCell(row.getCell(3), signature);
+        setTextForDataCell(row.getCell(3), "");
     }
 
     // Cập nhật lại fillSummaryRow
@@ -1152,7 +1249,7 @@ public class AptechExamServiceImpl implements AptechExamService {
         for (XWPFTable table : tables) {
             for (XWPFTableRow row : table.getRows()) {
                 String text = getRowText(row);
-                if (text == null || text.isBlank()) {
+                if (text.isBlank()) {
                     continue;
                 }
 
@@ -1200,7 +1297,7 @@ public class AptechExamServiceImpl implements AptechExamService {
         for (XWPFTableCell cell : row.getTableCells()) {
             String cellText = cell.getText();
             if (cellText != null && !cellText.isBlank()) {
-                if (builder.length() > 0) builder.append(' ');
+                if (!builder.isEmpty()) builder.append(' ');
                 builder.append(cellText.trim());
             }
         }

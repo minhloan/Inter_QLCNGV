@@ -53,6 +53,8 @@ import MyReviews from "./pages/teacher/MyReviews.jsx";
 import TrialEvaluationForm from "./pages/teacher/TrialEvaluationForm.jsx";
 import AptechExamTake from "./pages/teacher/AptechExamTake.jsx";
 import AptechExamManagement from "./pages/admin/AptechExamManagement.jsx";
+import AdminAptechSesssionExamAdd from "./pages/admin/AdminAptechSesssionExamAdd.jsx";
+import AdminAptechSessionList from "./pages/admin/AdminAptechSessionList.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -150,7 +152,6 @@ function AppRoutes() {
                 </ProtectedRoute>
             }
         />
-
       <Route
         path="/teacher-dashboard"
         element={
@@ -178,10 +179,18 @@ function AppRoutes() {
             }
         />
         <Route
-            path="/teacher/aptech-exam-detail/:id"
+            path="/admin/aptech-exam/sessions"
             element={
-                <ProtectedRoute allowedRoles={["Manage-Leader", "Teacher"]}>
-                    <AptechExamDetail />
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminAptechSessionList />
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/aptech-exam/add"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminAptechSesssionExamAdd />
                 </ProtectedRoute>
             }
         />

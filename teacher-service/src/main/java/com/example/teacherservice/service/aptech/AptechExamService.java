@@ -3,12 +3,15 @@ package com.example.teacherservice.service.aptech;
 import com.example.teacherservice.dto.aptech.AptechExamDto;
 import com.example.teacherservice.dto.aptech.AptechExamHistoryDto;
 import com.example.teacherservice.dto.aptech.AptechExamSessionDto;
+import com.example.teacherservice.dto.common.PagedResponse;
 import com.example.teacherservice.model.File;
 
 import java.util.List;
 
 public interface AptechExamService {
     List<AptechExamSessionDto> getAllSessions();
+    AptechExamSessionDto createSession(AptechExamSessionDto dto, String createdBy);
+    PagedResponse<AptechExamSessionDto> getUpcomingSessions(int page, int size, String keyword);
     List<AptechExamDto> getAllExams();
     List<AptechExamDto> getExamsByTeacher(String teacherId);
     AptechExamDto getExamForTeacher(String examId, String teacherId);

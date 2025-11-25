@@ -128,8 +128,14 @@ export const exportTrialMinutes = async (trialId) => {
     return response;
 };
 
-export const exportTrialStatistics = async (teacherId = null) => {
-    const params = teacherId ? { teacherId } : {};
+export const exportTrialStatistics = async ({ teacherId, startDate, endDate, year, month } = {}) => {
+    const params = {};
+    if (teacherId) params.teacherId = teacherId;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (year) params.year = year;
+    if (month) params.month = month;
+
     const response = await api.get('/export/statistics', {
         params,
         responseType: 'blob'
