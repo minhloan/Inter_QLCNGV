@@ -947,7 +947,6 @@ public class AptechExamServiceImpl implements AptechExamService {
         }
     }
 
-
     private void replaceTextEverywhere(XWPFDocument document, String target, String replacement) {
         if (target == null || replacement == null) return;
         for (XWPFParagraph paragraph : document.getParagraphs()) {

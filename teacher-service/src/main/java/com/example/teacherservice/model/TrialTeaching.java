@@ -51,6 +51,25 @@ public class TrialTeaching extends BaseEntity {
     @Column(name = "final_result")
     private TrialConclusion finalResult;
 
+    // Smart evaluation fields
+    @Column(name = "average_score")
+    private Integer averageScore;
+
+    @Column(name = "has_red_flag")
+    @Builder.Default
+    private Boolean hasRedFlag = false;
+
+    @Column(name = "needs_review")
+    @Builder.Default
+    private Boolean needsReview = false;
+
+    @Column(name = "admin_override")
+    @Builder.Default
+    private Boolean adminOverride = false;
+
+    @Column(name = "result_note", columnDefinition = "TEXT")
+    private String resultNote;
+
     @OneToMany(mappedBy = "trial", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<TrialAttendee> attendees;
 

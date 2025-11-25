@@ -89,14 +89,32 @@ const TeacherTrialTeaching = () => {
         return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
     };
 
-    const getConclusionBadge = (conclusion) => {
+    const getConclusionBadge = (trial) => {
+        // Check if needs review first
+        if (trial?.needsReview) {
+            return <span className="badge badge-status warning">CẦN ĐÁNH GIÁ LẠI</span>;
+        }
+
+        const conclusion = trial?.finalResult;
         if (!conclusion) return '-';
+
         const conclusionMap = {
             PASS: { label: 'ĐẠT', class: 'success' },
             FAIL: { label: 'KHÔNG ĐẠT', class: 'danger' }
         };
         const conclusionInfo = conclusionMap[conclusion] || { label: conclusion, class: 'secondary' };
-        return <span className={`badge badge-status ${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
+
+        return (
+            <div className="d-flex align-items-center gap-2">
+                <span className={`badge badge-status ${conclusionInfo.class}`}>
+                    {conclusionInfo.label}
+                </span>
+                {trial?.adminOverride && (
+                    <i className="bi bi-shield-fill-check text-primary"
+                        title="Admin đã ra quyết định cuối cùng"></i>
+                )}
+            </div>
+        );
     };
 
     const getAverageScore = (trial) => {
@@ -112,9 +130,15 @@ const TeacherTrialTeaching = () => {
         const avgScore = getAverageScore(trial);
         if (avgScore !== null) {
             return (
-                <span className={avgScore >= 7 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
-                    {avgScore}
-                </span>
+                <div className="d-flex align-items-center gap-2">
+                    <span className={avgScore >= 70 ? 'text-success fw-bold' : 'text-danger fw-bold'}>
+                        {avgScore}
+                    </span>
+                    {trial.hasRedFlag && (
+                        <i className="bi bi-exclamation-triangle-fill text-warning"
+                            title="Có điểm đánh giá thấp đáng lo ngại"></i>
+                    )}
+                </div>
             );
         }
         return '-';
@@ -170,62 +194,62 @@ const TeacherTrialTeaching = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="25%">Môn học</th>
-                                    <th width="12%">Ngày giảng thử</th>
-                                    <th width="10%">Địa điểm</th>
-                                    <th width="8%">Điểm</th>
-                                    <th width="10%">Trạng thái</th>
-                                    <th width="10%">Kết luận</th>
-                                    <th width="10%" className="text-center">Thao tác</th>
-                                </tr>
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="25%">Môn học</th>
+                                        <th width="12%">Ngày giảng thử</th>
+                                        <th width="10%">Địa điểm</th>
+                                        <th width="8%">Điểm</th>
+                                        <th width="10%">Trạng thái</th>
+                                        <th width="10%">Kết luận</th>
+                                        <th width="10%" className="text-center">Thao tác</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {pageTrials.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không tìm thấy giảng thử nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageTrials.map((trial, index) => (
-                                        <tr key={trial.id} className="fade-in">
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>{trial.subjectName || 'N/A'}</td>
-                                            <td>{trial.teachingDate || 'N/A'}</td>
-                                            <td>{trial.location || 'N/A'}</td>
-                                            <td>
-                                                {renderScore(trial)}
-                                            </td>
-                                            <td>{getStatusBadge(trial.status)}</td>
-                                            <td>{getConclusionBadge(trial.finalResult)}</td>
-                                            <td className="text-center">
-                                                <div className="action-buttons">
-                                                    {trial.status === 'REVIEWED' && trial.evaluations?.some(evaluation => evaluation.imageFileId) && (
-                                                        <button
-                                                            className="btn btn-sm btn-info btn-action"
-                                                            onClick={() => downloadReport(trial.id)}
-                                                            title="Xem biên bản"
-                                                        >
-                                                            <i className="bi bi-file-text"></i>
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        className="btn btn-sm btn-primary btn-action"
-                                                        onClick={() => navigate(`/teacher-trial-teaching-detail/${trial.id}`)}
-                                                        title="Chi tiết"
-                                                    >
-                                                        <i className="bi bi-eye"></i>
-                                                    </button>
+                                    {pageTrials.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="text-center">
+                                                <div className="empty-state">
+                                                    <i className="bi bi-inbox"></i>
+                                                    <p>Không tìm thấy giảng thử nào</p>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        pageTrials.map((trial, index) => (
+                                            <tr key={trial.id} className="fade-in">
+                                                <td>{startIndex + index + 1}</td>
+                                                <td>{trial.subjectName || 'N/A'}</td>
+                                                <td>{trial.teachingDate || 'N/A'}</td>
+                                                <td>{trial.location || 'N/A'}</td>
+                                                <td>
+                                                    {renderScore(trial)}
+                                                </td>
+                                                <td>{getStatusBadge(trial.status)}</td>
+                                                <td>{getConclusionBadge(trial)}</td>
+                                                <td className="text-center">
+                                                    <div className="action-buttons">
+                                                        {trial.status === 'REVIEWED' && trial.evaluations?.some(evaluation => evaluation.imageFileId) && (
+                                                            <button
+                                                                className="btn btn-sm btn-info btn-action"
+                                                                onClick={() => downloadReport(trial.id)}
+                                                                title="Xem biên bản"
+                                                            >
+                                                                <i className="bi bi-file-text"></i>
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            className="btn btn-sm btn-primary btn-action"
+                                                            onClick={() => navigate(`/teacher-trial-teaching-detail/${trial.id}`)}
+                                                            title="Chi tiết"
+                                                        >
+                                                            <i className="bi bi-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

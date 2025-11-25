@@ -142,3 +142,8 @@ export const exportTrialStatistics = async ({ teacherId, startDate, endDate, yea
     });
     return response;
 };
+
+export const adminOverrideTrialResult = async (trialId, overrideData) => {
+    const response = await api.put(`/${trialId}/admin-override`, overrideData);
+    return response.data;
+};

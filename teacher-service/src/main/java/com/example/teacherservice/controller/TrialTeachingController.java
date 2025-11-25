@@ -2,6 +2,7 @@ package com.example.teacherservice.controller;
 
 import com.example.teacherservice.dto.trial.TrialTeachingDto;
 import com.example.teacherservice.enums.TrialStatus;
+import com.example.teacherservice.request.trial.AdminTrialOverrideRequest;
 import com.example.teacherservice.request.trial.TrialTeachingRequest;
 import com.example.teacherservice.service.trial.TrialTeachingService;
 import com.example.teacherservice.jwt.JwtUtil;
@@ -72,6 +73,19 @@ public class TrialTeachingController {
         com.example.teacherservice.enums.TrialConclusion conclusion = 
             com.example.teacherservice.enums.TrialConclusion.valueOf(result.toUpperCase());
         TrialTeachingDto dto = trialTeachingService.finalizeResult(trialId, conclusion);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PutMapping("/{trialId}/admin-override")
+    public ResponseEntity<TrialTeachingDto> adminOverrideResult(
+            @PathVariable String trialId,
+            @RequestBody AdminTrialOverrideRequest request
+    ) {
+        TrialTeachingDto dto = trialTeachingService.adminOverrideResult(
+                trialId,
+                request.getFinalResult(),
+                request.getResultNote()
+        );
         return ResponseEntity.ok(dto);
     }
 }

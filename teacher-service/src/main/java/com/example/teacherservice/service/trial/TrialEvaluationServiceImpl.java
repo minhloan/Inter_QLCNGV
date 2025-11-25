@@ -35,6 +35,7 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
     private final TrialTeachingRepository trialRepository;
     private final UserRepository userRepository;
     private final FileService fileService;
+    private final TrialTeachingService trialTeachingService;
 
     @Override
     public TrialEvaluationDto createEvaluation(String attendeeId, String trialId, Integer score, String comments, String conclusion, String imageFileId, String currentUserId) {
@@ -88,6 +89,9 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
             trialRepository.save(trial);
         }
 
+        // Auto-recalculate trial result based on all evaluations
+        trialTeachingService.recalculateTrialResult(trialId);
+
         return toDto(savedEvaluation);
     }
 
@@ -114,7 +118,12 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
             }
         }
 
-        return toDto(evaluationRepository.save(evaluation));
+        TrialEvaluation saved = evaluationRepository.save(evaluation);
+        
+        // Recalculate trial result after update
+        trialTeachingService.recalculateTrialResult(evaluation.getTrial().getId());
+
+        return toDto(saved);
     }
 
     @Override

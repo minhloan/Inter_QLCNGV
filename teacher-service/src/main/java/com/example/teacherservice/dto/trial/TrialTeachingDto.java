@@ -32,4 +32,11 @@ public class TrialTeachingDto {
     private String note;
     private List<TrialAttendeeDto> attendees;
     private List<TrialEvaluationDto> evaluations; // Danh sách tất cả đánh giá từ hội đồng
+    
+    // Smart evaluation fields
+    private Integer averageScore;
+    private Boolean hasRedFlag;
+    private Boolean needsReview;
+    private Boolean adminOverride;
+    private String resultNote;
 }

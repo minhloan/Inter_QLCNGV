@@ -6,7 +6,7 @@ import Loading from '../../components/Common/Loading';
 import TrialEvaluationModal from '../../components/TrialEvaluationModal';
 import TrialAttendeeModal from '../../components/TrialAttendeeModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { getTrialById, updateTrialStatus, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes, exportTrialStatistics } from '../../api/trial';
+import { getTrialById, updateTrialStatus, adminOverrideTrialResult, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes, exportTrialStatistics } from '../../api/trial';
 import { downloadTrialReport } from '../../api/file';
 
 const TrialTeachingDetail = () => {
@@ -20,6 +20,8 @@ const TrialTeachingDetail = () => {
     const [showAttendeeModal, setShowAttendeeModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
+    const [overrideResult, setOverrideResult] = useState('');
+    const [overrideNote, setOverrideNote] = useState('');
 
     useEffect(() => {
         if (id) loadTrialData();
@@ -38,7 +40,7 @@ const TrialTeachingDetail = () => {
                 // Nếu có nhiều evaluations, lấy cái đầu tiên làm evaluation chính (nếu cần)
                 setEvaluation(trialData.evaluations[0]);
             }
-            
+
             if (trialData.attendees) setAttendees(trialData.attendees);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu giảng thử', 'danger');
@@ -125,6 +127,31 @@ const TrialTeachingDetail = () => {
         }
     };
 
+    const handleAdminOverride = async (e) => {
+        e.preventDefault();
+        if (!overrideResult) {
+            showToast('Lỗi', 'Vui lòng chọn kết luận', 'warning');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await adminOverrideTrialResult(id, {
+                finalResult: overrideResult,
+                resultNote: overrideNote
+            });
+            showToast('Thành công', 'Đã cập nhật kết quả cuối cùng', 'success');
+            loadTrialData(); // Reload data
+            setOverrideResult('');
+            setOverrideNote('');
+        } catch (error) {
+            console.error('Error admin override:', error);
+            showToast('Lỗi', 'Không thể cập nhật kết quả', 'danger');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const showToast = (title, message, type) => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -153,7 +180,7 @@ const TrialTeachingDetail = () => {
     const canEvaluate = () => {
         // Manage/Admin luôn có quyền đánh giá
         if (isManageLeader) return true;
-        
+
         // Kiểm tra xem user hiện tại có trong danh sách attendees không
         if (!user?.userId || !attendees || attendees.length === 0) return false;
         return attendees.some(attendee => attendee.attendeeUserId === user.userId);
@@ -210,12 +237,12 @@ const TrialTeachingDetail = () => {
                                 <div className="table-responsive">
                                     <table className="table table-borderless detail-table mb-0">
                                         <tbody>
-                                        <tr><td>Giảng viên:</td><td className="text-break">{trial.teacherName} ({trial.teacherCode})</td></tr>
-                                        <tr><td>Môn học:</td><td className="text-break">{trial.subjectName}</td></tr>
-                                        <tr><td>Ngày giảng:</td><td className="text-break">{trial.teachingDate}</td></tr>
-                                        <tr><td>Địa điểm:</td><td className="text-break">{trial.location || 'N/A'}</td></tr>
-                                        <tr><td>Trạng thái:</td><td>{getStatusBadge(trial.status)}</td></tr>
-                                        {trial.note && <tr><td>Ghi chú:</td><td className="text-break">{trial.note}</td></tr>}
+                                            <tr><td>Giảng viên:</td><td className="text-break">{trial.teacherName} ({trial.teacherCode})</td></tr>
+                                            <tr><td>Môn học:</td><td className="text-break">{trial.subjectName}</td></tr>
+                                            <tr><td>Ngày giảng:</td><td className="text-break">{trial.teachingDate}</td></tr>
+                                            <tr><td>Địa điểm:</td><td className="text-break">{trial.location || 'N/A'}</td></tr>
+                                            <tr><td>Trạng thái:</td><td>{getStatusBadge(trial.status)}</td></tr>
+                                            {trial.note && <tr><td>Ghi chú:</td><td className="text-break">{trial.note}</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
@@ -226,27 +253,27 @@ const TrialTeachingDetail = () => {
                                     <div className="table-responsive">
                                         <table className="table table-borderless detail-table mb-0">
                                             <tbody>
-                                            <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
-                                            <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
-                                            {evaluation.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
-                                            {evaluation.imageFileId && (
-                                                <tr>
-                                                    <td>Biên bản:</td>
-                                                    <td>
-                                                        <div className="d-flex gap-2">
-                                                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('pdf')}>
-                                                                <i className="bi bi-file-earmark-pdf"></i> PDF
-                                                            </button>
-                                                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('docx')}>
-                                                                <i className="bi bi-file-earmark-word"></i> DOCX
-                                                            </button>
-                                                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('doc')}>
-                                                                <i className="bi bi-file-earmark-word"></i> DOC
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
+                                                <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
+                                                <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation.conclusion)}</td></tr>
+                                                {evaluation.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
+                                                {evaluation.imageFileId && (
+                                                    <tr>
+                                                        <td>Biên bản:</td>
+                                                        <td>
+                                                            <div className="d-flex gap-2">
+                                                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('pdf')}>
+                                                                    <i className="bi bi-file-earmark-pdf"></i> PDF
+                                                                </button>
+                                                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('docx')}>
+                                                                    <i className="bi bi-file-earmark-word"></i> DOCX
+                                                                </button>
+                                                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('doc')}>
+                                                                    <i className="bi bi-file-earmark-word"></i> DOC
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
                                             </tbody>
                                         </table>
                                     </div>
@@ -270,6 +297,83 @@ const TrialTeachingDetail = () => {
                             )}
                         </div>
 
+                        {/* Admin Override Section */}
+                        {isManageLeader && trial.evaluations && trial.evaluations.length > 0 && (
+                            <div className="card mb-4">
+                                <div className="card-header bg-primary text-white">
+                                    <h5 className="mb-0">
+                                        <i className="bi bi-shield-fill-check me-2"></i>
+                                        Admin Override - Quyết định cuối cùng
+                                    </h5>
+                                </div>
+                                <div className="card-body">
+                                    {trial.averageScore !== null && (
+                                        <div className="alert alert-info mb-3">
+                                            <strong>Kết quả tự động:</strong>
+                                            <ul className="mb-0 mt-2">
+                                                <li>Điểm trung bình: <strong>{trial.averageScore}</strong></li>
+                                                <li>Kết luận: {trial.finalResult ? (
+                                                    <span className={`badge bg-${trial.finalResult === 'PASS' ? 'success' : 'danger'}`}>
+                                                        {trial.finalResult === 'PASS' ? 'ĐẠT' : 'KHÔNG ĐẠT'}
+                                                    </span>
+                                                ) : 'Chưa xác định'}</li>
+                                                {trial.hasRedFlag && (
+                                                    <li className="text-warning">
+                                                        <i className="bi bi-exclamation-triangle-fill"></i> Có điểm đánh giá thấp đáng lo ngại
+                                                    </li>
+                                                )}
+                                                {trial.needsReview && (
+                                                    <li className="text-warning">
+                                                        <i className="bi bi-exclamation-circle-fill"></i> Kết quả chưa rõ ràng, cần đánh giá lại
+                                                    </li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {trial.adminOverride && trial.resultNote && (
+                                        <div className="alert alert-success mb-3">
+                                            <i className="bi bi-check-circle-fill me-2"></i>
+                                            <strong>Quyết định đã được Admin xác nhận</strong>
+                                            <p className="mb-0 mt-2">{trial.resultNote}</p>
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={handleAdminOverride}>
+                                        <div className="row">
+                                            <div className="col-md-6 mb-3">
+                                                <label className="form-label fw-bold">Kết luận cuối cùng *</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={overrideResult}
+                                                    onChange={(e) => setOverrideResult(e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">-- Chọn kết luận --</option>
+                                                    <option value="PASS">ĐẠT</option>
+                                                    <option value="FAIL">KHÔNG ĐẠT</option>
+                                                </select>
+                                            </div>
+                                            <div className="col-md-12 mb-3">
+                                                <label className="form-label fw-bold">Ghi chú / Lý do</label>
+                                                <textarea
+                                                    className="form-control"
+                                                    rows="4"
+                                                    value={overrideNote}
+                                                    onChange={(e) => setOverrideNote(e.target.value)}
+                                                    placeholder="Nhập lý do ra quyết định này (ví dụ: Sau khi họp Hội đồng thảo luận...)"
+                                                />
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="btn btn-primary" disabled={loading}>
+                                            <i className="bi bi-shield-fill-check me-2"></i>
+                                            {loading ? 'Đang xử lý...' : 'Xác nhận quyết định cuối cùng'}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Export Documents Section */}
                         <div className="card mb-4">
                             <div className="card-header">
@@ -281,8 +385,8 @@ const TrialTeachingDetail = () => {
                             <div className="card-body">
                                 <div className="row g-3">
                                     <div className="col-md-6">
-                                        <button 
-                                            className="btn btn-outline-primary w-100" 
+                                        <button
+                                            className="btn btn-outline-primary w-100"
                                             onClick={() => handleExportDocument('assignment')}
                                             disabled={loading}
                                         >
@@ -291,8 +395,8 @@ const TrialTeachingDetail = () => {
                                         </button>
                                     </div>
                                     <div className="col-md-6">
-                                        <button 
-                                            className="btn btn-outline-success w-100" 
+                                        <button
+                                            className="btn btn-outline-success w-100"
                                             onClick={() => handleExportDocument('minutes')}
                                             disabled={loading}
                                         >
@@ -349,20 +453,20 @@ const TrialTeachingDetail = () => {
                                 <div className="table-responsive">
                                     <table className="table table-striped">
                                         <thead>
-                                        <tr><th>Tên</th><th>Vai trò</th></tr>
+                                            <tr><th>Tên</th><th>Vai trò</th></tr>
                                         </thead>
                                         <tbody>
-                                        {attendees.map(a => (
-                                            <tr key={a.id}>
-                                                <td>{a.attendeeName}</td>
-                                                <td>
+                                            {attendees.map(a => (
+                                                <tr key={a.id}>
+                                                    <td>{a.attendeeName}</td>
+                                                    <td>
                                                         <span className="badge badge-status secondary">
                                                             {a.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' :
                                                                 a.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}
                                                         </span>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>

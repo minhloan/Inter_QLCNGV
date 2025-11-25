@@ -39,6 +39,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
     private final TrialAttendeeService trialAttendeeService;
     private final TrialAttendeeRepository trialAttendeeRepository;
     private final NotificationService notificationService;
+    private final TrialEvaluationCalculator evaluationCalculator;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -190,6 +191,12 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .note(trial.getNote())
                 .attendees(attendees)
                 .evaluations(evaluationDtos)
+                // Smart evaluation fields
+                .averageScore(trial.getAverageScore())
+                .hasRedFlag(trial.getHasRedFlag())
+                .needsReview(trial.getNeedsReview())
+                .adminOverride(trial.getAdminOverride())
+                .resultNote(trial.getResultNote())
                 .build();
     }
 
@@ -289,5 +296,90 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void recalculateTrialResult(String trialId) {
+        TrialTeaching trial = trialTeachingRepository.findById(trialId)
+                .orElseThrow(() -> new NotFoundException("Trial not found"));
+
+        // Don't recalculate if admin has overridden
+        if (Boolean.TRUE.equals(trial.getAdminOverride())) {
+            return;
+        }
+
+        List<TrialEvaluation> evaluations = trialEvaluationRepository.findByTrial_Id(trialId);
+
+        if (evaluations.isEmpty()) {
+            // No evaluations yet, reset to defaults
+            trial.setAverageScore(null);
+            trial.setHasRedFlag(false);
+            trial.setNeedsReview(false);
+            trial.setFinalResult(null);
+            trial.setResultNote(null);
+        } else {
+            // Calculate average score
+            Integer avgScore = evaluationCalculator.calculateAverageScore(evaluations);
+            trial.setAverageScore(avgScore);
+
+            // Detect red flag
+            boolean hasRedFlag = evaluationCalculator.detectRedFlag(evaluations);
+            trial.setHasRedFlag(hasRedFlag);
+
+            // Determine consensus
+            TrialConclusion consensus = evaluationCalculator.determineConsensus(evaluations);
+            boolean needsReview = consensus == null;
+            trial.setNeedsReview(needsReview);
+
+            // Set final result based on consensus
+            trial.setFinalResult(consensus);
+
+            // Generate result note
+            String resultNote = evaluationCalculator.generateResultNote(evaluations, hasRedFlag, needsReview);
+            trial.setResultNote(resultNote);
+
+            // Update status based on result
+            if (!needsReview && consensus != null) {
+                if (consensus == TrialConclusion.PASS) {
+                    trial.setStatus(TrialStatus.PASSED);
+                } else if (consensus == TrialConclusion.FAIL) {
+                    trial.setStatus(TrialStatus.FAILED);
+                }
+            } else if (needsReview) {
+                trial.setStatus(TrialStatus.REVIEWED); // Needs manual review
+            }
+        }
+
+        trialTeachingRepository.save(trial);
+    }
+
+    @Override
+    public TrialTeachingDto adminOverrideResult(String trialId, TrialConclusion finalResult, String resultNote) {
+        TrialTeaching trial = trialTeachingRepository.findById(trialId)
+                .orElseThrow(() -> new NotFoundException("Trial not found"));
+
+        // Mark as admin override
+        trial.setAdminOverride(true);
+        trial.setFinalResult(finalResult);
+        
+        // Update result note with admin override prefix
+        String fullNote = "Admin đã ra quyết định cuối cùng. ";
+        if (resultNote != null && !resultNote.isBlank()) {
+            fullNote += resultNote;
+        }
+        trial.setResultNote(fullNote);
+
+        // Update status based on override result
+        if (finalResult == TrialConclusion.PASS) {
+            trial.setStatus(TrialStatus.PASSED);
+        } else if (finalResult == TrialConclusion.FAIL) {
+            trial.setStatus(TrialStatus.FAILED);
+        }
+
+        TrialTeaching updated = trialTeachingRepository.save(trial);
+
+        notifyTeacherStatusUpdate(updated);
+
+        return toDto(updated);
     }
 }

@@ -13,6 +13,12 @@ public interface TrialTeachingService {
     TrialTeachingDto createTrial(TrialTeachingRequest request);
     TrialTeachingDto updateStatus(String trialId, TrialStatus status);
     TrialTeachingDto finalizeResult(String trialId, TrialConclusion finalResult);
+    
+    // Smart evaluation methods
+    void recalculateTrialResult(String trialId);
+    TrialTeachingDto adminOverrideResult(String trialId, TrialConclusion finalResult, String resultNote);
+    
+    // Query methods
     List<TrialTeachingDto> getAllTrials();
     List<TrialTeachingDto> getTrialsByTeacher(String teacherId);
     List<TrialTeachingDto> getTrialsForEvaluation(String evaluatorUserId);
