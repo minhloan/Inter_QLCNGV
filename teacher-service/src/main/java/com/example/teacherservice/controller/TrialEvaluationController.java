@@ -26,12 +26,20 @@ public class TrialEvaluationController {
             HttpServletRequest httpRequest
     ) {
         String currentUserId = jwtUtil.ExtractUserId(httpRequest);
+        
+        // Nếu có criteria chi tiết, dùng method mới
+        if (request.getCriteria() != null && !request.getCriteria().isEmpty()) {
+            TrialEvaluationDto dto = trialEvaluationService.createEvaluationWithDetails(request, currentUserId);
+            return new ResponseEntity<>(dto, HttpStatus.CREATED);
+        }
+        
+        // Nếu không có criteria, dùng method cũ (backward compatible)
         TrialEvaluationDto dto = trialEvaluationService.createEvaluation(
                 request.getAttendeeId(),
                 request.getTrialId(),
                 request.getScore(),
                 request.getComments(),
-                request.getConclusion().toString(),
+                request.getConclusion() != null ? request.getConclusion().toString() : "FAIL",
                 request.getImageFileId(),
                 currentUserId
         );

@@ -55,10 +55,20 @@ const SubjectRegistrationManagement = () => {
                 subject_name: reg.subjectName || 'N/A',
                 quarter: reg.quarter ?? null,
                 registration_date: formatDate(reg.registrationDate),
+                // Store raw date for sorting
+                raw_registration_date: reg.registrationDate || '',
                 // backend trả về "registered" | "completed" | "not_completed"
                 status: (reg.status || '').toLowerCase(),
                 notes: reg.notes || '',
             }));
+
+            // Sort by raw_registration_date descending (newest first)
+            normalized.sort((a, b) => {
+                if (!a.raw_registration_date) return 1;
+                if (!b.raw_registration_date) return -1;
+                return b.raw_registration_date.localeCompare(a.raw_registration_date);
+            });
+
             setRegistrations(normalized);
             setFilteredRegistrations(normalized);
             setCurrentPage(1);
@@ -103,6 +113,13 @@ const SubjectRegistrationManagement = () => {
                 (reg) => reg.subject_id === parseInt(subjectFilter, 10)
             );
         }
+
+        // Sort by raw_registration_date descending (newest first)
+        filtered.sort((a, b) => {
+            if (!a.raw_registration_date) return 1;
+            if (!b.raw_registration_date) return -1;
+            return b.raw_registration_date.localeCompare(a.raw_registration_date);
+        });
 
         setFilteredRegistrations(filtered);
         setCurrentPage(1);
@@ -154,8 +171,8 @@ const SubjectRegistrationManagement = () => {
 
         return (
             <span className={`badge badge-status ${info.class}`}>
-        {info.label}
-      </span>
+                {info.label}
+            </span>
         );
     };
 
@@ -239,85 +256,85 @@ const SubjectRegistrationManagement = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="10%">Mã GV</th>
-                                    <th width="15%">Tên Giáo viên</th>
-                                    <th width="20%">Tên Môn học</th>
-                                    <th width="10%">Quý</th>
-                                    <th width="12%">Ngày đăng ký</th>
-                                    <th width="10%">Trạng thái</th>
-                                    <th width="13%" className="text-center">
-                                        Thao tác
-                                    </th>
-                                </tr>
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="10%">Mã GV</th>
+                                        <th width="15%">Tên Giáo viên</th>
+                                        <th width="20%">Tên Môn học</th>
+                                        <th width="10%">Quý</th>
+                                        <th width="12%">Ngày đăng ký</th>
+                                        <th width="10%">Trạng thái</th>
+                                        <th width="13%" className="text-center">
+                                            Thao tác
+                                        </th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {pageRegistrations.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không tìm thấy đăng ký nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageRegistrations.map((reg, index) => (
-                                        <tr key={reg.id} className="fade-in">
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>
-                          <span className="teacher-code">
-                            {reg.teacher_code}
-                          </span>
-                                            </td>
-                                            <td>{reg.teacher_name}</td>
-                                            <td>{reg.subject_name}</td>
-                                            <td>{reg.quarter ? `${reg.quarter}` : 'N/A'}</td>
-                                            <td>{reg.registration_date}</td>
-                                            <td>{getStatusBadge(reg.status)}</td>
-                                            <td className="text-center">
-                                                <div className="action-buttons">
-                                                    {/* Chỉ cho duyệt / từ chối khi đang ở trạng thái đã đăng ký */}
-                                                    {reg.status === 'registered' && (
-                                                        <>
-                                                            <button
-                                                                className="btn btn-sm btn-success btn-action"
-                                                                onClick={() =>
-                                                                    handleStatusChange(reg.id, 'COMPLETED')
-                                                                }
-                                                                title="Duyệt"
-                                                            >
-                                                                <i className="bi bi-check-circle"></i>
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-sm btn-danger btn-action"
-                                                                onClick={() =>
-                                                                    handleStatusChange(reg.id, 'NOT_COMPLETED')
-                                                                }
-                                                                title="Từ chối"
-                                                            >
-                                                                <i className="bi bi-x-circle"></i>
-                                                            </button>
-                                                        </>
-                                                    )}
-
-                                                    <button
-                                                        className="btn btn-sm btn-info btn-action"
-                                                        onClick={() =>
-                                                            navigate(
-                                                                `/subject-registration-detail/${reg.id}`
-                                                            )
-                                                        }
-                                                        title="Chi tiết"
-                                                    >
-                                                        <i className="bi bi-eye"></i>
-                                                    </button>
+                                    {pageRegistrations.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="text-center">
+                                                <div className="empty-state">
+                                                    <i className="bi bi-inbox"></i>
+                                                    <p>Không tìm thấy đăng ký nào</p>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        pageRegistrations.map((reg, index) => (
+                                            <tr key={reg.id} className="fade-in">
+                                                <td>{startIndex + index + 1}</td>
+                                                <td>
+                                                    <span className="teacher-code">
+                                                        {reg.teacher_code}
+                                                    </span>
+                                                </td>
+                                                <td>{reg.teacher_name}</td>
+                                                <td>{reg.subject_name}</td>
+                                                <td>{reg.quarter ? `${reg.quarter}` : 'N/A'}</td>
+                                                <td>{reg.registration_date}</td>
+                                                <td>{getStatusBadge(reg.status)}</td>
+                                                <td className="text-center">
+                                                    <div className="action-buttons">
+                                                        {/* Chỉ cho duyệt / từ chối khi đang ở trạng thái đã đăng ký */}
+                                                        {reg.status === 'registered' && (
+                                                            <>
+                                                                <button
+                                                                    className="btn btn-sm btn-success btn-action"
+                                                                    onClick={() =>
+                                                                        handleStatusChange(reg.id, 'COMPLETED')
+                                                                    }
+                                                                    title="Duyệt"
+                                                                >
+                                                                    <i className="bi bi-check-circle"></i>
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-sm btn-danger btn-action"
+                                                                    onClick={() =>
+                                                                        handleStatusChange(reg.id, 'NOT_COMPLETED')
+                                                                    }
+                                                                    title="Từ chối"
+                                                                >
+                                                                    <i className="bi bi-x-circle"></i>
+                                                                </button>
+                                                            </>
+                                                        )}
+
+                                                        <button
+                                                            className="btn btn-sm btn-info btn-action"
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    `/subject-registration-detail/${reg.id}`
+                                                                )
+                                                            }
+                                                            title="Chi tiết"
+                                                        >
+                                                            <i className="bi bi-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -326,9 +343,8 @@ const SubjectRegistrationManagement = () => {
                             <nav aria-label="Page navigation" className="mt-4">
                                 <ul className="pagination justify-content-center">
                                     <li
-                                        className={`page-item ${
-                                            currentPage === 1 ? 'disabled' : ''
-                                        }`}
+                                        className={`page-item ${currentPage === 1 ? 'disabled' : ''
+                                            }`}
                                     >
                                         <button
                                             className="page-link"
@@ -350,9 +366,8 @@ const SubjectRegistrationManagement = () => {
                                             return (
                                                 <li
                                                     key={page}
-                                                    className={`page-item ${
-                                                        currentPage === page ? 'active' : ''
-                                                    }`}
+                                                    className={`page-item ${currentPage === page ? 'active' : ''
+                                                        }`}
                                                 >
                                                     <button
                                                         className="page-link"
@@ -366,9 +381,8 @@ const SubjectRegistrationManagement = () => {
                                         return null;
                                     })}
                                     <li
-                                        className={`page-item ${
-                                            currentPage === totalPages ? 'disabled' : ''
-                                        }`}
+                                        className={`page-item ${currentPage === totalPages ? 'disabled' : ''
+                                            }`}
                                     >
                                         <button
                                             className="page-link"

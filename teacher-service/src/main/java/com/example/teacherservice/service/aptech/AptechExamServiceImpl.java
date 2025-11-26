@@ -202,20 +202,27 @@ public class AptechExamServiceImpl implements AptechExamService {
     @Override
     public void uploadCertificate(String examId, File certificateFile) {
         AptechExam exam = examRepo.findById(examId).orElseThrow();
-        if (exam.getResult() != ExamResult.PASS)
-            throw new IllegalArgumentException("Certificate only for PASS exams");
+
+        if (exam.getExamProofFile() == null) {
+            throw new IllegalArgumentException("Vui lòng upload chứng nhận thi trước khi nộp bằng chính thức");
+        }
+
+        Integer score = exam.getScore();
+        if (score == null || score < 80) {
+            throw new IllegalArgumentException("Certificate only available for exams with score >= 80");
+        }
         exam.setCertificateFile(certificateFile);
         examRepo.save(exam);
     }
 
     @Override
     @Transactional
-    public AptechOCRResponseDto uploadCertificateWithOCR(String examId, File certificateFile, OCRResultDTO ocrResult) {
+    public AptechOCRResponseDto uploadExamProofWithOCR(String examId, File proofFile, OCRResultDTO ocrResult) {
         AptechExam exam = examRepo.findById(examId)
                 .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
         
-        // 1. Save certificate file reference
-        exam.setCertificateFile(certificateFile);
+        // 1. Save exam proof file reference
+        exam.setExamProofFile(proofFile);
         
         // 2. Save OCR raw text for debugging
         if (ocrResult.getOcrText() != null) {
@@ -248,13 +255,22 @@ public class AptechExamServiceImpl implements AptechExamService {
             }
         }
         
-        // 5. Save exam (but don't auto-update score/result - let frontend do that)
+        // 5. Auto-update score and result if OCR extracted them successfully
+        // For Aptech: save PERCENTAGE (100) not MARKS (30) since scoring is percentage-based
+        if (ocrResult.getOcrPercentage() != null) {
+            exam.setScore(ocrResult.getOcrPercentage());
+        }
+
+        if (ocrResult.getOcrResult() != null) {
+            exam.setResult(ocrResult.getOcrResult());
+        }
+
         examRepo.save(exam);
         
         // 6. Build and return response DTO
         return AptechOCRResponseDto.builder()
-                .certificateFileId(certificateFile.getId())
-                .extractedScore(ocrResult.getOcrScore())
+                .proofFileId(proofFile.getId())
+                .extractedScore(ocrResult.getOcrPercentage())  // Return percentage (100) not marks (30)
                 .extractedResult(ocrResult.getOcrResult() != null ? ocrResult.getOcrResult().name() : null)
                 .extractedSubject(ocrResult.getOcrSubjectName())
                 .extractedName(ocrResult.getOcrFullName())
@@ -367,6 +383,7 @@ public class AptechExamServiceImpl implements AptechExamService {
                 .score(exam.getScore())
                 .result(exam.getResult())
                 .aptechStatus(exam.getAptechStatus() != null ? exam.getAptechStatus().name() : null)
+                .examProofFileId(exam.getExamProofFile() != null ? exam.getExamProofFile().getId() : null)
                 .certificateFileId(exam.getCertificateFile() != null ? exam.getCertificateFile().getId() : null)
                 .canRetake(canRetakeExam(exam.getTeacher().getId(), exam.getSubject().getId()))
                 .retakeCondition(getRetakeCondition(exam.getTeacher().getId(), exam.getSubject().getId()))
@@ -396,6 +413,7 @@ public class AptechExamServiceImpl implements AptechExamService {
                 .attempt(exam.getAttempt())
                 .score(exam.getScore())
                 .result(exam.getResult())
+                .examProofFileId(exam.getExamProofFile() != null ? exam.getExamProofFile().getId() : null)
                 .certificateFileId(exam.getCertificateFile() != null ? exam.getCertificateFile().getId() : null)
                 .build();
     }

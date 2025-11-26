@@ -22,5 +22,6 @@ public class AptechExamHistoryDto {
     private Integer attempt;
     private Integer score;
     private ExamResult result;
+    private String examProofFileId;
     private String certificateFileId;
 }

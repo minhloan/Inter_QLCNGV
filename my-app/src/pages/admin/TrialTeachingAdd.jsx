@@ -7,6 +7,7 @@ import { createTrial } from '../../api/trial';
 import { getAllUsers, searchUsersByTeaching } from '../../api/user';
 import { getAllSubjectsByTrial } from '../../api/subject';
 import { getUserInfo } from '../../api/auth';
+import { getAllAptechExams } from '../../api/aptechExam';
 
 const TrialTeachingAdd = () => {
     const navigate = useNavigate();
@@ -95,9 +96,30 @@ const TrialTeachingAdd = () => {
         if (!formData.subjectId) return 'subjectId';
         if (!formData.teachingDate) return 'teachingDate';
         const selectedDate = new Date(formData.teachingDate);
-        const today = new Date(); today.setHours(0,0,0,0);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
         if (selectedDate < today) return 'teachingDate';
         return null;
+    };
+
+    const validateTeacherExam = async (teacherId, subjectId) => {
+        try {
+            // Get all Aptech exams
+            const allExams = await getAllAptechExams();
+
+            // Filter exams by teacherId and subjectId
+            const teacherSubjectExams = allExams.filter(
+                exam => exam.teacherId === teacherId && exam.subjectId === subjectId
+            );
+
+            // Check if at least one exam has result === 'PASS'
+            const hasPassed = teacherSubjectExams.some(exam => exam.result === 'PASS');
+
+            return hasPassed;
+        } catch (error) {
+            console.error('Error validating teacher exam:', error);
+            // If we can't validate, allow the creation (fail open)
+            return true;
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -112,6 +134,15 @@ const TrialTeachingAdd = () => {
 
         try {
             setLoading(true);
+
+            // Validate that teacher has passed Aptech exam for this subject
+            const hasPassedExam = await validateTeacherExam(formData.teacherId, formData.subjectId);
+            if (!hasPassedExam) {
+                showToast('Lỗi', 'Giảng viên chưa thi đạt môn học này. Vui lòng kiểm tra lại.', 'danger');
+                setLoading(false);
+                return;
+            }
+
             await createTrial(formData);
             showToast('Thành công', 'Tạo buổi giảng thử thành công', 'success');
             setTimeout(() => navigate('/trial-teaching-management'), 1500);
@@ -153,7 +184,7 @@ const TrialTeachingAdd = () => {
                                         className="form-control mb-2"
                                         placeholder="Tìm kiếm giảng viên..."
                                         value={teacherSearch}
-                                        onChange={e=>setTeacherSearch(e.target.value)}
+                                        onChange={e => setTeacherSearch(e.target.value)}
                                     />
                                     <select
                                         className="form-select"
@@ -163,7 +194,7 @@ const TrialTeachingAdd = () => {
                                         disabled={currentUser?.role === 'TEACHER'}
                                     >
                                         <option value="">Chọn giảng viên</option>
-                                        {filteredTeachers.sort((a,b)=>a.username.localeCompare(b.username)).map(t => (
+                                        {filteredTeachers.sort((a, b) => a.username.localeCompare(b.username)).map(t => (
                                             <option key={t.id} value={t.id}>{t.username} ({t.teacherCode})</option>
                                         ))}
                                     </select>
@@ -178,7 +209,7 @@ const TrialTeachingAdd = () => {
                                         className="form-control mb-2"
                                         placeholder="Tìm kiếm môn học..."
                                         value={subjectSearch}
-                                        onChange={e=>setSubjectSearch(e.target.value)}
+                                        onChange={e => setSubjectSearch(e.target.value)}
                                     />
                                     <select
                                         className="form-select"
@@ -227,7 +258,7 @@ const TrialTeachingAdd = () => {
                         </div>
 
                         <div className="form-actions">
-                            <button type="button" className="btn btn-secondary" onClick={()=>navigate('/trial-teaching-management')}>
+                            <button type="button" className="btn btn-secondary" onClick={() => navigate('/trial-teaching-management')}>
                                 <i className="bi bi-x-circle"></i> Hủy
                             </button>
                             <button type="submit" className="btn btn-primary">
@@ -237,7 +268,7 @@ const TrialTeachingAdd = () => {
                     </form>
                 </div>
 
-                {toast.show && <Toast title={toast.title} message={toast.message} type={toast.type} onClose={()=>setToast(prev=>({...prev, show:false}))} />}
+                {toast.show && <Toast title={toast.title} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, show: false }))} />}
                 {loading && <Loading fullscreen={true} message="Đang xử lý..." />}
             </div>
         </MainLayout>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import { getTeacherAptechExams, downloadCertificate } from '../../api/aptechExam';
+import { getTeacherAptechExams, viewCertificate } from '../../api/aptechExam';
 
 const TeacherAptechExam = () => {
     const navigate = useNavigate();
@@ -44,34 +44,13 @@ const TeacherAptechExam = () => {
         }
 
         setFilteredExams(filtered);
-        setCurrentPage(1);
-    };
-
-    const handleDownloadCertificate = async (examId) => {
-        try {
-            const response = await downloadCertificate(examId);
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `certificate_${examId}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            showToast('Thành công', 'Chứng chỉ đã được tải xuống', 'success');
-        } catch (error) {
-            showToast('Lỗi', 'Không thể tải chứng chỉ', 'danger');
-        }
-    };
-
-    const showToast = (title, message, type) => {
-        setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     };
 
     const getResultBadge = (exam) => {
         const s = exam && (exam.score !== null && exam.score !== undefined) ? Number(exam.score) : null;
         if (s === null) return <span className={`badge badge-status warning`}>Chờ thi</span>;
-        if (s >= 80) return <span className={`badge badge-status success`}>Đạt (Có thể cấp chứng nhận)</span>;
+        if (s >= 80) return <span className={`badge badge-status success`}>Đạt</span>;
         if (s >= 60) return <span className={`badge badge-status warning`}>Đạt</span>;
         return <span className={`badge badge-status danger`}>Không đạt</span>;
     };
@@ -181,55 +160,55 @@ const TeacherAptechExam = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="25%">Môn thi</th>
-                                    <th width="12%">Ngày thi</th>
-                                    <th width="10%">Giờ thi</th>
-                                    <th width="10%">Phòng</th>
-                                    <th width="8%">Lần thi</th>
-                                    <th width="8%">Điểm</th>
-                                    <th width="10%">Kết quả</th>
-                                    <th width="12%" className="text-center">Thao tác</th>
-                                </tr>
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="25%">Môn thi</th>
+                                        <th width="12%">Ngày thi</th>
+                                        <th width="10%">Giờ thi</th>
+                                        <th width="10%">Phòng</th>
+                                        <th width="8%">Lần thi</th>
+                                        <th width="8%">Điểm</th>
+                                        <th width="10%">Kết quả</th>
+                                        <th width="12%" className="text-center">Thao tác</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {pageExams.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="9" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không tìm thấy kỳ thi nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageExams.map((exam, index) => (
-                                        <tr key={exam.id} className="fade-in">
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>{(exam.subjectCode ? `${exam.subjectCode} - ` : '') + (exam.subjectName || 'N/A')}</td>
-                                            <td>{exam.examDate || 'N/A'}</td>
-                                            <td>{exam.examTime || 'N/A'}</td>
-                                            <td>{exam.room || 'N/A'}</td>
-                                            <td>{exam.attempt || 1}</td>
-                                            <td>
-                                                {renderScoreCell(exam)}
-                                            </td>
-                                            <td>{getResultBadge(exam)}</td>
-                                            <td className="text-center">
-                                                <div className="action-buttons">
-                                                    <button
-                                                        className="btn btn-sm btn-info"
-                                                        onClick={() => navigate(`/teacher/aptech-exam-detail/${exam.id}`)}
-                                                        title="Chi tiết"
-                                                    >
-                                                        <i className="bi bi-eye"></i>
-                                                    </button>
+                                    {pageExams.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="9" className="text-center">
+                                                <div className="empty-state">
+                                                    <i className="bi bi-inbox"></i>
+                                                    <p>Không tìm thấy kỳ thi nào</p>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        pageExams.map((exam, index) => (
+                                            <tr key={exam.id} className="fade-in">
+                                                <td>{startIndex + index + 1}</td>
+                                                <td>{(exam.subjectCode ? `${exam.subjectCode} - ` : '') + (exam.subjectName || 'N/A')}</td>
+                                                <td>{exam.examDate || 'N/A'}</td>
+                                                <td>{exam.examTime || 'N/A'}</td>
+                                                <td>{exam.room || 'N/A'}</td>
+                                                <td>{exam.attempt || 1}</td>
+                                                <td>
+                                                    {renderScoreCell(exam)}
+                                                </td>
+                                                <td>{getResultBadge(exam)}</td>
+                                                <td className="text-center">
+                                                    <div className="action-buttons">
+                                                        <button
+                                                            className="btn btn-sm btn-info"
+                                                            onClick={() => navigate(`/teacher/aptech-exam-detail/${exam.id}`)}
+                                                            title="Chi tiết"
+                                                        >
+                                                            <i className="bi bi-eye"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

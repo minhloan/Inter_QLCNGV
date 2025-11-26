@@ -6,7 +6,8 @@ import Loading from '../../components/Common/Loading';
 import TrialEvaluationModal from '../../components/TrialEvaluationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { getTrialById, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes } from '../../api/trial';
-import { downloadTrialReport } from '../../api/file';
+import { downloadTrialReport, getFile } from '../../api/file';
+import { getAptechExamsByTeacherForAdmin } from '../../api/aptechExam';
 
 const TeacherTrialTeachingDetail = () => {
     const { id } = useParams();
@@ -19,10 +20,46 @@ const TeacherTrialTeachingDetail = () => {
     const [showEvaluationModal, setShowEvaluationModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
+    const [aptechExams, setAptechExams] = useState([]);
+    const [loadingCertificates, setLoadingCertificates] = useState(false);
+    const [showCertificates, setShowCertificates] = useState(false);
+    const [certPage, setCertPage] = useState(1);
+    const CERT_PAGE_SIZE = 10;
 
     useEffect(() => {
         if (id) loadTrialData();
     }, [id]);
+
+    const buildConsolidatedEvaluation = (trialData) => {
+        if (!trialData) return null;
+
+        const commentList = (trialData.evaluations || [])
+            .map(item => item?.comments?.trim())
+            .filter(Boolean);
+        const firstFileId = (trialData.evaluations || []).find(item => item?.imageFileId)?.imageFileId;
+
+        if (trialData.averageScore !== null && trialData.averageScore !== undefined) {
+            return {
+                score: trialData.averageScore,
+                conclusion: trialData.finalResult || null,
+                comments: commentList.length ? commentList.join('; ') : null,
+                imageFileId: firstFileId || null,
+            };
+        }
+
+        if (trialData.finalResult) {
+            return {
+                score: null,
+                conclusion: trialData.finalResult,
+                comments: commentList.length ? commentList.join('; ') : null,
+                imageFileId: firstFileId || null,
+            };
+        }
+
+        if (trialData.evaluation) return trialData.evaluation;
+        if (trialData.evaluations && trialData.evaluations.length > 0) return trialData.evaluations[0];
+        return null;
+    };
 
     const loadTrialData = async () => {
         try {
@@ -30,40 +67,23 @@ const TeacherTrialTeachingDetail = () => {
             const trialData = await getTrialById(id);
             setTrial(trialData);
 
-            // Tính toán evaluation từ trial.evaluations và trial.finalResult
-            if (trialData.evaluations && trialData.evaluations.length > 0) {
-                // Tính điểm trung bình từ các đánh giá
-                const totalScore = trialData.evaluations.reduce((sum, evaluationItem) => sum + (evaluationItem.score || 0), 0);
-                const avgScore = Math.round(totalScore / trialData.evaluations.length);
-                
-                // Lấy comments từ tất cả evaluations (hoặc chỉ lấy từ evaluation đầu tiên)
-                const allComments = trialData.evaluations
-                    .map(evaluationItem => evaluationItem.comments)
-                    .filter(c => c && c.trim())
-                    .join('; ');
-                
-                // Tìm imageFileId từ evaluation đầu tiên có file
-                const firstEvaluationWithFile = trialData.evaluations.find(evaluationItem => evaluationItem.imageFileId);
-                
-                setEvaluation({
-                    score: avgScore,
-                    conclusion: trialData.finalResult,
-                    comments: allComments || null,
-                    imageFileId: firstEvaluationWithFile?.imageFileId || null
-                });
-            } else if (trialData.finalResult) {
-                // Nếu có finalResult nhưng chưa có evaluations chi tiết
-                setEvaluation({
-                    score: null,
-                    conclusion: trialData.finalResult,
-                    comments: null,
-                    imageFileId: null
-                });
-            } else {
-                setEvaluation(null);
-            }
+            const consolidatedEvaluation = buildConsolidatedEvaluation(trialData);
+            setEvaluation(consolidatedEvaluation);
             
             if (trialData.attendees) setAttendees(trialData.attendees);
+
+            // Load Aptech certificates for the teacher of this trial
+            if (trialData.teacherId) {
+                try {
+                    setLoadingCertificates(true);
+                    const exams = await getAptechExamsByTeacherForAdmin(trialData.teacherId);
+                    setAptechExams(exams || []);
+                } finally {
+                    setLoadingCertificates(false);
+                }
+            } else {
+                setAptechExams([]);
+            }
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu giảng thử', 'danger');
         } finally {
@@ -155,6 +175,18 @@ const TeacherTrialTeachingDetail = () => {
         return <span className={`badge badge-status ${conclusionInfo.class}`}>{conclusionInfo.label}</span>;
     };
 
+    const handleOpenFileById = async (fileId) => {
+        if (!fileId) return;
+        try {
+            const url = await getFile(fileId);
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        } catch (error) {
+            showToast('Lỗi', 'Không thể mở file chứng nhận', 'danger');
+        }
+    };
+
     // Kiểm tra xem user hiện tại có phải là teacher được đánh giá không
     const isCurrentUserTheTeacher = () => {
         if (!user?.userId || !trial?.teacherId) return false;
@@ -186,6 +218,11 @@ const TeacherTrialTeachingDetail = () => {
         const myAttendee = attendees.find(attendee => attendee.attendeeUserId === user.userId);
         return myAttendee?.id || null;
     };
+
+    const totalCertPages = Math.ceil(aptechExams.length / CERT_PAGE_SIZE) || 1;
+    const currentCertPage = Math.min(certPage, totalCertPages);
+    const certStart = (currentCertPage - 1) * CERT_PAGE_SIZE;
+    const pagedExams = aptechExams.slice(certStart, certStart + CERT_PAGE_SIZE);
 
     if (loading && !trial) return <MainLayout><Loading /></MainLayout>;
 
@@ -330,6 +367,166 @@ const TeacherTrialTeachingDetail = () => {
                             </div>
                         )}
 
+                        {/* Aptech Certificates Section - chỉ cho manage hoặc người được phân công chấm */}
+                        {canExportDocuments() && (
+                            <div className="card mb-4 mt-3">
+                                <div className="card-header">
+                                    <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <h5 className="mb-0">
+                                            <i className="bi bi-award me-2" />
+                                            Chứng nhận & Bằng Aptech của giảng viên
+                                        </h5>
+                                        {aptechExams.length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-secondary"
+                                                onClick={() => setShowCertificates(prev => !prev)}
+                                            >
+                                                <i
+                                                    className={`bi ${
+                                                        showCertificates ? 'bi-chevron-up' : 'bi-chevron-down'
+                                                    } me-1`}
+                                                />
+                                                {showCertificates ? 'Thu gọn' : 'Hiển thị danh sách'}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="card-body">
+                                    {loadingCertificates ? (
+                                        <p className="text-muted mb-0">Đang tải dữ liệu chứng chỉ...</p>
+                                    ) : aptechExams.length === 0 ? (
+                                        <p className="text-muted mb-0">
+                                            Chưa ghi nhận kỳ thi Aptech nào cho giảng viên này trong hệ thống.
+                                        </p>
+                                    ) : showCertificates ? (
+                                        <>
+                                            <div className="table-responsive">
+                                                <table className="table table-striped align-middle mb-2">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Môn thi</th>
+                                                            <th>Ngày thi</th>
+                                                            <th>Lần thi</th>
+                                                            <th>Điểm</th>
+                                                            <th>Kết quả</th>
+                                                            <th>Chứng nhận thi</th>
+                                                            <th>Bằng Aptech</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {pagedExams.map(exam => (
+                                                            <tr key={exam.id}>
+                                                                <td className="text-break">
+                                                                    {(exam.subjectCode ? `${exam.subjectCode} - ` : '') +
+                                                                        (exam.subjectName || '')}
+                                                                </td>
+                                                                <td>{exam.examDate || ''}</td>
+                                                                <td>{exam.attempt}</td>
+                                                                <td>{exam.score != null ? exam.score : '—'}</td>
+                                                                <td>{exam.result || '—'}</td>
+                                                                <td>
+                                                                    {exam.examProofFileId ? (
+                                                                        <button
+                                                                            className="btn btn-sm btn-outline-primary"
+                                                                            onClick={() =>
+                                                                                handleOpenFileById(exam.examProofFileId)
+                                                                            }
+                                                                        >
+                                                                            <i className="bi bi-file-earmark-richtext me-1" />
+                                                                            Xem chứng nhận
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-muted small">Không có</span>
+                                                                    )}
+                                                                </td>
+                                                                <td>
+                                                                    {exam.certificateFileId ? (
+                                                                        <button
+                                                                            className="btn btn-sm btn-outline-success"
+                                                                            onClick={() =>
+                                                                                handleOpenFileById(exam.certificateFileId)
+                                                                            }
+                                                                        >
+                                                                            <i className="bi bi-patch-check me-1" />
+                                                                            Xem bằng
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-muted small">Không có</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {totalCertPages > 1 && (
+                                                <nav aria-label="Aptech certificates pagination">
+                                                    <ul className="pagination pagination-sm justify-content-end mb-0 flex-wrap">
+                                                        <li
+                                                            className={`page-item ${
+                                                                currentCertPage === 1 ? 'disabled' : ''
+                                                            }`}
+                                                        >
+                                                            <button
+                                                                className="page-link"
+                                                                onClick={() =>
+                                                                    setCertPage(prev => Math.max(1, prev - 1))
+                                                                }
+                                                                disabled={currentCertPage === 1}
+                                                            >
+                                                                <i className="bi bi-chevron-left" />
+                                                            </button>
+                                                        </li>
+                                                        {Array.from({ length: totalCertPages }).map((_, idx) => {
+                                                            const page = idx + 1;
+                                                            return (
+                                                                <li
+                                                                    key={page}
+                                                                    className={`page-item ${
+                                                                        page === currentCertPage ? 'active' : ''
+                                                                    }`}
+                                                                >
+                                                                    <button
+                                                                        className="page-link"
+                                                                        onClick={() => setCertPage(page)}
+                                                                    >
+                                                                        {page}
+                                                                    </button>
+                                                                </li>
+                                                            );
+                                                        })}
+                                                        <li
+                                                            className={`page-item ${
+                                                                currentCertPage === totalCertPages ? 'disabled' : ''
+                                                            }`}
+                                                        >
+                                                            <button
+                                                                className="page-link"
+                                                                onClick={() =>
+                                                                    setCertPage(prev =>
+                                                                        Math.min(totalCertPages, prev + 1)
+                                                                    )
+                                                                }
+                                                                disabled={currentCertPage === totalCertPages}
+                                                            >
+                                                                <i className="bi bi-chevron-right" />
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </nav>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <p className="text-muted mb-0">
+                                            Có {aptechExams.length} lần thi Aptech. Bấm "Hiển thị danh sách" để xem chi
+                                            tiết.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Export Documents Section - Chỉ hiển thị nếu user có quyền */}
                         {canExportDocuments() && (
                             <div className="card mb-4">
@@ -348,7 +545,7 @@ const TeacherTrialTeachingDetail = () => {
                                                 disabled={loading}
                                             >
                                                 <i className="bi bi-file-earmark-word me-2"></i>
-                                                - Phân công đánh giá (Word)
+                                                BM06.39 - Phân công đánh giá (Word)
                                             </button>
                                         </div>
                                         <div className="col-md-6">
@@ -358,37 +555,52 @@ const TeacherTrialTeachingDetail = () => {
                                                 disabled={loading}
                                             >
                                                 <i className="bi bi-file-earmark-word me-2"></i>
-                                                - Biên bản đánh giá (Word)
+                                                BM06.41 - Biên bản đánh giá (Word)
                                             </button>
                                         </div>
-                                        {/* {trial?.evaluations && trial.evaluations.length > 0 && (
+
+                                        {/* BM06.40 - Phiếu đánh giá cá nhân cho giáo viên cơ hữu / người chấm */}
+                                        {getCurrentUserAttendeeId() && (
                                             <div className="col-md-6">
-                                                <div className="dropdown">
-                                                    <button 
-                                                        className="btn btn-outline-info w-100 dropdown-toggle" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown"
-                                                        disabled={loading}
-                                                    >
-                                                        <i className="bi bi-file-earmark-excel me-2"></i>
-                                                        BM06.40 - Phiếu đánh giá (Excel)
-                                                    </button>
-                                                    <ul className="dropdown-menu w-100">
-                                                        {trial.evaluations.map((evaluation) => (
-                                                            <li key={evaluation.id}>
-                                                                <button 
-                                                                    className="dropdown-item" 
-                                                                    onClick={() => handleExportDocument('evaluation-form', evaluation.attendeeId)}
-                                                                >
-                                                                    {evaluation.attendeeName || 'Người đánh giá'} 
-                                                                    {evaluation.attendeeRole && ` (${evaluation.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' : evaluation.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'})`}
-                                                                </button>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
+                                                <button
+                                                    className="btn btn-outline-info w-100"
+                                                    disabled={loading}
+                                                    onClick={async () => {
+                                                        try {
+                                                            setLoading(true);
+                                                            const attendeeId = getCurrentUserAttendeeId();
+                                                            const res = await exportTrialEvaluationForm(id, attendeeId);
+                                                            const blob = res.data;
+                                                            const url = window.URL.createObjectURL(blob);
+                                                            const a = document.createElement('a');
+
+                                                            const safeTeacher = (trial.teacherName || 'GiangVien')
+                                                                .replace(/\s+/g, '_');
+                                                            const safeEvaluator = (user?.userData?.full_name || user?.username || 'NguoiDanhGia')
+                                                                .replace(/\s+/g, '_');
+                                                            const filename = `BM06.40-Phieu_danh_gia_giang_thu-${safeTeacher}-${safeEvaluator}.xlsx`;
+
+                                                            a.href = url;
+                                                            a.download = filename;
+                                                            document.body.appendChild(a);
+                                                            a.click();
+                                                            window.URL.revokeObjectURL(url);
+                                                            document.body.removeChild(a);
+
+                                                            showToast('Thành công', 'Đã xuất phiếu đánh giá của bạn', 'success');
+                                                        } catch (error) {
+                                                            console.error('Error exporting personal evaluation form:', error);
+                                                            showToast('Lỗi', 'Không thể xuất phiếu đánh giá', 'danger');
+                                                        } finally {
+                                                            setLoading(false);
+                                                        }
+                                                    }}
+                                                >
+                                                    <i className="bi bi-file-earmark-excel me-2"></i>
+                                                    BM06.40 - Phiếu đánh giá của tôi (Excel)
+                                                </button>
                                             </div>
-                                        )} */}
+                                        )}
                                     </div>
                                 </div>
                             </div>

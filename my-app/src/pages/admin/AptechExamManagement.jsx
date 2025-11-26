@@ -76,8 +76,15 @@ const AptechExamManagement = () => {
             // Gọi API mới
             const examsData = await getAllAptechExams();
 
-            setExams(examsData);
-            setFilteredExams(examsData);
+            // Sort by examDate descending (newest first)
+            const sortedExams = (examsData || []).sort((a, b) => {
+                if (!a.examDate) return 1;
+                if (!b.examDate) return -1;
+                return b.examDate.localeCompare(a.examDate);
+            });
+
+            setExams(sortedExams);
+            setFilteredExams(sortedExams);
 
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu', 'danger');
@@ -120,6 +127,13 @@ const AptechExamManagement = () => {
             filtered = filtered.filter(exam => exam.result === statusFilter);
         }
 
+        // Sort by examDate descending (newest first)
+        filtered.sort((a, b) => {
+            if (!a.examDate) return 1;
+            if (!b.examDate) return -1;
+            return b.examDate.localeCompare(a.examDate);
+        });
+
         setFilteredExams(filtered);
         setCurrentPage(1);
     };
@@ -127,7 +141,7 @@ const AptechExamManagement = () => {
     const getStatusBadge = (exam) => {
         const s = exam && (exam.score !== null && exam.score !== undefined) ? Number(exam.score) : null;
         if (s === null) return <span className={`badge badge-status warning`}>Chờ thi</span>;
-        if (s >= 80) return <span className={`badge badge-status success`}>Đạt (Có thể cấp chứng nhận)</span>;
+        if (s >= 80) return <span className={`badge badge-status success`}>Đạt</span>;
         if (s >= 60) return <span className={`badge badge-status warning`}>Đạt</span>;
         return <span className={`badge badge-status danger`}>Không đạt</span>;
     };
@@ -359,92 +373,92 @@ const AptechExamManagement = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Mã GV</th>
-                                    <th>Tên Giáo viên</th>
-                                    <th>Môn thi</th>
-                                    <th>Ngày thi</th>
-                                    <th>Giờ thi</th>
-                                    <th>Điểm</th>
-                                    <th>Trạng thái</th>
-                                    <th className="text-center">Thao tác</th>
-                                </tr>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Mã GV</th>
+                                        <th>Tên Giáo viên</th>
+                                        <th>Môn thi</th>
+                                        <th>Ngày thi</th>
+                                        <th>Giờ thi</th>
+                                        <th>Điểm</th>
+                                        <th>Trạng thái</th>
+                                        <th className="text-center">Thao tác</th>
+                                    </tr>
                                 </thead>
 
                                 <tbody>
-                                {pageExams.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="9" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không tìm thấy kỳ thi nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageExams.map((exam, index) => (
-                                        <tr key={exam.id}>
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>{exam.teacherCode}</td>
-                                            <td>{exam.teacherName}</td>
-                                            <td>{(exam.subjectCode ? `${exam.subjectCode} - ` : '') + (exam.subjectName || '')}</td>
-                                            <td>{exam.examDate}</td>
-                                            <td>{exam.examTime}</td>
-
-                                            <td>
-                                                {exam.score != null ? (
-                                                    <span className={exam.score >= 80 ? "text-success fw-bold" : exam.score >= 60 ? "text-warning fw-bold" : "text-danger fw-bold"}>
-                                                            {exam.score}
-                                                        </span>
-                                                ) : "N/A"}
-                                            </td>
-
-                                            <td>{getStatusBadge(exam)}</td>
-
-                                            <td className="text-center">
-
-                                                {/* Approve / Reject badges: only visible when score >= 80 and awaiting approval */}
-                                                {exam.score != null && exam.score >= 80 && exam.aptechStatus === 'PENDING' ? (
-                                                    <>
-                                                        <button
-                                                            className="btn btn-sm btn-success me-1"
-                                                            title="Duyệt chứng chỉ"
-                                                            onClick={async () => {
-                                                                try {
-                                                                    await adminUpdateExamStatus(exam.id, 'APPROVED');
-                                                                    showToast('Thành công', 'Đã phê duyệt chứng chỉ', 'success');
-                                                                    // update local state
-                                                                    setExams(prev => prev.map(e => e.id === exam.id ? { ...e, aptechStatus: 'APPROVED' } : e));
-                                                                } catch (err) {
-                                                                    showToast('Lỗi', 'Không thể phê duyệt', 'danger');
-                                                                }
-                                                            }}
-                                                        >
-                                                            <i className="bi bi-check-lg"></i>
-                                                        </button>
-
-                                                        <button
-                                                            className="btn btn-sm btn-danger"
-                                                            title="Từ chối chứng chỉ"
-                                                            onClick={async () => {
-                                                                try {
-                                                                    await adminUpdateExamStatus(exam.id, 'REJECTED');
-                                                                    showToast('Thành công', 'Đã từ chối chứng chỉ', 'success');
-                                                                    setExams(prev => prev.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED' } : e));
-                                                                } catch (err) {
-                                                                    showToast('Lỗi', 'Không thể từ chối', 'danger');
-                                                                }
-                                                            }}
-                                                        >
-                                                            <i className="bi bi-x-lg"></i>
-                                                        </button>
-                                                    </>
-                                                ) : null}
+                                    {pageExams.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="9" className="text-center">
+                                                <div className="empty-state">
+                                                    <i className="bi bi-inbox"></i>
+                                                    <p>Không tìm thấy kỳ thi nào</p>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        pageExams.map((exam, index) => (
+                                            <tr key={exam.id}>
+                                                <td>{startIndex + index + 1}</td>
+                                                <td>{exam.teacherCode}</td>
+                                                <td>{exam.teacherName}</td>
+                                                <td>{(exam.subjectCode ? `${exam.subjectCode} - ` : '') + (exam.subjectName || '')}</td>
+                                                <td>{exam.examDate}</td>
+                                                <td>{exam.examTime}</td>
+
+                                                <td>
+                                                    {exam.score != null ? (
+                                                        <span className={exam.score >= 80 ? "text-success fw-bold" : exam.score >= 60 ? "text-warning fw-bold" : "text-danger fw-bold"}>
+                                                            {exam.score}
+                                                        </span>
+                                                    ) : "N/A"}
+                                                </td>
+
+                                                <td>{getStatusBadge(exam)}</td>
+
+                                                <td className="text-center">
+
+                                                    {/* Approve / Reject badges: only visible when đã upload file và chờ duyệt */}
+                                                    {exam.certificateFileId && exam.aptechStatus === 'PENDING' ? (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-success me-1"
+                                                                title="Duyệt chứng chỉ"
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await adminUpdateExamStatus(exam.id, 'APPROVED');
+                                                                        showToast('Thành công', 'Đã phê duyệt chứng chỉ', 'success');
+                                                                        // update local state
+                                                                        setExams(prev => prev.map(e => e.id === exam.id ? { ...e, aptechStatus: 'APPROVED' } : e));
+                                                                    } catch (err) {
+                                                                        showToast('Lỗi', 'Không thể phê duyệt', 'danger');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <i className="bi bi-check-lg"></i>
+                                                            </button>
+
+                                                            <button
+                                                                className="btn btn-sm btn-danger"
+                                                                title="Từ chối chứng chỉ"
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await adminUpdateExamStatus(exam.id, 'REJECTED');
+                                                                        showToast('Thành công', 'Đã từ chối chứng chỉ', 'success');
+                                                                        setExams(prev => prev.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED' } : e));
+                                                                    } catch (err) {
+                                                                        showToast('Lỗi', 'Không thể từ chối', 'danger');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <i className="bi bi-x-lg"></i>
+                                                            </button>
+                                                        </>
+                                                    ) : null}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
 
                             </table>

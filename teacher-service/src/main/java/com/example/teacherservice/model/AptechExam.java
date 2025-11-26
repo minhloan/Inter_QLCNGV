@@ -51,6 +51,10 @@ public class AptechExam extends BaseEntity {
     private AptechStatus aptechStatus = AptechStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exam_proof_file_id")
+    private File examProofFile;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "certificate_file_id")
     private File certificateFile;
 

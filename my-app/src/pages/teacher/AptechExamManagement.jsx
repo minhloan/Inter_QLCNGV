@@ -127,7 +127,7 @@ const AptechExamManagement = () => {
     const getStatusBadge = (exam) => {
         const s = exam && (exam.score !== null && exam.score !== undefined) ? Number(exam.score) : null;
         if (s === null) return <span className={`badge badge-status warning`}>Chờ thi</span>;
-        if (s >= 80) return <span className={`badge badge-status success`}>Đạt (Có thể cấp chứng nhận)</span>;
+        if (s >= 80) return <span className={`badge badge-status success`}>Đạt</span>;
         if (s >= 60) return <span className={`badge badge-status warning`}>Đạt</span>;
         return <span className={`badge badge-status danger`}>Không đạt</span>;
     };
@@ -382,8 +382,8 @@ const AptechExamManagement = () => {
 
                                             <td className="text-center">
 
-                                                {/* Approve / Reject badges: only visible when score >= 80 and awaiting approval */}
-                                                {exam.score != null && exam.score >= 80 && exam.aptechStatus === 'PENDING' ? (
+                                                {/* Approve / Reject badges: only visible khi đã upload file và đang chờ duyệt */}
+                                                {exam.certificateFileId && exam.aptechStatus === 'PENDING' ? (
                                                     <>
                                                         <button
                                                             className="btn btn-sm btn-success me-1"

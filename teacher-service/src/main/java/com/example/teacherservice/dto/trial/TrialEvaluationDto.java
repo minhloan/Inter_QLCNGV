@@ -4,6 +4,8 @@ import com.example.teacherservice.enums.TrialConclusion;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class TrialEvaluationDto {
@@ -17,5 +19,8 @@ public class TrialEvaluationDto {
     private String comments;
     private TrialConclusion conclusion;
     private String imageFileId;
+    
+    // Danh sách điểm chi tiết từng tiêu chí
+    private List<TrialEvaluationItemDto> items;
 }
 

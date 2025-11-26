@@ -9,8 +9,10 @@ export const getFile = async (fileId) => {
     const response = await api.get(`/get/${fileId}`, {
       responseType: 'blob'
     });
-    
-    const blob = new Blob([response.data]);
+
+    // Axios trả về trực tiếp Blob với đúng content-type từ server,
+    // dùng luôn blob này để giữ nguyên metadata (image/jpeg, application/pdf, ...)
+    const blob = response.data;
     const blobUrl = URL.createObjectURL(blob);
     return blobUrl;
   } catch (error) {

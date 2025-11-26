@@ -311,9 +311,19 @@ public class OCRServiceImpl implements OCRService {
     public OCRResultDTO processAptechCertificate(File imageFile) {
         java.io.File physicalFile = new java.io.File(imageFile.getFilePath());
         try {
-            // Perform OCR
-            String ocrText = tesseract.doOCR(physicalFile);
+            // Convert to BufferedImage to avoid image format issues
+            BufferedImage bufferedImage = ImageIO.read(physicalFile);
+            if (bufferedImage == null) {
+                log.error("Failed to read image file: {}", physicalFile.getName());
+                return OCRResultDTO.builder().ocrText("").build();
+            }
+            
+            // Perform OCR on BufferedImage
+            String ocrText = tesseract.doOCR(bufferedImage);
             return parseAptechCertificateText(ocrText != null ? ocrText : "");
+        } catch (IOException e) {
+            log.error("IO error reading image file: {}", physicalFile.getName(), e);
+            return OCRResultDTO.builder().ocrText("").build();
         } catch (TesseractException e) {
             log.error("OCR failed for Aptech certificate: {}", physicalFile.getName(), e);
             return OCRResultDTO.builder().ocrText("").build();
@@ -327,11 +337,17 @@ public class OCRServiceImpl implements OCRService {
      * Parse Aptech certificate OCR text with specific patterns
      */
     private OCRResultDTO parseAptechCertificateText(String ocrText) {
+        log.info("=== APTECH OCR DEBUG START ===");
+        log.info("Raw OCR Text length: {}", ocrText != null ? ocrText.length() : 0);
+        log.info("Raw OCR Text:\n{}", ocrText);
+        log.info("=== APTECH OCR DEBUG END ===");
+        
         OCRResultDTO result = OCRResultDTO.builder()
                 .ocrText(ocrText)
                 .build();
 
         if (ocrText == null || ocrText.trim().isEmpty()) {
+            log.warn("OCR text is empty, cannot extract anything");
             return result;
         }
 

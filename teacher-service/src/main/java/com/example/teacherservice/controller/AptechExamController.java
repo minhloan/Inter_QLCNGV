@@ -65,8 +65,8 @@ public class AptechExamController {
         return ResponseEntity.ok(examService.getExamHistory(teacherId, subjectId));
     }
 
-    @PostMapping("/{examId}/certificate")
-    public ResponseEntity<?> uploadCertificate(
+    @PostMapping("/{examId}/exam-proof")
+    public ResponseEntity<?> uploadExamProof(
             @PathVariable String examId,
             @RequestParam("file") MultipartFile file,
             HttpServletRequest request) {
@@ -78,20 +78,42 @@ public class AptechExamController {
 
         try {
             // 1. Save file physically
-            File savedFile = fileService.saveFile(file, "certificates");
+            File savedFile = fileService.saveFile(file, "exam-proofs");
             
             // 2. Run OCR to extract Aptech certificate info
             OCRResultDTO ocrResult = ocrService.processAptechCertificate(savedFile);
             
             // 3. Upload certificate with OCR data and get response
-            AptechOCRResponseDto response = examService.uploadCertificateWithOCR(examId, savedFile, ocrResult);
+            AptechOCRResponseDto response = examService.uploadExamProofWithOCR(examId, savedFile, ocrResult);
             
             // 4. Return OCR results to frontend for auto-fill
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Failed to upload certificate for exam {}", examId, e);
+            log.error("Failed to upload exam proof for exam {}", examId, e);
             return ResponseEntity.badRequest()
                 .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{examId}/certificate")
+    public ResponseEntity<?> uploadFinalCertificate(
+            @PathVariable String examId,
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
+        String teacherId = jwtUtil.ExtractUserId(request);
+        boolean validExam = examService.getExamsByTeacher(teacherId)
+                .stream().anyMatch(e -> e.getId().equals(examId));
+
+        if (!validExam) return ResponseEntity.badRequest().build();
+
+        try {
+            File savedFile = fileService.saveFile(file, "certificates");
+            examService.uploadCertificate(examId, savedFile);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Failed to upload final certificate for exam {}", examId, e);
+            return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
@@ -132,6 +154,18 @@ public class AptechExamController {
     @GetMapping("/all")
     public ResponseEntity<List<AptechExamDto>> getAllExams() {
         return ResponseEntity.ok(examService.getAllExams());
+    }
+
+    /**
+     * ADMIN / REVIEWER VIEW:
+     * Lấy danh sách kỳ thi Aptech của một giáo viên bất kỳ (dùng trong màn quản lý,
+     * xem chứng nhận & bằng của giáo viên được phân công / giảng thử).
+     */
+    @GetMapping("/admin/teacher/{teacherId}")
+    public ResponseEntity<List<AptechExamDto>> getExamsByTeacherForAdmin(
+            @PathVariable String teacherId
+    ) {
+        return ResponseEntity.ok(examService.getExamsByTeacher(teacherId));
     }
 
     @GetMapping("/sessions")

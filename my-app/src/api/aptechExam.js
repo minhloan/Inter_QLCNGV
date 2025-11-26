@@ -24,6 +24,15 @@ export const getTeacherAptechExams = async () => {
     return response.data;
 };
 
+// 1b. Admin / reviewer: lấy danh sách kỳ thi Aptech của một giáo viên bất kỳ
+//    (dùng để hiển thị chứng nhận & bằng trên màn quản lý/trial, phân công, v.v.)
+export const getAptechExamsByTeacherForAdmin = async (teacherId) => {
+    if (!teacherId) return [];
+    const adminApi = createApiInstance(`${API_URL}/admin`);
+    const response = await adminApi.get(`/teacher/${teacherId}`);
+    return response.data;
+};
+
 export const getExamById = async (id) => {
     const response = await api.get(`/${id}`);
     return response.data;
@@ -35,24 +44,32 @@ export const getExamHistory = async (subjectId) => {
     return response.data;
 };
 
-// 3. Upload chứng chỉ cho kỳ thi với OCR
-export const uploadCertificate = async (examId, file) => {
+// 3. Upload chứng nhận thi để đọc OCR điểm
+export const uploadExamProof = async (examId, file) => {
     const formData = new FormData();
     formData.append("file", file);
-
-    const response = await api.post(`/${examId}/certificate`, formData, {
+    const response = await api.post(`/${examId}/exam-proof`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
     });
-
     return response.data; // Return OCR results
 };
 
-// 4. Download chứng chỉ
-export const downloadCertificate = async (examId) => {
+// 3b. Upload bằng Aptech chính thức (khi đã đủ điều kiện)
+export const uploadFinalCertificate = async (examId, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post(`/${examId}/certificate`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+    });
+    return response.data;
+};
+
+// 4. Download/View chứng chỉ
+export const viewCertificate = async (examId) => {
     const response = await api.get(`/${examId}/certificate`, {
         responseType: "blob"
     });
-    return response;
+    return response.data;
 };
 
 // 5. Đăng ký thi

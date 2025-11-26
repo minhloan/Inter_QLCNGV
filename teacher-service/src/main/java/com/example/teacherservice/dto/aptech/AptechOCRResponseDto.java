@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AptechOCRResponseDto {
-    private String certificateFileId;  // Saved file ID
+    private String proofFileId;        // Saved file ID for exam proof
     private Integer extractedScore;    // From OCR
     private String extractedResult;    // PASS or FAIL
     private String extractedSubject;   // Subject name from OCR

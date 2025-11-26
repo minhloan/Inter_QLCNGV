@@ -33,7 +33,14 @@ const AdminAptechSessionList = () => {
                 search: keyword?.trim() || undefined
             });
 
-            setSessions(response?.items || []);
+            // Sort sessions by examDate descending (newest first)
+            const sortedSessions = (response?.items || []).sort((a, b) => {
+                if (!a.examDate) return 1;
+                if (!b.examDate) return -1;
+                return b.examDate.localeCompare(a.examDate);
+            });
+            setSessions(sortedSessions);
+
             setMeta({
                 totalPages: response?.totalPages ?? 0,
                 totalElements: response?.totalElements ?? 0,
@@ -220,32 +227,32 @@ const AdminAptechSessionList = () => {
                         <div className="table-responsive mt-3 mt-md-0">
                             <table className="table table-hover table-bordered align-middle">
                                 <thead className="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Ngày thi</th>
-                                    <th>Giờ thi</th>
-                                    <th>Phòng</th>
-                                    <th>Ghi chú</th>
-                                </tr>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Ngày thi</th>
+                                        <th>Giờ thi</th>
+                                        <th>Phòng</th>
+                                        <th>Ghi chú</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {sessions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="text-center text-muted py-4">
-                                            Không có đợt thi nào phù hợp
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    sessions.map((session, index) => (
-                                        <tr key={session.id}>
-                                            <td>{page * pageSize + index + 1}</td>
-                                            <td>{formatDate(session.examDate)}</td>
-                                            <td>{formatTime(session.examTime)}</td>
-                                            <td>{session.room || '-'}</td>
-                                            <td>{session.note || '-'}</td>
+                                    {sessions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="text-center text-muted py-4">
+                                                Không có đợt thi nào phù hợp
+                                            </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        sessions.map((session, index) => (
+                                            <tr key={session.id}>
+                                                <td>{page * pageSize + index + 1}</td>
+                                                <td>{formatDate(session.examDate)}</td>
+                                                <td>{formatTime(session.examTime)}</td>
+                                                <td>{session.room || '-'}</td>
+                                                <td>{session.note || '-'}</td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

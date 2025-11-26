@@ -1,17 +1,21 @@
 package com.example.teacherservice.service.trial;
 
 import com.example.teacherservice.dto.trial.TrialEvaluationDto;
+import com.example.teacherservice.dto.trial.TrialEvaluationItemDto;
 import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.exception.UnauthorizedException;
 import com.example.teacherservice.model.File;
 import com.example.teacherservice.model.TrialAttendee;
 import com.example.teacherservice.model.TrialEvaluation;
+import com.example.teacherservice.model.TrialEvaluationItem;
 import com.example.teacherservice.model.TrialTeaching;
 import com.example.teacherservice.model.User;
 import com.example.teacherservice.repository.TrialAttendeeRepository;
+import com.example.teacherservice.repository.TrialEvaluationItemRepository;
 import com.example.teacherservice.repository.TrialEvaluationRepository;
 import com.example.teacherservice.repository.TrialTeachingRepository;
 import com.example.teacherservice.repository.UserRepository;
+import com.example.teacherservice.request.trial.TrialEvaluationRequest;
 import com.example.teacherservice.service.file.FileService;
 import com.example.teacherservice.enums.Role;
 import com.example.teacherservice.enums.TrialConclusion;
@@ -31,6 +35,7 @@ import java.util.stream.Collectors;
 public class TrialEvaluationServiceImpl implements TrialEvaluationService {
 
     private final TrialEvaluationRepository evaluationRepository;
+    private final TrialEvaluationItemRepository evaluationItemRepository;
     private final TrialAttendeeRepository attendeeRepository;
     private final TrialTeachingRepository trialRepository;
     private final UserRepository userRepository;
@@ -96,6 +101,93 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
     }
 
     @Override
+    public TrialEvaluationDto createEvaluationWithDetails(TrialEvaluationRequest request, String currentUserId) {
+        // Validate attendee exists and belongs to the trial
+        TrialAttendee attendee = attendeeRepository.findById(request.getAttendeeId())
+                .orElseThrow(() -> new NotFoundException("Attendee not found"));
+        
+        if (!attendee.getTrial().getId().equals(request.getTrialId())) {
+            throw new IllegalArgumentException("Attendee does not belong to the specified trial");
+        }
+
+        // Check if current user is authorized to evaluate
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        
+        boolean isManage = currentUser.getPrimaryRole() == Role.MANAGE;
+        boolean isAssignedAttendee = attendee.getAttendeeUser() != null && 
+                                    attendee.getAttendeeUser().getId().equals(currentUserId);
+        
+        if (!isManage && !isAssignedAttendee) {
+            throw new UnauthorizedException("You are not authorized to evaluate this trial. Only the assigned attendee or Manage can evaluate.");
+        }
+
+        // Check if evaluation already exists for this attendee
+        Optional<TrialEvaluation> existingEvaluation = evaluationRepository.findByAttendee_Id(request.getAttendeeId());
+        if (existingEvaluation.isPresent()) {
+            // Update existing evaluation
+            return updateEvaluationWithDetails(existingEvaluation.get().getId(), request);
+        }
+
+        // Calculate score from criteria if not provided
+        Integer finalScore = request.getScore();
+        if (finalScore == null && request.getCriteria() != null && !request.getCriteria().isEmpty()) {
+            double avg = request.getCriteria().stream()
+                    .mapToInt(c -> c.getScore() != null ? c.getScore() : 0)
+                    .filter(s -> s > 0)
+                    .average()
+                    .orElse(0.0);
+            // Convert 1-5 scale to 0-100 scale: (avg - 1) * 25
+            finalScore = (int) Math.round((avg - 1) * 25);
+        }
+
+        // Create new evaluation
+        TrialEvaluation evaluation = new TrialEvaluation();
+        evaluation.setAttendee(attendee);
+        evaluation.setTrial(attendee.getTrial());
+        evaluation.setScore(finalScore != null ? finalScore : 0);
+        evaluation.setComments(request.getComments());
+        evaluation.setConclusion(request.getConclusion() != null ? request.getConclusion() : TrialConclusion.FAIL);
+
+        // Link image if provided
+        if (StringUtils.hasText(request.getImageFileId())) {
+            File imageFile = fileService.findFileById(request.getImageFileId());
+            evaluation.setImageFile(imageFile);
+        }
+
+        TrialEvaluation savedEvaluation = evaluationRepository.save(evaluation);
+
+        // Save detailed criteria items
+        if (request.getCriteria() != null && !request.getCriteria().isEmpty()) {
+            int orderIndex = 1;
+            for (TrialEvaluationRequest.CriterionScore criterion : request.getCriteria()) {
+                if (criterion.getCode() != null && criterion.getScore() != null && criterion.getScore() >= 1 && criterion.getScore() <= 5) {
+                    TrialEvaluationItem item = TrialEvaluationItem.builder()
+                            .evaluation(savedEvaluation)
+                            .criterionCode(criterion.getCode())
+                            .score(criterion.getScore())
+                            .comment(criterion.getComment())
+                            .orderIndex(orderIndex++)
+                            .build();
+                    evaluationItemRepository.save(item);
+                }
+            }
+        }
+
+        // Update trial status to REVIEWED if not already
+        TrialTeaching trial = attendee.getTrial();
+        if (trial.getStatus() == TrialStatus.PENDING) {
+            trial.setStatus(TrialStatus.REVIEWED);
+            trialRepository.save(trial);
+        }
+
+        // Auto-recalculate trial result based on all evaluations
+        trialTeachingService.recalculateTrialResult(request.getTrialId());
+
+        return toDto(savedEvaluation);
+    }
+
+    @Override
     public TrialEvaluationDto updateEvaluation(String evaluationId, Integer score, String comments, String conclusion, String imageFileId) {
         TrialEvaluation evaluation = evaluationRepository.findById(evaluationId)
                 .orElseThrow(() -> new NotFoundException("Evaluation not found"));
@@ -119,6 +211,70 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
         }
 
         TrialEvaluation saved = evaluationRepository.save(evaluation);
+        
+        // Recalculate trial result after update
+        trialTeachingService.recalculateTrialResult(evaluation.getTrial().getId());
+
+        return toDto(saved);
+    }
+
+    @Override
+    public TrialEvaluationDto updateEvaluationWithDetails(String evaluationId, TrialEvaluationRequest request) {
+        TrialEvaluation evaluation = evaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new NotFoundException("Evaluation not found"));
+
+        // Calculate score from criteria if not provided
+        Integer finalScore = request.getScore();
+        if (finalScore == null && request.getCriteria() != null && !request.getCriteria().isEmpty()) {
+            double avg = request.getCriteria().stream()
+                    .mapToInt(c -> c.getScore() != null ? c.getScore() : 0)
+                    .filter(s -> s > 0)
+                    .average()
+                    .orElse(0.0);
+            // Convert 1-5 scale to 0-100 scale: (avg - 1) * 25
+            finalScore = (int) Math.round((avg - 1) * 25);
+        }
+
+        if (finalScore != null) {
+            evaluation.setScore(finalScore);
+        }
+        if (request.getComments() != null) {
+            evaluation.setComments(request.getComments());
+        }
+        if (request.getConclusion() != null) {
+            evaluation.setConclusion(request.getConclusion());
+        }
+
+        // Handle image
+        if (request.getImageFileId() != null) {
+            if (!request.getImageFileId().isBlank()) {
+                File imageFile = fileService.findFileById(request.getImageFileId());
+                evaluation.setImageFile(imageFile);
+            } else {
+                evaluation.setImageFile(null);
+            }
+        }
+
+        TrialEvaluation saved = evaluationRepository.save(evaluation);
+
+        // Delete old items and save new ones
+        if (request.getCriteria() != null) {
+            evaluationItemRepository.deleteByEvaluation_Id(evaluationId);
+            
+            int orderIndex = 1;
+            for (TrialEvaluationRequest.CriterionScore criterion : request.getCriteria()) {
+                if (criterion.getCode() != null && criterion.getScore() != null && criterion.getScore() >= 1 && criterion.getScore() <= 5) {
+                    TrialEvaluationItem item = TrialEvaluationItem.builder()
+                            .evaluation(saved)
+                            .criterionCode(criterion.getCode())
+                            .score(criterion.getScore())
+                            .comment(criterion.getComment())
+                            .orderIndex(orderIndex++)
+                            .build();
+                    evaluationItemRepository.save(item);
+                }
+            }
+        }
         
         // Recalculate trial result after update
         trialTeachingService.recalculateTrialResult(evaluation.getTrial().getId());
@@ -151,6 +307,22 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
 
     private TrialEvaluationDto toDto(TrialEvaluation evaluation) {
         TrialAttendee attendee = evaluation.getAttendee();
+        
+        // Load detailed items
+        List<TrialEvaluationItemDto> items = evaluationItemRepository
+                .findByEvaluation_IdOrderByOrderIndexAsc(evaluation.getId())
+                .stream()
+                .map(item -> TrialEvaluationItemDto.builder()
+                        .id(item.getId())
+                        .evaluationId(item.getEvaluation().getId())
+                        .criterionCode(item.getCriterionCode())
+                        .criterionLabel(item.getCriterionLabel())
+                        .score(item.getScore())
+                        .orderIndex(item.getOrderIndex())
+                        .comment(item.getComment())
+                        .build())
+                .collect(Collectors.toList());
+        
         return TrialEvaluationDto.builder()
                 .id(evaluation.getId())
                 .trialId(evaluation.getTrial().getId())
@@ -162,6 +334,7 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
                 .comments(evaluation.getComments())
                 .conclusion(evaluation.getConclusion())
                 .imageFileId(evaluation.getImageFile() != null ? evaluation.getImageFile().getId() : null)
+                .items(items)
                 .build();
     }
 }

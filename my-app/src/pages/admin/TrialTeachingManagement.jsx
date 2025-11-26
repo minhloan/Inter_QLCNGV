@@ -42,8 +42,16 @@ const TrialTeachingManagement = () => {
         try {
             setLoading(true);
             const data = await getAllTrials();
-            setTrials(data || []);
-            setFilteredTrials(data || []);
+
+            // Sort by teachingDate descending (newest first)
+            const sortedTrials = (data || []).sort((a, b) => {
+                if (!a.teachingDate) return 1;
+                if (!b.teachingDate) return -1;
+                return b.teachingDate.localeCompare(a.teachingDate);
+            });
+
+            setTrials(sortedTrials);
+            setFilteredTrials(sortedTrials);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải danh sách giảng thử', 'danger');
         } finally {
@@ -66,6 +74,13 @@ const TrialTeachingManagement = () => {
         if (statusFilter) {
             filtered = filtered.filter(trial => trial?.status?.toLowerCase() === statusFilter.toLowerCase());
         }
+
+        // Sort by teachingDate descending (newest first)
+        filtered.sort((a, b) => {
+            if (!a.teachingDate) return 1;
+            if (!b.teachingDate) return -1;
+            return b.teachingDate.localeCompare(a.teachingDate);
+        });
 
         setFilteredTrials(filtered);
         setCurrentPage(1);

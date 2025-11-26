@@ -29,6 +29,7 @@ public class AptechExamDto {
     private Integer score;
     private ExamResult result;
     private String aptechStatus;
+    private String examProofFileId;
     private String certificateFileId;
     private boolean canRetake;
     private String retakeCondition;

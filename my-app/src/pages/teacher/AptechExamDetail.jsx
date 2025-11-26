@@ -3,7 +3,18 @@ import { useNavigate, useParams } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import { getExamById, updateExamScore, uploadCertificate } from '../../api/aptechExam';
+import { getExamById, updateExamScore, uploadExamProof, uploadFinalCertificate, viewCertificate } from '../../api/aptechExam';
+
+const layoutStyles = {
+    page: {
+        maxWidth: '1240px',
+        margin: '0 auto',
+        paddingBottom: '32px'
+    },
+    cardGrid: {
+        gap: '24px'
+    }
+};
 
 const AptechExamDetail = () => {
     const navigate = useNavigate();
@@ -11,8 +22,8 @@ const AptechExamDetail = () => {
     const [exam, setExam] = useState(null);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
-
     const [score, setScore] = useState("");
+    const examHasProof = Boolean(exam?.examProofFileId);
 
     useEffect(() => {
         if (exam) {
@@ -20,7 +31,7 @@ const AptechExamDetail = () => {
         }
     }, [exam]);
 
-    const handleScoreKeyDown = (e) => {
+    const handleScoreKeyDown = (e) => {X
         if (e.key === 'Enter') {
             e.preventDefault();
             saveScore();
@@ -29,13 +40,11 @@ const AptechExamDetail = () => {
 
     const saveScore = async () => {
         try {
-            // Prevent editing after approval/rejection
             if (exam && exam.aptechStatus && exam.aptechStatus !== 'PENDING') {
                 showToast('Lỗi', 'Không thể sửa điểm sau khi phê duyệt hoặc từ chối', 'danger');
                 return;
             }
 
-            // Prevent saving score before exam started
             if (exam) {
                 let date = exam.examDate || '';
                 let time = exam.examTime || '00:00';
@@ -95,10 +104,61 @@ const AptechExamDetail = () => {
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     };
 
+    const handleExamProofUpload = async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        try {
+            setLoading(true);
+            const ocrResponse = await uploadExamProof(id, file);
+
+            if (ocrResponse && ocrResponse.extractedScore != null) {
+                showToast('Thành công', `Đã tải chứng nhận và tự động lưu điểm: ${ocrResponse.extractedScore}`, 'success');
+            } else {
+                showToast('Thông báo', 'Đã tải chứng nhận thi', 'success');
+            }
+
+            await loadExamDetail();
+        } catch (err) {
+            console.error('Exam proof upload error:', err);
+            showToast('Lỗi', err.response?.data?.error || 'Không thể tải chứng nhận', 'danger');
+        } finally {
+            event.target.value = '';
+            setLoading(false);
+        }
+    };
+
+    const handleFinalCertificateUpload = async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        try {
+            setLoading(true);
+            await uploadFinalCertificate(id, file);
+            showToast('Thành công', 'Đã tải bằng Aptech', 'success');
+            await loadExamDetail();
+        } catch (err) {
+            console.error('Final certificate upload error:', err);
+            showToast('Lỗi', err.response?.data?.error || 'Không thể tải bằng', 'danger');
+        } finally {
+            event.target.value = '';
+            setLoading(false);
+        }
+    };
+
+    const handleViewCertificate = async () => {
+        try {
+            const blob = await viewCertificate(id);
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        } catch (err) {
+            console.error('Error viewing certificate:', err);
+            showToast('Lỗi', 'Không thể xem ảnh', 'danger');
+        }
+    };
+
     const renderStatusBadgeByScore = (scoreVal) => {
         if (scoreVal === null || scoreVal === undefined || scoreVal === '') return null;
         const s = Number(scoreVal);
-        if (s >= 80) return <span className="badge badge-status success">Đạt (Có thể cấp chứng nhận)</span>;
+        if (s >= 80) return <span className="badge badge-status success">Đạt</span>;
         if (s >= 60) return <span className="badge badge-status warning">Đạt</span>;
         return <span className="badge badge-status danger">Không đạt</span>;
     };
@@ -111,9 +171,17 @@ const AptechExamDetail = () => {
         return <span className="badge badge-status secondary">{status}</span>;
     };
 
+    const canUploadFinalCertificate = () => {
+        if (!examHasProof) return false;
+        const currentScore = exam?.score ?? score;
+        if (currentScore === null || currentScore === undefined || currentScore === '') return false;
+        return Number(currentScore) >= 80;
+    };
+
     return (
         <MainLayout>
-            <div className="page-teacher-aptech-exam-detail page-align-with-form">
+            <div className="page-teacher-aptech-exam-detail page-align-with-form container-xxl">
+                <div style={layoutStyles.page}>
                 <div className="content-header">
                     <div className="content-title">
                         <button className="back-button" onClick={() => navigate(-1)}>
@@ -121,13 +189,12 @@ const AptechExamDetail = () => {
                         </button>
                         <h1 className="page-title">Chi tiết Kỳ thi Aptech</h1>
                     </div>
-
                     <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
                         <i className="bi bi-list-ul me-2" />Danh sách kỳ thi
                     </button>
                 </div>
 
-                <div className="detail-card-grid">
+                <div className="detail-card-grid" style={layoutStyles.cardGrid}>
                     {!exam ? (
                         <div className="detail-card text-center text-muted">
                             {loading ? 'Đang tải dữ liệu kỳ thi...' : 'Không tìm thấy kỳ thi'}
@@ -136,94 +203,140 @@ const AptechExamDetail = () => {
                         <>
                             <section className="detail-card">
                                 <div className="detail-section-header">
-                                    <h5>
-                                        <i className="bi bi-person-badge" /> Thông tin Giáo viên
-                                    </h5>
+                                    <h5><i className="bi bi-person-badge" /> Thông tin Giáo viên</h5>
                                 </div>
                                 <div className="detail-section-body">
-                                    <div className="info-row">
-                                        <span className="label">Tên giảng viên</span>
-                                        <strong>{exam.teacherName || '—'}</strong>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="label">Môn thi</span>
-                                        <span>{(exam.subjectCode ? `${exam.subjectCode} - ` : '') + (exam.subjectName || '—')}</span>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="label">Điểm</span>
-                                        <div className="value">
-                                            {exam && exam.aptechStatus !== 'PENDING' ? (
-                                                <>
-                                                    {score !== null && score !== '' ? (
-                                                        <span className={Number(score) >= 80 ? 'text-success fw-bold' : Number(score) >= 60 ? 'text-warning fw-bold' : 'text-danger fw-bold'}>
-                                                            {score}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted">N/A</span>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <input
-                                                        type="number"
-                                                        className="form-control"
-                                                        style={{ width: '200px', display: 'inline-block' }}
-                                                        min="0"
-                                                        max="100"
-                                                        value={score}
-                                                        onChange={handleScoreChange}
-                                                        onKeyDown={handleScoreKeyDown}
-                                                        placeholder="Nhập điểm (0-100)"
-                                                    />
-                                                    <button className="btn btn-sm btn-primary ms-2" onClick={saveScore}>Lưu</button>
-                                                </>
-                                            )}
+                                    <div className="row gy-4">
+                                        <div className="col-md-6">
+                                            <div className="d-flex flex-column h-100">
+                                                <span className="text-uppercase text-muted small">Tên giảng viên</span>
+                                                <strong className="fs-5">{exam.teacherName || '—'}</strong>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="label">Kết quả</span>
-                                        <div>{renderStatusBadgeByScore(exam.score ?? score)}</div>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="label">Hiện trạng</span>
-                                        <div>{renderAptechStatusBadge(exam.aptechStatus)}</div>
-                                    </div>
-                                    <div className="info-row">
-                                        <span className="label">Hình ảnh điểm</span>
-                                        <div>
-                                            <input
-                                                type="file"
-                                                id="upload-screenshot"
-                                                accept="image/*"
-                                                style={{ display: 'none' }}
-                                                onChange={async (e) => {
-                                                    const f = e.target.files && e.target.files[0];
-                                                    if (!f) return;
-                                                    try {
-                                                        setLoading(true);
-                                                        const ocrResponse = await uploadCertificate(id, f);
+                                        <div className="col-md-6">
+                                            <div className="d-flex flex-column h-100">
+                                                <span className="text-uppercase text-muted small">Môn thi</span>
+                                                <span className="fs-5">{(exam.subjectCode ? `${exam.subjectCode} · ` : '') + (exam.subjectName || '—')}</span>
+                                            </div>
+                                        </div>
 
-                                                        // Auto-fill score from OCR if available
-                                                        if (ocrResponse && ocrResponse.extractedScore != null) {
-                                                            setScore(ocrResponse.extractedScore);
-                                                            showToast('Thành công',
-                                                                `Đã tải ảnh lên và tự động điền điểm: ${ocrResponse.extractedScore}`,
-                                                                'success');
-                                                        } else {
-                                                            showToast('Thành công', 'Đã tải ảnh lên', 'success');
-                                                        }
+                                        <div className="col-md-6">
+                                            <div className="d-flex flex-column h-100">
+                                                <span className="text-uppercase text-muted small mb-2">Điểm</span>
+                                                <div className="d-flex flex-wrap align-items-center gap-2">
+                                                    {exam && exam.aptechStatus !== 'PENDING' ? (
+                                                        <>
+                                                            {score !== null && score !== '' ? (
+                                                                <span className={`fs-3 fw-bold ${Number(score) >= 80 ? 'text-success' : Number(score) >= 60 ? 'text-warning' : 'text-danger'}`}>
+                                                                    {score}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-muted">N/A</span>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                className="form-control form-control-lg"
+                                                                style={{ maxWidth: '200px' }}
+                                                                min="0"
+                                                                max="100"
+                                                                value={score}
+                                                                onChange={handleScoreChange}
+                                                                onKeyDown={handleScoreKeyDown}
+                                                                placeholder="Nhập điểm (0-100)"
+                                                            />
+                                                            <button className="btn btn-primary" onClick={saveScore}>Lưu</button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                                        await loadExamDetail();
-                                                    } catch (err) {
-                                                        showToast('Lỗi', 'Không thể tải ảnh lên', 'danger');
-                                                    } finally {
-                                                        setLoading(false);
-                                                    }
-                                                }}
-                                            />
-                                            <button className="btn btn-sm btn-secondary" onClick={() => document.getElementById('upload-screenshot').click()}>
-                                                Upload ảnh điểm
-                                            </button>
+                                        <div className="col-md-3 col-sm-6">
+                                            <div className="d-flex flex-column gap-2">
+                                                <span className="text-uppercase text-muted small">Kết quả</span>
+                                                <div>{renderStatusBadgeByScore(exam.score ?? score)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="col-md-3 col-sm-6">
+                                            <div className="d-flex flex-column gap-2">
+                                                <span className="text-uppercase text-muted small">Hiện trạng</span>
+                                                <div>{renderAptechStatusBadge(exam.aptechStatus)}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-lg-6">
+                                            <div className={`h-100 border rounded-4 p-4 d-flex flex-column gap-3 ${examHasProof ? 'border-success bg-success-subtle' : 'border-secondary bg-light'}`}>
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <div className="rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center" style={{ width: 42, height: 42 }}>
+                                                        <i className="bi bi-journal-richtext text-success fs-5"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong>Chứng nhận thi</strong>
+                                                        <div className="text-muted small">Upload phiếu điểm để hệ thống đọc OCR</div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    {examHasProof ? (
+                                                        <div className="text-success mb-2">Đã tải chứng nhận thi</div>
+                                                    ) : (
+                                                        <div className="text-muted mb-2">Chưa có chứng nhận thi</div>
+                                                    )}
+                                                    <input
+                                                        type="file"
+                                                        id="upload-exam-proof"
+                                                        accept="image/*"
+                                                        style={{ display: 'none' }}
+                                                        onChange={handleExamProofUpload}
+                                                    />
+                                                    <button className="btn btn-outline-success" onClick={() => document.getElementById('upload-exam-proof').click()}>
+                                                        {examHasProof ? 'Upload lại chứng nhận' : 'Upload chứng nhận'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-lg-6">
+                                            <div className={`h-100 border rounded-4 p-4 d-flex flex-column gap-3 ${exam.certificateFileId ? 'border-primary bg-primary-subtle' : 'border-secondary bg-light'}`}>
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <div className="rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center" style={{ width: 42, height: 42 }}>
+                                                        <i className="bi bi-award text-primary fs-5"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong>Bằng Aptech</strong>
+                                                        <div className="text-muted small">Yêu cầu &gt;= 80 điểm và có chứng nhận thi</div>
+                                                    </div>
+                                                </div>
+                                                <div className="d-flex flex-column gap-2">
+                                                    {exam.certificateFileId ? (
+                                                        <div className="text-primary">Đã tải lên bằng Aptech</div>
+                                                    ) : (
+                                                        <div className="text-muted">Chưa có bằng được nộp</div>
+                                                    )}
+                                                    <div className="d-flex flex-wrap gap-2">
+                                                        {canUploadFinalCertificate() ? (
+                                                            <>
+                                                                <input
+                                                                    type="file"
+                                                                    id="upload-final-certificate"
+                                                                    accept="image/*"
+                                                                    style={{ display: 'none' }}
+                                                                    onChange={handleFinalCertificateUpload}
+                                                                />
+                                                                <button className="btn btn-primary" onClick={() => document.getElementById('upload-final-certificate').click()}>
+                                                                    Upload bằng
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-muted small">
+                                                                Cần chứng nhận thi và điểm &gt;= 80 để nộp bằng
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -231,9 +344,7 @@ const AptechExamDetail = () => {
 
                             <section className="detail-card">
                                 <div className="detail-section-header">
-                                    <h5>
-                                        <i className="bi bi-sticky" /> Ghi chú
-                                    </h5>
+                                    <h5><i className="bi bi-sticky" /> Ghi chú</h5>
                                 </div>
                                 <div className="detail-section-body note-box">
                                     {exam.note && exam.note.trim() !== '' ? exam.note : 'Không có ghi chú.'}
@@ -241,6 +352,7 @@ const AptechExamDetail = () => {
                             </section>
                         </>
                     )}
+                </div>
                 </div>
             </div>
 

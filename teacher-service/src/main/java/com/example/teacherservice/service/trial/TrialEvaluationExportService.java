@@ -2,6 +2,7 @@ package com.example.teacherservice.service.trial;
 
 import com.example.teacherservice.dto.trial.TrialAttendeeDto;
 import com.example.teacherservice.dto.trial.TrialEvaluationDto;
+import com.example.teacherservice.dto.trial.TrialEvaluationItemDto;
 import com.example.teacherservice.dto.trial.TrialTeachingDto;
 import com.example.teacherservice.enums.TrialAttendeeRole;
 import com.example.teacherservice.enums.TrialConclusion;
@@ -14,6 +15,7 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -108,66 +110,224 @@ public class TrialEvaluationExportService {
     }
 
     /**
-     *  Phiếu đánh giá giảng thử (Excel)
+     *  BM06.40 - Phiếu đánh giá giảng thử (Excel)
+     *  Sử dụng template BM06.40-template.xlsx trong resources/templates và thay thế các placeholder.
+     *
+     *  Các placeholder được hỗ trợ:
+     *  - ${TEACHER_NAME}, ${TEACHER_CODE}
+     *  - ${SUBJECT_NAME}
+     *  - ${TEACHING_DATE}, ${TEACHING_TIME}, ${LOCATION}
+     *  - ${EVALUATOR_NAME}, ${EVALUATOR_ROLE}
+     *  - ${SCORE}, ${CONCLUSION}, ${COMMENTS}
+     *  - ${SCORE_1_1}, ${SCORE_1_2}, ..., ${SCORE_1_22} (điểm từng tiêu chí)
+     *  - ${TOTAL} (tổng điểm từ các tiêu chí)
      */
     public byte[] generateEvaluationForm(TrialTeachingDto trial, TrialEvaluationDto evaluation) throws IOException {
-        Workbook workbook = WorkbookFactory.create(true);
-        Sheet sheet = workbook.createSheet("Phiếu đánh giá");
+        ClassPathResource resource = new ClassPathResource("templates/BM06.40-template.xlsx");
 
-        CellStyle titleStyle = createTitleStyle(workbook);
-        CellStyle normalStyle = createNormalStyle(workbook);
-        CellStyle boldStyle = createBoldStyle(workbook);
+        // Validate file exists
+        if (!resource.exists()) {
+            throw new IOException("Template file not found: templates/BM06.40-template.xlsx");
+        }
 
-        int rowNum = 0;
+        // Validate file is readable
+        if (!resource.isReadable()) {
+            throw new IOException("Template file is not readable: templates/BM06.40-template.xlsx");
+        }
 
-        Row titleRow = sheet.createRow(rowNum++);
-        Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("PHIẾU ĐÁNH GIÁ GIẢNG THỬ");
-        titleCell.setCellStyle(titleStyle);
-        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
-        titleRow.setHeightInPoints(30);
+        log.info("Loading template: templates/BM06.40-template.xlsx, exists: {}, readable: {}", 
+                resource.exists(), resource.isReadable());
 
-        rowNum++;
+        InputStream is = null;
+        Workbook workbook = null;
+        try {
+            is = resource.getInputStream();
+            
+            // Validate input stream
+            if (is == null) {
+                throw new IOException("Cannot open input stream for template file");
+            }
 
-        rowNum = addExcelInfoRow(sheet, rowNum, "Giảng viên:", trial.getTeacherName() + (trial.getTeacherCode() != null ? " (" + trial.getTeacherCode() + ")" : ""), normalStyle, boldStyle);
-        rowNum = addExcelInfoRow(sheet, rowNum, "Môn học:", trial.getSubjectName(), normalStyle, boldStyle);
-        rowNum = addExcelInfoRow(sheet, rowNum, "Ngày giảng:", trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "", normalStyle,  boldStyle);
-        rowNum = addExcelInfoRow(sheet, rowNum, "Giờ giảng:", trial.getTeachingTime() != null ? trial.getTeachingTime() : "", normalStyle, boldStyle);
-        rowNum = addExcelInfoRow(sheet, rowNum, "Địa điểm:", trial.getLocation() != null ? trial.getLocation() : "", normalStyle, boldStyle);
+            // Read file into memory first to avoid ZIP issues
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] bufferArray = new byte[8192];
+            int nRead;
+            while ((nRead = is.read(bufferArray, 0, bufferArray.length)) != -1) {
+                buffer.write(bufferArray, 0, nRead);
+            }
+            buffer.flush();
+            byte[] fileBytes = buffer.toByteArray();
+            
+            if (fileBytes.length == 0) {
+                throw new IOException("Template file is empty");
+            }
+            
+            log.info("Loaded template file, size: {} bytes", fileBytes.length);
 
-        rowNum++;
+            // Try to read and validate the workbook from byte array
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes)) {
+                workbook = WorkbookFactory.create(bais);
+                log.info("Successfully loaded workbook with {} sheets", workbook.getNumberOfSheets());
+            } catch (Exception e) {
+                log.error("Error creating workbook from template: {}", e.getMessage(), e);
+                throw new IOException("Invalid Excel template file. Please check if the file is a valid Excel (.xlsx) file. " +
+                        "The file might be corrupted. Error: " + e.getMessage(), e);
+            }
 
-        if (evaluation != null) {
-            rowNum = addExcelInfoRow(sheet, rowNum, "Người đánh giá:", evaluation.getAttendeeName() != null ? evaluation.getAttendeeName() : "", normalStyle, boldStyle);
-            rowNum = addExcelInfoRow(sheet, rowNum, "Vai trò:", getRoleName(evaluation.getAttendeeRole() != null ?
-                    TrialAttendeeRole.valueOf(evaluation.getAttendeeRole()) : null), normalStyle, boldStyle);
-            rowNum = addExcelInfoRow(sheet, rowNum, "Điểm số:", evaluation.getScore() != null ? String.valueOf(evaluation.getScore()) : "", normalStyle, boldStyle);
-            rowNum = addExcelInfoRow(sheet, rowNum, "Kết luận:", evaluation.getConclusion() == TrialConclusion.PASS ? "ĐẠT" :
-                    (evaluation.getConclusion() == TrialConclusion.FAIL ? "KHÔNG ĐẠT" : ""), normalStyle, boldStyle);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-            if (evaluation.getComments() != null && !evaluation.getComments().isEmpty()) {
-                rowNum++;
-                Row commentLabelRow = sheet.createRow(rowNum++);
-                Cell commentLabelCell = commentLabelRow.createCell(0);
-                commentLabelCell.setCellValue("Nhận xét:");
-                commentLabelCell.setCellStyle(boldStyle);
+            // Chuẩn bị dữ liệu thay thế
+            String teacherName = trial.getTeacherName() != null ? trial.getTeacherName() : "";
+            String teacherCode = trial.getTeacherCode() != null ? trial.getTeacherCode() : "";
+            String subjectName = trial.getSubjectName() != null ? trial.getSubjectName() : "";
+            String teachingDate = trial.getTeachingDate() != null ? trial.getTeachingDate().format(DATE_FORMATTER) : "";
+            String teachingTime = trial.getTeachingTime() != null ? trial.getTeachingTime() : "";
+            String location = trial.getLocation() != null ? trial.getLocation() : "";
 
-                Row commentRow = sheet.createRow(rowNum++);
-                Cell commentCell = commentRow.createCell(0);
-                commentCell.setCellValue(evaluation.getComments());
-                commentCell.setCellStyle(normalStyle);
-                sheet.addMergedRegion(new CellRangeAddress(rowNum - 1, rowNum - 1, 0, 5));
+            String evaluatorName = evaluation != null && evaluation.getAttendeeName() != null
+                    ? evaluation.getAttendeeName()
+                    : "";
+            String evaluatorRole = evaluation != null && evaluation.getAttendeeRole() != null
+                    ? getRoleName(TrialAttendeeRole.valueOf(evaluation.getAttendeeRole()))
+                    : "";
+            String score = evaluation != null && evaluation.getScore() != null
+                    ? String.valueOf(evaluation.getScore())
+                    : "";
+            String conclusion = "";
+            if (evaluation != null && evaluation.getConclusion() != null) {
+                conclusion = evaluation.getConclusion() == TrialConclusion.PASS
+                        ? "PASS"
+                        : (evaluation.getConclusion() == TrialConclusion.FAIL ? "FAIL" : "");
+            }
+            String comments = evaluation != null && evaluation.getComments() != null
+                    ? evaluation.getComments()
+                    : "";
+
+            Map<String, String> data = new HashMap<>();
+            data.put("${TEACHER_NAME}", teacherName);
+            data.put("${TEACHER_CODE}", teacherCode);
+            data.put("${SUBJECT_NAME}", subjectName);
+            data.put("${TEACHING_DATE}", teachingDate);
+            data.put("${TEACHING_TIME}", teachingTime);
+            data.put("${LOCATION}", location);
+            data.put("${EVALUATOR_NAME}", evaluatorName);
+            data.put("${EVALUATOR_ROLE}", evaluatorRole);
+            data.put("${SCORE}", score);
+            data.put("${CONCLUSION}", conclusion);
+            data.put("${COMMENTS}", comments);
+
+            // Fill điểm từng tiêu chí (1-1 đến 1-17)
+            if (evaluation != null && evaluation.getItems() != null) {
+                for (TrialEvaluationItemDto item : evaluation.getItems()) {
+                    if (item.getCriterionCode() != null && item.getScore() != null) {
+                        // Map code "1-1" -> placeholder "${SCORE_1_1}"
+                        String placeholder = "${SCORE_" + item.getCriterionCode().replace("-", "_") + "}";
+                        data.put(placeholder, String.valueOf(item.getScore()));
+                    }
+                }
+            }
+            
+            // Đảm bảo tất cả placeholder SCORE_1_1 đến SCORE_1_22 đều có giá trị (rỗng nếu chưa chấm)
+            for (int i = 1; i <= 22; i++) {
+                String placeholder = "${SCORE_1_" + i + "}";
+                if (!data.containsKey(placeholder)) {
+                    data.put(placeholder, "");
+                }
+            }
+            
+            // Tính tổng điểm từ các tiêu chí (nếu có)
+            if (evaluation != null && evaluation.getItems() != null && !evaluation.getItems().isEmpty()) {
+                int totalScore = evaluation.getItems().stream()
+                        .filter(item -> item.getScore() != null)
+                        .mapToInt(item -> item.getScore())
+                        .sum();
+                data.put("${TOTAL}", String.valueOf(totalScore));
+            } else {
+                data.put("${TOTAL}", "");
+            }
+
+            // Thay thế placeholder trong tất cả sheet / ô (cả string và numeric)
+            for (int s = 0; s < workbook.getNumberOfSheets(); s++) {
+                Sheet sheet = workbook.getSheetAt(s);
+                if (sheet == null) continue;
+
+                for (Row row : sheet) {
+                    if (row == null) continue;
+                    for (Cell cell : row) {
+                        if (cell == null) continue;
+                        
+                        // Xử lý ô string
+                        if (cell.getCellType() == CellType.STRING) {
+                            String text = cell.getStringCellValue();
+                            if (text == null || text.isEmpty()) continue;
+
+                            String replaced = text;
+                            for (Map.Entry<String, String> entry : data.entrySet()) {
+                                if (replaced.contains(entry.getKey())) {
+                                    replaced = replaced.replace(entry.getKey(), entry.getValue() != null ? entry.getValue() : "");
+                                }
+                            }
+
+                            if (!replaced.equals(text)) {
+                                cell.setCellValue(replaced);
+                            }
+                        }
+                        // Xử lý ô formula - có thể chứa placeholder
+                        else if (cell.getCellType() == CellType.FORMULA) {
+                            String formula = cell.getCellFormula();
+                            if (formula != null) {
+                                String replaced = formula;
+                                for (Map.Entry<String, String> entry : data.entrySet()) {
+                                    if (replaced.contains(entry.getKey())) {
+                                        // Thử parse số nếu có thể
+                                        try {
+                                            double numValue = Double.parseDouble(entry.getValue());
+                                            replaced = replaced.replace(entry.getKey(), String.valueOf(numValue));
+                                        } catch (NumberFormatException e) {
+                                            replaced = replaced.replace(entry.getKey(), entry.getValue() != null ? entry.getValue() : "0");
+                                        }
+                                    }
+                                }
+                                if (!replaced.equals(formula)) {
+                                    try {
+                                        cell.setCellFormula(replaced);
+                                    } catch (Exception e) {
+                                        log.warn("Cannot set formula: {}", replaced);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        workbook.write(outputStream);
+            byte[] result = outputStream.toByteArray();
+            log.info("Successfully generated evaluation form, size: {} bytes", result.length);
+            return result;
+        } catch (IOException e) {
+            log.error("IO error while generating evaluation form: {}", e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error while generating evaluation form: {}", e.getMessage(), e);
+            throw new IOException("Error generating evaluation form: " + e.getMessage(), e);
+        } finally {
+            // Cleanup resources
+            if (workbook != null) {
+                try {
+        workbook.close();
+                } catch (IOException e) {
+                    log.warn("Error closing workbook: {}", e.getMessage());
+                }
+            }
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    log.warn("Error closing input stream: {}", e.getMessage());
+                }
             }
         }
-
-        for (int i = 0; i < 6; i++) {
-            sheet.autoSizeColumn(i);
-        }
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        workbook.write(outputStream);
-        workbook.close();
-        return outputStream.toByteArray();
     }
 
     /**

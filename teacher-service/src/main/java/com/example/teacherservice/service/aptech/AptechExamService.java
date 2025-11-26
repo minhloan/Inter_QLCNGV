@@ -19,8 +19,8 @@ public interface AptechExamService {
     List<AptechExamDto> getExamsByTeacher(String teacherId);
     AptechExamDto getExamForTeacher(String examId, String teacherId);
     List<AptechExamHistoryDto> getExamHistory(String teacherId, String subjectId);
+    AptechOCRResponseDto uploadExamProofWithOCR(String examId, File proofFile, OCRResultDTO ocrResult);
     void uploadCertificate(String examId, File certificateFile);
-    AptechOCRResponseDto uploadCertificateWithOCR(String examId, File certificateFile, OCRResultDTO ocrResult);
     File downloadCertificate(String examId);
     boolean canRetakeExam(String teacherId, String subjectId);
     String getRetakeCondition(String teacherId, String subjectId);
