@@ -301,6 +301,112 @@ public class OCRServiceImpl implements OCRService {
         return result;
     }
 
+    @Override
+    /**
+     * Xử lý certificate Aptech với format đặc biệt:
+     * - Facility Name: VIẾT HOA TOÀN BỘ
+     * - Score: "Your score is XX marks (YY%)"
+     * - Skill Name: "1367-PHP (v8.x) with Laravel"
+     */
+    public OCRResultDTO processAptechCertificate(File imageFile) {
+        java.io.File physicalFile = new java.io.File(imageFile.getFilePath());
+        try {
+            // Perform OCR
+            String ocrText = tesseract.doOCR(physicalFile);
+            return parseAptechCertificateText(ocrText != null ? ocrText : "");
+        } catch (TesseractException e) {
+            log.error("OCR failed for Aptech certificate: {}", physicalFile.getName(), e);
+            return OCRResultDTO.builder().ocrText("").build();
+        } catch (Exception e) {
+            log.error("Unexpected error during Aptech OCR processing: {}", physicalFile.getName(), e);
+            return OCRResultDTO.builder().ocrText("").build();
+        }
+    }
+
+    /**
+     * Parse Aptech certificate OCR text with specific patterns
+     */
+    private OCRResultDTO parseAptechCertificateText(String ocrText) {
+        OCRResultDTO result = OCRResultDTO.builder()
+                .ocrText(ocrText)
+                .build();
+
+        if (ocrText == null || ocrText.trim().isEmpty()) {
+            return result;
+        }
+
+        // 1. Extract Score: "Your score is 30 marks (100%)"
+        Pattern scorePattern = Pattern.compile(
+            "Your\\s+score\\s+is\\s+(\\d+)\\s+marks?\\s*\\((\\d+)%\\)",
+            Pattern.CASE_INSENSITIVE
+        );
+        Matcher scoreMatcher = scorePattern.matcher(ocrText);
+        if (scoreMatcher.find()) {
+            try {
+                int marks = Integer.parseInt(scoreMatcher.group(1));
+                int percentage = Integer.parseInt(scoreMatcher.group(2));
+                
+                result.setOcrScore(marks);
+                result.setOcrPercentage(percentage);
+                
+                // Aptech PASS threshold: 70%
+                result.setOcrResult(percentage >= 70 ? ExamResult.PASS : ExamResult.FAIL);
+                
+                log.debug("Extracted Aptech score: {} marks ({}%)", marks, percentage);
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse Aptech score numbers", e);
+            }
+        }
+
+        // 2. Extract Facility Name (Teacher Name) - VIẾT HOA
+        Pattern namePattern = Pattern.compile(
+            "Facility\\s+Name\\s*[:\\s]+([A-Z][A-Z\\s]+?)(?:\\n|Skill|Exam|$)",
+            Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+        );
+        Matcher nameMatcher = namePattern.matcher(ocrText);
+        if (nameMatcher.find()) {
+            String name = nameMatcher.group(1).trim();
+            // Chuẩn hóa: LOAN LE THI MINH -> Loan Le Thi Minh
+            result.setOcrFullName(toTitleCase(name));
+            log.debug("Extracted Aptech name: {}", name);
+        }
+
+        // 3. Extract Skill/Exam Name
+        Pattern skillPattern = Pattern.compile(
+            "(?:Skill\\s+Name|Exam\\s+Name)\\s*[:\\s]+([\\d\\-A-Za-z\\(\\)\\.\\s]+?)(?:\\n|Facility|$)",
+            Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+        );
+        Matcher skillMatcher = skillPattern.matcher(ocrText);
+        if (skillMatcher.find()) {
+            String skillName = skillMatcher.group(1).trim();
+            result.setOcrSubjectName(skillName);
+            log.debug("Extracted Aptech skill: {}", skillName);
+        }
+
+        return result;
+    }
+
+    /**
+     * Convert "LOAN LE THI MINH" -> "Loan Le Thi Minh"
+     */
+    private String toTitleCase(String input) {
+        if (input == null || input.isEmpty()) return input;
+        
+        String[] words = input.split("\\s+");
+        StringBuilder result = new StringBuilder();
+        
+        for (String word : words) {
+            if (word.length() > 0) {
+                result.append(Character.toUpperCase(word.charAt(0)))
+                      .append(word.substring(1).toLowerCase())
+                      .append(" ");
+            }
+        }
+        
+        return result.toString().trim();
+    }
+
+
     // Phần này chỉ tập trung vào việc phát hiện kết quả thi PASS / FAIL
     // bằng cách dò các từ khóa tiếng Anh và tiếng Việt trong đoạn text OCR
     private void extractResult(String upperText, String normalizedText, OCRResultDTO result) {

@@ -56,5 +56,15 @@ public class AptechExam extends BaseEntity {
 
     @Column(name = "exam_date")
     private LocalDate examDate;
+    
+    // OCR extraction fields for verification and debugging
+    @Column(name = "ocr_raw_text", columnDefinition = "TEXT")
+    private String ocrRawText;
+    
+    @Column(name = "ocr_extracted_name", length = 255)
+    private String ocrExtractedName;
+    
+    @Column(name = "ocr_subject_code", length = 100)
+    private String ocrSubjectCode;
 }
 

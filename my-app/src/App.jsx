@@ -47,7 +47,6 @@ import AdminManageSubjectEdit from "./pages/admin/AdminManageSubjectEdit.jsx";
 import TeachingAssignmentAdd from "./pages/admin/TeachingAssignmentManagementAdd.jsx";
 import TeachingAssignmentDetail from "./pages/admin/TeachingAssignmentDetail.jsx";
 import TeacherTrialTeachingDetail from "./pages/teacher/TeacherTrialTeachingDetail.jsx";
-import AptechExamDetail from "./pages/admin/AptechExamDetail.jsx";
 import AptechExamAdd from "./pages/teacher/AptechExamAdd.jsx";
 import MyReviews from "./pages/teacher/MyReviews.jsx";
 import TrialEvaluationForm from "./pages/teacher/TrialEvaluationForm.jsx";
@@ -55,6 +54,7 @@ import AptechExamTake from "./pages/teacher/AptechExamTake.jsx";
 import AptechExamManagement from "./pages/admin/AptechExamManagement.jsx";
 import AdminAptechSesssionExamAdd from "./pages/admin/AdminAptechSesssionExamAdd.jsx";
 import AdminAptechSessionList from "./pages/admin/AdminAptechSessionList.jsx";
+import AptechExamDetail from "./pages/teacher/AptechExamDetail.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -194,14 +194,14 @@ function AppRoutes() {
                 </ProtectedRoute>
             }
         />
-        <Route
-            path="/aptech-exam-detail/:id"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AptechExamDetail />
-                </ProtectedRoute>
-            }
-        />
+        {/*<Route*/}
+        {/*    path="/teacher/aptech-exam-detail/:id"*/}
+        {/*    element={*/}
+        {/*        <ProtectedRoute requiredRole="Manage-Leader">*/}
+        {/*            <AptechExamDetail />*/}
+        {/*        </ProtectedRoute>*/}
+        {/*    }*/}
+        {/*/>*/}
       <Route
         path="/trial-teaching-management"
         element={
@@ -313,6 +313,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+        <Route
+            path="/teacher/aptech-exam-detail/:id"
+            element={
+                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+                    <AptechExamDetail />
+                </ProtectedRoute>
+            }
+        />
       <Route
         path="/teacher-subject-registration"
         element={

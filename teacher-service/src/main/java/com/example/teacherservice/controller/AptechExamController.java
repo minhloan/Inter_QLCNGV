@@ -3,11 +3,14 @@ package com.example.teacherservice.controller;
 import com.example.teacherservice.dto.aptech.AptechExamDto;
 import com.example.teacherservice.dto.aptech.AptechExamHistoryDto;
 import com.example.teacherservice.dto.aptech.AptechExamSessionDto;
+import com.example.teacherservice.dto.aptech.AptechOCRResponseDto;
+import com.example.teacherservice.dto.evidence.OCRResultDTO;
 import com.example.teacherservice.jwt.JwtUtil;
 import com.example.teacherservice.model.File;
 import com.example.teacherservice.request.AptechExamRegisterRequest;
 import com.example.teacherservice.service.aptech.AptechExamService;
 import com.example.teacherservice.service.file.FileService;
+import com.example.teacherservice.service.ocr.OCRService;
 import com.example.teacherservice.dto.aptech.AptechExamScoreUpdateDto;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +33,7 @@ public class AptechExamController {
 
     private final AptechExamService examService;
     private final FileService fileService;
+    private final OCRService ocrService;
     private final JwtUtil jwtUtil;
 
     // ========================
@@ -62,7 +66,7 @@ public class AptechExamController {
     }
 
     @PostMapping("/{examId}/certificate")
-    public ResponseEntity<Void> uploadCertificate(
+    public ResponseEntity<?> uploadCertificate(
             @PathVariable String examId,
             @RequestParam("file") MultipartFile file,
             HttpServletRequest request) {
@@ -73,11 +77,21 @@ public class AptechExamController {
         if (!validExam) return ResponseEntity.badRequest().build();
 
         try {
+            // 1. Save file physically
             File savedFile = fileService.saveFile(file, "certificates");
-            examService.uploadCertificate(examId, savedFile);
-            return ResponseEntity.ok().build();
+            
+            // 2. Run OCR to extract Aptech certificate info
+            OCRResultDTO ocrResult = ocrService.processAptechCertificate(savedFile);
+            
+            // 3. Upload certificate with OCR data and get response
+            AptechOCRResponseDto response = examService.uploadCertificateWithOCR(examId, savedFile, ocrResult);
+            
+            // 4. Return OCR results to frontend for auto-fill
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            log.error("Failed to upload certificate for exam {}", examId, e);
+            return ResponseEntity.badRequest()
+                .body(java.util.Map.of("error", e.getMessage()));
         }
     }
 

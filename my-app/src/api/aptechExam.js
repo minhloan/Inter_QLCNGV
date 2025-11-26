@@ -35,7 +35,7 @@ export const getExamHistory = async (subjectId) => {
     return response.data;
 };
 
-// 3. Upload chứng chỉ cho kỳ thi
+// 3. Upload chứng chỉ cho kỳ thi với OCR
 export const uploadCertificate = async (examId, file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -44,7 +44,7 @@ export const uploadCertificate = async (examId, file) => {
         headers: { "Content-Type": "multipart/form-data" }
     });
 
-    return response.data;
+    return response.data; // Return OCR results
 };
 
 // 4. Download chứng chỉ

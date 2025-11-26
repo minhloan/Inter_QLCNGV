@@ -201,8 +201,18 @@ const AptechExamDetail = () => {
                                                     if (!f) return;
                                                     try {
                                                         setLoading(true);
-                                                        await uploadCertificate(id, f);
-                                                        showToast('Thành công', 'Đã tải ảnh lên', 'success');
+                                                        const ocrResponse = await uploadCertificate(id, f);
+
+                                                        // Auto-fill score from OCR if available
+                                                        if (ocrResponse && ocrResponse.extractedScore != null) {
+                                                            setScore(ocrResponse.extractedScore);
+                                                            showToast('Thành công',
+                                                                `Đã tải ảnh lên và tự động điền điểm: ${ocrResponse.extractedScore}`,
+                                                                'success');
+                                                        } else {
+                                                            showToast('Thành công', 'Đã tải ảnh lên', 'success');
+                                                        }
+
                                                         await loadExamDetail();
                                                     } catch (err) {
                                                         showToast('Lỗi', 'Không thể tải ảnh lên', 'danger');

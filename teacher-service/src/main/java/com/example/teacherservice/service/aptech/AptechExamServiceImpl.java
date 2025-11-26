@@ -3,7 +3,9 @@ package com.example.teacherservice.service.aptech;
 import com.example.teacherservice.dto.aptech.AptechExamDto;
 import com.example.teacherservice.dto.aptech.AptechExamHistoryDto;
 import com.example.teacherservice.dto.aptech.AptechExamSessionDto;
+import com.example.teacherservice.dto.aptech.AptechOCRResponseDto;
 import com.example.teacherservice.dto.common.PagedResponse;
+import com.example.teacherservice.dto.evidence.OCRResultDTO;
 import com.example.teacherservice.enums.ExamResult;
 import com.example.teacherservice.enums.NotificationType;
 import com.example.teacherservice.model.*;
@@ -204,6 +206,78 @@ public class AptechExamServiceImpl implements AptechExamService {
             throw new IllegalArgumentException("Certificate only for PASS exams");
         exam.setCertificateFile(certificateFile);
         examRepo.save(exam);
+    }
+
+    @Override
+    @Transactional
+    public AptechOCRResponseDto uploadCertificateWithOCR(String examId, File certificateFile, OCRResultDTO ocrResult) {
+        AptechExam exam = examRepo.findById(examId)
+                .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
+        
+        // 1. Save certificate file reference
+        exam.setCertificateFile(certificateFile);
+        
+        // 2. Save OCR raw text for debugging
+        if (ocrResult.getOcrText() != null) {
+            exam.setOcrRawText(ocrResult.getOcrText());
+        }
+        
+        // 3. Save OCR extracted name for verification
+        boolean nameMatch = false;
+        if (ocrResult.getOcrFullName() != null) {
+            exam.setOcrExtractedName(ocrResult.getOcrFullName());
+            
+            // Verify name matches teacher
+            String teacherName = exam.getTeacher().getUsername(); // or fullName if available
+            nameMatch = namesAreSimilar(teacherName, ocrResult.getOcrFullName());
+            if (!nameMatch) {
+
+            }
+        }
+        
+        // 4. Save OCR subject code for verification
+        boolean subjectMatch = false;
+        if (ocrResult.getOcrSubjectName() != null) {
+            exam.setOcrSubjectCode(ocrResult.getOcrSubjectName());
+            
+            // Verify subject matches
+            String expectedCode = exam.getSubject().getSubjectCode();
+            subjectMatch = ocrResult.getOcrSubjectName().contains(expectedCode);
+            if (!subjectMatch) {
+
+            }
+        }
+        
+        // 5. Save exam (but don't auto-update score/result - let frontend do that)
+        examRepo.save(exam);
+        
+        // 6. Build and return response DTO
+        return AptechOCRResponseDto.builder()
+                .certificateFileId(certificateFile.getId())
+                .extractedScore(ocrResult.getOcrScore())
+                .extractedResult(ocrResult.getOcrResult() != null ? ocrResult.getOcrResult().name() : null)
+                .extractedSubject(ocrResult.getOcrSubjectName())
+                .extractedName(ocrResult.getOcrFullName())
+                .ocrRawText(ocrResult.getOcrText())
+                .subjectMatch(subjectMatch)
+                .nameMatch(nameMatch)
+                .build();
+    }
+
+    private boolean namesAreSimilar(String name1, String name2) {
+        if (name1 == null || name2 == null) return false;
+        
+        // Normalize and compare
+        String n1 = normalize(name1).replaceAll("\\s+", "").toLowerCase();
+        String n2 = normalize(name2).replaceAll("\\s+", "").toLowerCase();
+        
+        return n1.equals(n2);
+    }
+
+    private String normalize(String text) {
+        // Remove accents (already imported Normalizer at top)
+        String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{M}", "");
     }
 
     @Override

@@ -7,4 +7,5 @@ public interface OCRService {
     OCRResultDTO processFile(File file);
     OCRResultDTO processImage(File imageFile);
     OCRResultDTO processPDF(File pdfFile);
+    OCRResultDTO processAptechCertificate(File imageFile);
 }
