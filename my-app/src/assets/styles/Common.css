@@ -1691,7 +1691,8 @@ body {
 .main-content:has(.page-admin-teaching-assignment-detail),
 .main-content:has(.page-admin-subject),
 .main-content:has(.page-admin-add-subject),
-.main-content:has(.page-admin-audit-log) {
+.main-content:has(.page-admin-audit-log),
+.main-content:has(.page-teacher-aptech-exam-detail) {
     padding-top: 12px;
 }
 
@@ -1703,7 +1704,8 @@ body {
 .main-content:has(.page-admin-teaching-assignment-detail) .content-header,
 .main-content:has(.page-admin-subject) .content-header,
 .main-content:has(.page-admin-add-subject) .content-header,
-.main-content:has(.page-admin-audit-log) .content-header {
+.main-content:has(.page-admin-audit-log) .content-header,
+.main-content:has(.page-teacher-aptech-exam-detail) .content-header {
     margin-bottom: 8px;
 }
 
@@ -1745,6 +1747,7 @@ body {
     .main-content:has(.page-teacher-my-reviews),
     .main-content:has(.page-teacher-subject-registration),
     .main-content:has(.page-teacher-aptech-exam),
+    .main-content:has(.page-teacher-aptech-exam-detail),
     .main-content:has(.page-teacher-evidence),
     .main-content:has(.page-teacher-teaching-assignment),
     .main-content:has(.edit-profile-container) {
@@ -1764,6 +1767,7 @@ body {
     .main-content:has(.page-teacher-my-reviews) .content-header,
     .main-content:has(.page-teacher-subject-registration) .content-header,
     .main-content:has(.page-teacher-aptech-exam) .content-header,
+    .main-content:has(.page-teacher-aptech-exam-detail) .content-header,
     .main-content:has(.page-teacher-evidence) .content-header,
     .main-content:has(.page-teacher-teaching-assignment) .content-header,
     .main-content:has(.edit-profile-container) .edit-profile-header {

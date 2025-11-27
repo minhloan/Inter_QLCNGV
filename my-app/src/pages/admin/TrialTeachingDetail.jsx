@@ -501,7 +501,7 @@ const TrialTeachingDetail = () => {
                                 <div className="card-header bg-primary text-white">
                                     <h5 className="mb-0">
                                         <i className="bi bi-shield-fill-check me-2"></i>
-                                        Admin Override - Quyết định cuối cùng
+                                        Quyết định cuối cùng
                                     </h5>
                                 </div>
                                 <div className="card-body">

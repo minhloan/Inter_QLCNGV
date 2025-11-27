@@ -117,17 +117,19 @@ const TeacherTrialTeaching = () => {
         );
     };
 
-    const getAverageScore = (trial) => {
-        if (trial.evaluations && trial.evaluations.length > 0) {
-            const totalScore = trial.evaluations.reduce((sum, evaluation) => sum + (evaluation.score || 0), 0);
-            const avgScore = Math.round(totalScore / trial.evaluations.length);
-            return avgScore;
-        }
-        return null;
-    };
-
     const renderScore = (trial) => {
-        const avgScore = getAverageScore(trial);
+        // Ưu tiên dùng averageScore từ backend (đã được tính chính xác)
+        // Nếu không có thì mới tự tính từ evaluations
+        let avgScore = null;
+        
+        if (trial.averageScore !== null && trial.averageScore !== undefined) {
+            avgScore = trial.averageScore;
+        } else if (trial.evaluations && trial.evaluations.length > 0) {
+            // Fallback: tự tính nếu backend chưa có averageScore
+            const totalScore = trial.evaluations.reduce((sum, evaluation) => sum + (evaluation.score || 0), 0);
+            avgScore = Math.round(totalScore / trial.evaluations.length);
+        }
+        
         if (avgScore !== null) {
             return (
                 <div className="d-flex align-items-center gap-2">
@@ -149,7 +151,7 @@ const TeacherTrialTeaching = () => {
     const pageTrials = filteredTrials.slice(startIndex, startIndex + pageSize);
 
     if (loading) {
-        return <Loading fullscreen={true} message="Đang tải danh sách giảng thử..." />;
+        return <Loading fullscreen={true} message="Đang tải danh sách giảng dạy..." />;
     }
 
     return (
@@ -160,7 +162,7 @@ const TeacherTrialTeaching = () => {
                         <button className="back-button" onClick={() => navigate(-1)}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className="page-title">Giảng thử</h1>
+                        <h1 className="page-title">Đánh giá giảng dạy</h1>
                     </div>
                 </div>
 
@@ -197,7 +199,7 @@ const TeacherTrialTeaching = () => {
                                     <tr>
                                         <th width="5%">#</th>
                                         <th width="25%">Môn học</th>
-                                        <th width="12%">Ngày giảng thử</th>
+                                        <th width="12%">Ngày giảng dạy</th>
                                         <th width="10%">Địa điểm</th>
                                         <th width="8%">Điểm</th>
                                         <th width="10%">Trạng thái</th>
@@ -211,7 +213,7 @@ const TeacherTrialTeaching = () => {
                                             <td colSpan="8" className="text-center">
                                                 <div className="empty-state">
                                                     <i className="bi bi-inbox"></i>
-                                                    <p>Không tìm thấy giảng thử nào</p>
+                                                    <p>Không tìm thấy giảng dạy nào</p>
                                                 </div>
                                             </td>
                                         </tr>

@@ -7,8 +7,6 @@ import { getExamById, updateExamScore, uploadExamProof, uploadFinalCertificate, 
 
 const layoutStyles = {
     page: {
-        maxWidth: '1240px',
-        margin: '0 auto',
         paddingBottom: '32px'
     },
     cardGrid: {
@@ -180,8 +178,7 @@ const AptechExamDetail = () => {
 
     return (
         <MainLayout>
-            <div className="page-teacher-aptech-exam-detail page-align-with-form container-xxl">
-                <div style={layoutStyles.page}>
+            <div className="page-teacher-aptech-exam-detail">
                 <div className="content-header">
                     <div className="content-title">
                         <button className="back-button" onClick={() => navigate(-1)}>
@@ -194,7 +191,8 @@ const AptechExamDetail = () => {
                     </button>
                 </div>
 
-                <div className="detail-card-grid" style={layoutStyles.cardGrid}>
+                <div style={layoutStyles.page}>
+                    <div className="detail-card-grid" style={{ ...layoutStyles.cardGrid, maxWidth: '1240px', margin: '0 auto', paddingLeft: '30px', paddingRight: '30px', boxSizing: 'border-box' }}>
                     {!exam ? (
                         <div className="detail-card text-center text-muted">
                             {loading ? 'Đang tải dữ liệu kỳ thi...' : 'Không tìm thấy kỳ thi'}
@@ -352,7 +350,7 @@ const AptechExamDetail = () => {
                             </section>
                         </>
                     )}
-                </div>
+                    </div>
                 </div>
             </div>
 

@@ -85,7 +85,7 @@ const TeacherTrialTeachingDetail = () => {
                 setAptechExams([]);
             }
         } catch (error) {
-            showToast('Lỗi', 'Không thể tải dữ liệu giảng thử', 'danger');
+            showToast('Lỗi', 'Không thể tải dữ liệu giảng dạy', 'danger');
         } finally {
             setLoading(false);
         }
@@ -234,7 +234,7 @@ const TeacherTrialTeachingDetail = () => {
                         <div className="col-12">
                             <div className="card">
                                 <div className="card-body text-center">
-                                    <h4>Không tìm thấy dữ liệu giảng thử</h4>
+                                    <h4>Không tìm thấy dữ liệu giảng dạy</h4>
                                     <button className="btn btn-primary mt-3" onClick={() => {
                                         const fromPage = location.state?.fromPage;
                                         navigate(fromPage === 'my-reviews' ? '/my-reviews' : '/teacher-trial-teaching');
@@ -267,7 +267,7 @@ const TeacherTrialTeachingDetail = () => {
                         <button className="back-button" onClick={() => navigate(getBackPath())}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className="page-title">Chi tiết buổi giảng thử</h1>
+                            <h1 className="page-title">Chi tiết buổi giảng dạy</h1>
                     </div>
                     {isCurrentUserAssigned() && (
                         <div className="d-flex gap-2 flex-wrap">
@@ -275,7 +275,7 @@ const TeacherTrialTeachingDetail = () => {
                                 className="btn btn-primary" 
                                 onClick={() => setShowEvaluationModal(true)}
                             >
-                                <i className="bi bi-star"></i> Đánh giá giảng thử
+                                <i className="bi bi-star"></i> Đánh giá giảng dạy
                             </button>
                         </div>
                     )}
@@ -286,7 +286,7 @@ const TeacherTrialTeachingDetail = () => {
                         {/* Trial Information & Evaluation */}
                         <div className="row mb-4">
                             <div className="col-md-6 detail-section">
-                                <h5>Thông tin buổi giảng thử</h5>
+                                <h5>Thông tin buổi giảng dạy</h5>
                                 <div className="table-responsive">
                                     <table className="table table-borderless detail-table mb-0">
                                         <tbody>
