@@ -50,6 +50,9 @@ public class Subject extends BaseEntity {
     @JsonIgnore
     private File image_subject;
 
+    @Column(name = "is_new_subject")
+    private Boolean isNewSubject = false;
+
     @JsonProperty("imageFileId")
     public String getImageFileId() {
         return image_subject != null ? image_subject.getId() : null;

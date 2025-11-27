@@ -1,10 +1,14 @@
 package com.example.teacherservice.controller.adminteachersubjectregistration;
 
 import com.example.teacherservice.dto.adminteachersubjectregistration.AdminSubjectRegistrationDto;
+import com.example.teacherservice.dto.adminteachersubjectregistration.ImportResultDto;
 import com.example.teacherservice.enums.RegistrationStatus;
 import com.example.teacherservice.service.adminteachersubjectregistration.AdminSubjectRegistrationService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -52,4 +56,27 @@ public class AdminSubjectRegistrationController {
     public AdminSubjectRegistrationDto getById(@PathVariable String id) {
         return adminService.getById(id);
     }
+
+    // EXPORT FILE EXCEL
+    @GetMapping("/export")
+    public void exportExcel(
+            HttpServletResponse response,
+            @RequestParam(defaultValue = "ALL") String status,
+            @RequestParam(required = false) String teacher
+    ) {
+        adminService.exportExcel(response, status, teacher);
+    }
+
+
+
+
+    // IMPORT FILE EXCEL
+
+    @PostMapping(value = "/import", consumes = "multipart/form-data")
+    public ResponseEntity<ImportResultDto> importExcel(
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(adminService.importExcel(file));
+    }
+
 }

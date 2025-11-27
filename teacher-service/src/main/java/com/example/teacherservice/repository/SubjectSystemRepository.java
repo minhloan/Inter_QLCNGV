@@ -9,8 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SubjectSystemRepository extends JpaRepository<SubjectSystem, String> {
-
     boolean existsBySystemCodeIgnoreCase(String systemCode);
+
+    SubjectSystem findBySystemCode(String systemCode);
 
     Optional<SubjectSystem> findBySystemCodeIgnoreCase(String systemCode);
 
@@ -25,6 +26,10 @@ public interface SubjectSystemRepository extends JpaRepository<SubjectSystem, St
               OR lower(ss.systemName) LIKE lower(concat('%', :keyword, '%'))
            """)
     List<SubjectSystem> searchByKeyword(@Param("keyword") String keyword);
+    @Query("SELECT s FROM SubjectSystem s " +
+            "WHERE LOWER(:sheet) LIKE CONCAT('%', LOWER(s.systemName), '%') " +
+            "   OR LOWER(s.systemName) LIKE CONCAT('%', LOWER(:sheet), '%')")
+    SubjectSystem findMatchingSystem(@Param("sheet") String sheet);
 
     @Query("""
            SELECT ss

@@ -3,7 +3,6 @@ package com.example.teacherservice.controller.subject;
 
 import com.example.teacherservice.dto.subject.SubjectDto;
 import com.example.teacherservice.enums.Semester;
-import com.example.teacherservice.enums.SubjectSystem;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.request.subject.SubjectCreateRequest;
 import com.example.teacherservice.request.subject.SubjectUpdateRequest;
@@ -22,7 +21,7 @@ public class SubjectController {
     private final SubjectService subjectService;
 
     @GetMapping("/search")
-    public ResponseEntity<List<Subject>> searchSubjects(
+    public ResponseEntity<List<SubjectDto>> searchSubjects(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String systemId,
             @RequestParam(required = false) Boolean isActive,
@@ -31,7 +30,11 @@ public class SubjectController {
         List<Subject> subjects =
                 subjectService.searchSubjects(keyword, systemId, isActive, semester);
 
-        return ResponseEntity.ok(subjects);
+        List<SubjectDto> dtos = subjects.stream()
+                .map(subjectService::toDto)
+                .toList();
+
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/getAllRaw") // raw entity

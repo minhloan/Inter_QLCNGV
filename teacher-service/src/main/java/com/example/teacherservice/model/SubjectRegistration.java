@@ -42,8 +42,4 @@ public class SubjectRegistration extends BaseEntity {
     @Builder.Default
     private RegistrationStatus status = RegistrationStatus.REGISTERED;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "carried_from_id")
-    private SubjectRegistration carriedFrom;
 }
-

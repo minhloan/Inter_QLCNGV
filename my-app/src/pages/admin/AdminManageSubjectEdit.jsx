@@ -151,12 +151,8 @@ const AdminManageSubjectEdit = () => {
             return showToast("Lỗi", "Tên môn học không được để trống", "danger");
         }
 
-        if (!formData.hours.trim() || Number(formData.hours) <= 0) {
+        if (formData.hours && Number(formData.hours) <= 0) {
             return showToast("Lỗi", "Số giờ phải là số dương", "danger");
-        }
-
-        if (!formData.semester) {
-            return showToast("Lỗi", "Vui lòng chọn học kỳ", "danger");
         }
 
         try {
@@ -168,9 +164,14 @@ const AdminManageSubjectEdit = () => {
             const payload = {
                 id: formData.id,
                 subjectName: formData.subjectName.trim(),
-                hours: Number(formData.hours),              // ⭐ đổi credit → hours
-                semester: formData.semester,                // ⭐ thêm
-
+                hours:
+                    formData.hours === "" || formData.hours === null
+                        ? null
+                        : Number(formData.hours),
+                semester:
+                    formData.semester === "" || formData.semester === null
+                        ? null
+                        : formData.semester,
                 description: formData.description || null,
                 systemId: formData.systemId || null,
                 isActive: formData.isActive,
@@ -237,7 +238,7 @@ const AdminManageSubjectEdit = () => {
                             {/* HOURS + SEMESTER */}
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label className="form-label">Số giờ *</label>
+                                    <label className="form-label">Số giờ</label>
                                     <input
                                         type="number"
                                         className="form-control"
@@ -249,7 +250,7 @@ const AdminManageSubjectEdit = () => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Học kỳ *</label>
+                                    <label className="form-label">Học kỳ </label>
                                     <select
                                         className="form-control"
                                         name="semester"

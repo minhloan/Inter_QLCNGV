@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
-import DeleteModal from '../../components/Teacher/DeleteModal';
+import DeleteSubjectModal from '../../components/Subject/DeleteSubjectModal';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { getAllSubjects, deleteSubject } from '../../api/subject';
 import { listActiveSystems } from '../../api/subjectSystem';
 import { getFile } from '../../api/file';
+import { importSubjectsExcel, exportSubjectsExcel } from "../../api/subjectExcel";
 
 const AdminManageSubject = () => {
     const navigate = useNavigate();
@@ -27,8 +28,8 @@ const AdminManageSubject = () => {
     const [hasLoaded, setHasLoaded] = useState(false);
 
     const [subjectImages, setSubjectImages] = useState({});
-
-    const pageSize = 9;
+    const [selectedFile, setSelectedFile] = useState(null);
+    const pageSize = 12;
     const [currentPage, setCurrentPage] = useState(1);
 
     const showToast = useCallback((title, message, type) => {
@@ -36,56 +37,54 @@ const AdminManageSubject = () => {
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     }, []);
 
+    // ⭐ MAP SUBJECT RESPONSE (Đã thêm isNewSubject)
     const mapSubjectResponse = (response) => {
-        const mappedSubjects = (response || []).map((s) => ({
+        const mapped = (response || []).map((s) => ({
             id: s.id,
             subjectCode: s.subjectCode,
             subjectName: s.subjectName,
-
             hours: s.hours,
             semester: s.semester,
             semesterLabel:
                 s.semester === "SEMESTER_1" ? "Học kỳ 1" :
                     s.semester === "SEMESTER_2" ? "Học kỳ 2" :
                         s.semester === "SEMESTER_3" ? "Học kỳ 3" :
-                            s.semester === "SEMESTER_4" ? "Học kỳ 4" :
-                                "",
-
+                            s.semester === "SEMESTER_4" ? "Học kỳ 4" : "",
             systemId: s.systemId || s.system?.id || "",
             systemName: s.systemName || s.system?.systemName || "Unknown system",
-
             isActive: s.isActive,
             status: s.isActive ? "active" : "inactive",
+            imageFileId: s.imageFileId || s.image_subject?.id || null,
 
-            imageFileId: s.imageFileId || s.image_subject?.id || null
+            // ⭐⭐ FIELD MỚI — LẤY TỪ BACKEND ⭐⭐
+            isNewSubject: s.isNewSubject,
         }));
 
-        setAllSubjects(mappedSubjects);
+        setAllSubjects(mapped);
     };
 
-    // ⭐ LOAD ALL SYSTEMS
+    // Load systems
     useEffect(() => {
-        const loadSystems = async () => {
+        const load = async () => {
             try {
                 const res = await listActiveSystems();
                 setSystemOptions(res);
             } catch (err) {
-                console.error("Error loading systems:", err);
+                console.error(err);
             }
         };
-        loadSystems();
+        load();
     }, []);
 
-    // ⭐ LOAD ALL SUBJECTS
+    // Load subjects
     const loadSubjects = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await getAllSubjects();
-            mapSubjectResponse(response);
+            const res = await getAllSubjects();
+            mapSubjectResponse(res);
             setHasLoaded(true);
-        } catch (error) {
-            console.error('Error loading subjects:', error);
-            showToast('Lỗi', 'Không thể tải danh sách môn học', 'danger');
+        } catch (err) {
+            showToast("Lỗi", "Không thể tải môn học", "danger");
         } finally {
             setLoading(false);
         }
@@ -95,47 +94,42 @@ const AdminManageSubject = () => {
         if (!hasLoaded) loadSubjects();
     }, [hasLoaded, loadSubjects]);
 
-    // ⭐ LOAD IMAGES
+    // Load images
     useEffect(() => {
-        const fetchImages = async () => {
-            const newImages = {};
-
+        const loadImg = async () => {
+            const imgs = {};
             await Promise.all(
                 allSubjects.map(async (s) => {
                     if (!s.imageFileId) return;
                     try {
                         const url = await getFile(s.imageFileId);
-                        newImages[s.id] = url;
-                    } catch { }
+                        imgs[s.id] = url;
+                    } catch {}
                 })
             );
-
-            setSubjectImages(newImages);
+            setSubjectImages(imgs);
         };
 
-        if (allSubjects.length > 0) fetchImages();
+        if (allSubjects.length > 0) loadImg();
     }, [allSubjects]);
 
-    // ⭐ FILTER + SORT
+    // Filter + sort
     const filteredSubjects = useMemo(() => {
-        let filtered = [...allSubjects];
+        let f = [...allSubjects];
 
-        if (systemFilter)
-            filtered = filtered.filter((s) => s.systemId === systemFilter);
-
-        if (statusFilter)
-            filtered = filtered.filter((s) => s.status === statusFilter);
+        if (systemFilter) f = f.filter(s => s.systemId === systemFilter);
+        if (statusFilter) f = f.filter(s => s.status === statusFilter);
 
         if (searchTerm.trim()) {
-            const kw = searchTerm.trim().toLowerCase();
-            filtered = filtered.filter(
-                (s) =>
+            const kw = searchTerm.toLowerCase();
+            f = f.filter(
+                s =>
                     s.subjectCode?.toLowerCase().includes(kw) ||
                     s.subjectName?.toLowerCase().includes(kw)
             );
         }
 
-        filtered.sort((a, b) => {
+        f.sort((a, b) => {
             switch (sortBy) {
                 case 'code_asc': return a.subjectCode.localeCompare(b.subjectCode);
                 case 'code_desc': return b.subjectCode.localeCompare(a.subjectCode);
@@ -145,31 +139,71 @@ const AdminManageSubject = () => {
             }
         });
 
-        return filtered;
+        return f;
     }, [allSubjects, systemFilter, statusFilter, searchTerm, sortBy]);
 
     const totalPages = Math.ceil(filteredSubjects.length / pageSize);
-    const pageSubjects = filteredSubjects.slice(
-        (currentPage - 1) * pageSize,
-        currentPage * pageSize
-    );
+    const pageSubjects = filteredSubjects.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const handleAdd = () => navigate('/manage-subject-add');
     const handleGoToSystems = () => navigate('/manage-subject-systems');
     const handleEdit = (s) => navigate(`/manage-subject-edit/${s.id}`);
+    const handDetail = (s) => navigate(`/manage-subject-detail/${s.id}`);
 
     const handleDelete = (s) => {
         setDeleteSubjectItem(s);
         setShowDeleteModal(true);
     };
 
+    // IMPORT
+    const handleImport = async () => {
+        if (!selectedFile) {
+            showToast("Lỗi", "Vui lòng chọn file Excel (.xlsx)", "danger");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await importSubjectsExcel(selectedFile);
+            showToast("Thành công", "Import excel thành công!", "success");
+            setSelectedFile(null);
+            await loadSubjects();
+        } catch (err) {
+            showToast("Lỗi", "Không import được file Excel", "danger");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleExport = async () => {
+        try {
+            const res = await exportSubjectsExcel();
+
+            const blob = new Blob([res.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "subjects_export.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            showToast("Thành công", "Xuất Excel thành công!", "success");
+        } catch (err) {
+            console.error(err);
+            showToast("Lỗi", "Xuất Excel thất bại", "danger");
+        }
+    };
     const confirmDelete = async () => {
         if (!deleteSubjectItem) return;
 
         try {
             setLoading(true);
             await deleteSubject(deleteSubjectItem.id);
-            showToast("Thành công", "Xóa môn học thành công", "success");
+            showToast("Thành công", "Xóa thành công", "success");
             setShowDeleteModal(false);
             setDeleteSubjectItem(null);
             loadSubjects();
@@ -190,6 +224,7 @@ const AdminManageSubject = () => {
     return (
         <MainLayout>
             <div className="page-admin-subject">
+
                 {/* HEADER */}
                 <div className="content-header">
                     <div className="content-title">
@@ -198,27 +233,60 @@ const AdminManageSubject = () => {
                         </button>
                         <h1 className="page-title">Quản lý Môn học</h1>
                     </div>
+
                     <div className="content-actions">
-                        <button onClick={handleGoToSystems} className="btn btn-outline-primary me-2">
+
+                        <button className="btn btn-outline-primary me-2" onClick={handleGoToSystems}>
                             <i className="bi bi-diagram-3"></i> Trang Hệ Đào Tạo
                         </button>
-                        <button onClick={handleAdd} className="btn btn-primary">
+
+                        {/* EXPORT */}
+                        <button className="btn btn-success me-2" onClick={handleExport}>
+                            <i className="bi bi-download"></i> Xuất Excel
+                        </button>
+
+                        {/* FILE INPUT */}
+                        <label className="btn btn-warning me-2">
+                            <i className="bi bi-upload"></i> Chọn File Excel
+                            <input
+                                type="file"
+                                hidden
+                                accept=".xlsx"
+                                onChange={(e) => setSelectedFile(e.target.files[0])}
+                            />
+                        </label>
+
+                        {/* IMPORT */}
+                        <button
+                            className="btn btn-primary me-2"
+                            disabled={!selectedFile}
+                            onClick={handleImport}
+                        >
+                            <i className="bi bi-upload"></i> Import Excel
+                        </button>
+
+                        <button className="btn btn-primary" onClick={handleAdd}>
                             <i className="bi bi-plus-circle"></i> Thêm Môn Học
                         </button>
                     </div>
                 </div>
+
+                {selectedFile && (
+                    <p className="mt-2"><strong>Đã chọn:</strong> {selectedFile.name}</p>
+                )}
+
                 <p className="page-subtitle subject-count">
                     Tổng số môn học: {filteredSubjects.length}
                 </p>
 
                 {loading && <Loading fullscreen={true} message="Đang tải..." />}
 
+                {/* FILTER */}
                 <div className="filter-table-wrapper">
-                    {/* FILTERS */}
                     <div className="filter-section">
                         <div className="filter-row">
 
-                            {/* SYSTEM FILTER */}
+                            {/* SYSTEM */}
                             <div className="filter-group">
                                 <label className="filter-label">Hệ đào tạo</label>
                                 <select
@@ -226,8 +294,7 @@ const AdminManageSubject = () => {
                                     value={systemFilter}
                                     onChange={(e) => setSystemFilter(e.target.value)}
                                 >
-                                    <option value="">Tất cả hệ thống</option>
-
+                                    <option value="">Tất cả</option>
                                     {systemOptions.map((sys) => (
                                         <option key={sys.id} value={sys.id}>
                                             {sys.systemName}
@@ -236,7 +303,7 @@ const AdminManageSubject = () => {
                                 </select>
                             </div>
 
-                            {/* STATUS FILTER */}
+                            {/* STATUS */}
                             <div className="filter-group">
                                 <label className="filter-label">Trạng thái</label>
                                 <select
@@ -258,7 +325,7 @@ const AdminManageSubject = () => {
                                     <input
                                         type="text"
                                         className="filter-input"
-                                        placeholder="Tìm kiếm theo mã hoặc tên..."
+                                        placeholder="Tìm theo mã hoặc tên..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
@@ -274,36 +341,50 @@ const AdminManageSubject = () => {
                         </div>
                     </div>
 
+                    {/* SUBJECT GRID */}
                     <div className="table-container">
-                        {/* COURSES GRID */}
                         <div className="courses-grid">
+
                             {pageSubjects.map((subject) => {
-                                const imageUrl = subjectImages[subject.id];
+                                const img = subjectImages[subject.id];
 
                                 return (
                                     <div
                                         key={subject.id}
-                                        className="course-card"
-                                        onClick={() => handleEdit(subject)}
+                                        className="course-card position-relative"
+                                        onClick={() => handDetail(subject)}
                                     >
-                                        {/* IMAGE */}
+
                                         <div className="course-image">
-                                            {imageUrl ? (
-                                                <img src={imageUrl} alt="img" />
+                                            {img ? (
+                                                <img src={img} alt="img" />
                                             ) : (
                                                 <div className="placeholder"></div>
                                             )}
                                         </div>
 
-                                        {/* BODY */}
                                         <div className="course-card-body">
                                             <h3>{subject.subjectName}</h3>
                                             <p>
-                                                {subject.subjectCode} • {subject.hours} giờ • {subject.semesterLabel} •{" "}
-                                                {subject.systemName}
+                                                {subject.subjectCode}
+                                                {subject.isNewSubject && (
+                                                    <span
+                                                        style={{
+                                                            color: "red",
+                                                            fontWeight: 700,
+                                                            marginLeft: "6px",
+                                                            fontSize: "0.8rem"
+                                                        }}
+                                                    >
+                                                        NEW
+                                                    </span>
+                                                )}
+                                                {" • "}
+                                                {subject.hours} giờ • {subject.semesterLabel} • {subject.systemName}
                                             </p>
 
                                             <div className="action-buttons">
+
                                                 <button
                                                     className="btn btn-sm btn-primary"
                                                     onClick={(e) => {
@@ -334,23 +415,51 @@ const AdminManageSubject = () => {
                         {totalPages > 1 && (
                             <nav className="mt-4 mb-2">
                                 <ul className="pagination justify-content-center">
+
+                                    {/* PREV */}
                                     <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                                         <button className="page-link" onClick={() => setCurrentPage(p => p - 1)}>
                                             <i className="bi bi-chevron-left"></i>
                                         </button>
                                     </li>
 
-                                    {Array.from({ length: totalPages }, (_, i) => (
-                                        <li
-                                            key={i}
-                                            className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
-                                        >
-                                            <button className="page-link" onClick={() => setCurrentPage(i + 1)}>
-                                                {i + 1}
+                                    {/* Page 1 */}
+                                    <li className={`page-item ${currentPage === 1 ? "active" : ""}`}>
+                                        <button className="page-link" onClick={() => setCurrentPage(1)}>1</button>
+                                    </li>
+
+                                    {/* Dấu ... nếu cách xa */}
+                                    {currentPage > 4 && (
+                                        <li className="page-item disabled"><span className="page-link">...</span></li>
+                                    )}
+
+                                    {/* Các trang quanh currentPage */}
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(p => p !== 1 && p !== totalPages)
+                                        .filter(p => p >= currentPage - 2 && p <= currentPage + 2)
+                                        .map(p => (
+                                            <li key={p} className={`page-item ${currentPage === p ? "active" : ""}`}>
+                                                <button className="page-link" onClick={() => setCurrentPage(p)}>
+                                                    {p}
+                                                </button>
+                                            </li>
+                                        ))}
+
+                                    {/* Dấu ... trước trang cuối */}
+                                    {currentPage < totalPages - 3 && (
+                                        <li className="page-item disabled"><span className="page-link">...</span></li>
+                                    )}
+
+                                    {/* Last page */}
+                                    {totalPages > 1 && (
+                                        <li className={`page-item ${currentPage === totalPages ? "active" : ""}`}>
+                                            <button className="page-link" onClick={() => setCurrentPage(totalPages)}>
+                                                {totalPages}
                                             </button>
                                         </li>
-                                    ))}
+                                    )}
 
+                                    {/* NEXT */}
                                     <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
                                         <button className="page-link" onClick={() => setCurrentPage(p => p + 1)}>
                                             <i className="bi bi-chevron-right"></i>
@@ -359,18 +468,16 @@ const AdminManageSubject = () => {
                                 </ul>
                             </nav>
                         )}
+
                     </div>
                 </div>
 
                 {/* DELETE MODAL */}
                 {showDeleteModal && (
-                    <DeleteModal
-                        teacher={deleteSubjectItem}
+                    <DeleteSubjectModal
+                        subject={deleteSubjectItem}
                         onConfirm={confirmDelete}
-                        onClose={() => {
-                            setShowDeleteModal(false);
-                            setDeleteSubjectItem(null);
-                        }}
+                        onClose={() => setShowDeleteModal(false)}
                     />
                 )}
 

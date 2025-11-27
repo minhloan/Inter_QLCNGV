@@ -4,9 +4,11 @@ import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import {
-    getAllRegistrationsForAdmin,
+    exportRegistrationsExcel,
+    getAllRegistrationsForAdmin, importRegistrationsExcel,
     updateRegistrationStatus,
 } from '../../api/adminSubjectRegistrationApi';
+
 
 const SubjectRegistrationManagement = () => {
     const navigate = useNavigate();
@@ -18,6 +20,13 @@ const SubjectRegistrationManagement = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [loading, setLoading] = useState(false);
+    const [importResult, setImportResult] = useState(null);
+    const [showExcelModal, setShowExcelModal] = useState(false);
+    const [excelTab, setExcelTab] = useState("export"); // export | import
+    const [exportStatus, setExportStatus] = useState("ALL");
+    const [teacherSearch, setTeacherSearch] = useState("");
+    const [selectedTeacher, setSelectedTeacher] = useState("");
+
     const [toast, setToast] = useState({
         show: false,
         title: '',
@@ -53,22 +62,18 @@ const SubjectRegistrationManagement = () => {
                 teacher_name: reg.teacherName || 'N/A',
                 subject_id: reg.subjectId || null,
                 subject_name: reg.subjectName || 'N/A',
+                subject_code: reg.subjectCode || 'N/A',
+
+                // 👉 thêm
+                system_name: reg.systemName || 'N/A',
+                semester: reg.semester || null,
+                year: reg.year ?? null,
                 quarter: reg.quarter ?? null,
+
                 registration_date: formatDate(reg.registrationDate),
-                // Store raw date for sorting
-                raw_registration_date: reg.registrationDate || '',
-                // backend trả về "registered" | "completed" | "not_completed"
                 status: (reg.status || '').toLowerCase(),
                 notes: reg.notes || '',
             }));
-
-            // Sort by raw_registration_date descending (newest first)
-            normalized.sort((a, b) => {
-                if (!a.raw_registration_date) return 1;
-                if (!b.raw_registration_date) return -1;
-                return b.raw_registration_date.localeCompare(a.raw_registration_date);
-            });
-
             setRegistrations(normalized);
             setFilteredRegistrations(normalized);
             setCurrentPage(1);
@@ -81,6 +86,18 @@ const SubjectRegistrationManagement = () => {
         } finally {
             setLoading(false);
         }
+    };
+    const formatDeadline = (year, quarter) => {
+        if (!year || !quarter) return 'N/A';
+        const mapMonth = {
+            QUY1: '03',
+            QUY2: '06',
+            QUY3: '09',
+            QUY4: '12',
+        };
+        const month = mapMonth[quarter] || '';
+        if (!month) return `${quarter}-${year}`;
+        return `${month}-${year}`;
     };
 
     const applyFilters = () => {
@@ -113,13 +130,6 @@ const SubjectRegistrationManagement = () => {
                 (reg) => reg.subject_id === parseInt(subjectFilter, 10)
             );
         }
-
-        // Sort by raw_registration_date descending (newest first)
-        filtered.sort((a, b) => {
-            if (!a.raw_registration_date) return 1;
-            if (!b.raw_registration_date) return -1;
-            return b.raw_registration_date.localeCompare(a.raw_registration_date);
-        });
 
         setFilteredRegistrations(filtered);
         setCurrentPage(1);
@@ -156,23 +166,24 @@ const SubjectRegistrationManagement = () => {
     };
 
     const getStatusBadge = (status) => {
-        const key = (status || '').toLowerCase();
+        const key = (status || "").toLowerCase();
 
         const statusMap = {
-            registered: { label: 'Đang chờ duyệt', class: 'info' },
-            completed: { label: 'Đã duyệt', class: 'success' },
-            not_completed: { label: 'Từ chối', class: 'secondary' },
+            registered: { label: "Đang chờ duyệt", class: "info" },
+            completed: { label: "Đã duyệt", class: "success" },
+            not_completed: { label: "Từ chối", class: "secondary" },
+            carryover: { label: "Dời môn", class: "warning" }, // ⭐ THÊM
         };
 
         const info = statusMap[key] || {
-            label: status || 'Không rõ',
-            class: 'secondary',
+            label: status || "Không rõ",
+            class: "secondary",
         };
 
         return (
             <span className={`badge badge-status ${info.class}`}>
-                {info.label}
-            </span>
+            {info.label}
+        </span>
         );
     };
 
@@ -197,11 +208,399 @@ const SubjectRegistrationManagement = () => {
             <div className="page-admin-subject-registration">
                 <div className="content-header">
                     <div className="content-title">
+
                         <button className="back-button" onClick={() => navigate(-1)}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
                         <h1 className="page-title">Quản lý Đăng ký Môn học</h1>
                     </div>
+
+                    {/*export-import button*/}
+                    <button
+                        onClick={() => setShowExcelModal(true)}
+                        style={{
+                            background: "linear-gradient(90deg, #627cf5, #8f4df3)",
+                            color: "white",
+                            padding: "10px 22px",
+                            borderRadius: "10px",
+                            border: "none",
+                            fontWeight: "600",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            cursor: "pointer",
+                        }}
+                    >
+                        <i className="bi bi-file-earmark-spreadsheet"></i>
+                        Xuất / Nhập Excel
+                    </button>
+
+
+
+
+                    {/* ===================== MODAL XUẤT/NHẬP EXCEL ==================== */}
+                    {showExcelModal && (
+                        <>
+                            <style>
+                                {`
+      /* Nút chính */
+      .excel-main-btn {
+        background: linear-gradient(90deg, #627cf5, #8f4df3);
+        color: white;
+        padding: 10px 22px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        cursor: pointer;
+      }
+
+      /* Overlay */
+      .excel-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      .excel-modal-box {
+        width: 780px;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        animation: fadeIn 0.25s ease;
+      }
+
+      /* Header */
+      .excel-modal-header {
+        background: linear-gradient(90deg, #627cf5, #8f4df3);
+        padding: 16px 20px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .excel-modal-header .title {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .excel-close-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 22px;
+        cursor: pointer;
+      }
+
+      /* Tabs */
+      .excel-tabs {
+        display: flex;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .excel-tabs button {
+        flex: 1;
+        padding: 14px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-weight: 600;
+        color: #777;
+      }
+
+      .excel-tabs button.active {
+        color: #6c5ce7;
+        border-bottom: 3px solid #6c5ce7;
+      }
+
+      /* Nội dung tab */
+      .excel-tab-content {
+        padding: 22px;
+      }
+
+      /* Card info */
+      .excel-card {
+        background: #f9fafc;
+        display: flex;
+        gap: 12px;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+
+      .excel-card i {
+        font-size: 24px;
+        color: #6c5ce7;
+      }
+
+      .excel-select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 15px;
+      }
+
+      /* Upload Box */
+      .excel-upload-box {
+        border: 2px dashed #8f4df3;
+        border-radius: 12px;
+        padding: 35px;
+        text-align: center;
+        cursor: pointer;
+        color: #666;
+      }
+
+      .excel-upload-box i {
+        font-size: 40px;
+        color: #8f4df3;
+      }
+
+      .excel-upload-box:hover {
+        background: #faf6ff;
+      }
+
+      /* Notes */
+      .excel-note {
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 15px;
+      }
+
+      .excel-note.blue {
+        background: #eaf3ff;
+        border-left: 4px solid #4a90e2;
+      }
+
+      .excel-note.yellow {
+        background: #fff9e6;
+        border-left: 4px solid #f2c94c;
+      }
+
+      /* Footer buttons */
+      .excel-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .btn-cancel {
+        padding: 10px 22px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background: white;
+      }
+
+      .btn-primary {
+        padding: 10px 22px;
+        border-radius: 8px;
+        border: none;
+        background: linear-gradient(90deg, #627cf5, #8f4df3);
+        color: white;
+        font-weight: 600;
+      }
+      `}
+                            </style>
+
+                            <div className="excel-modal-overlay">
+                                <div className="excel-modal-box">
+
+                                    {/* Header */}
+                                    <div className="excel-modal-header">
+                                        <div className="title">
+                                            <i className="bi bi-filetype-xlsx"></i> Xuất / Nhập dữ liệu Excel
+                                        </div>
+                                        <button className="excel-close-btn" onClick={() => setShowExcelModal(false)}>✕</button>
+                                    </div>
+
+                                    {/* Tabs */}
+                                    <div className="excel-tabs">
+                                        <button
+                                            className={excelTab === "export" ? "active" : ""}
+                                            onClick={() => setExcelTab("export")}
+                                        >
+                                            <i className="bi bi-download"></i> Xuất dữ liệu
+                                        </button>
+                                        <button
+                                            className={excelTab === "import" ? "active" : ""}
+                                            onClick={() => setExcelTab("import")}
+                                        >
+                                            <i className="bi bi-upload"></i> Nhập dữ liệu
+                                        </button>
+                                    </div>
+
+                                    {/* EXPORT TAB */}
+                                    {excelTab === "export" && (
+                                        <div className="excel-tab-content">
+                                            <div className="excel-card">
+                                                <i className="bi bi-info-circle"></i>
+                                                <div>
+                                                    <h4>Xuất danh sách đăng ký ra Excel</h4>
+                                                    <p>Chọn trạng thái để xuất dữ liệu.</p>
+                                                </div>
+                                            </div>
+
+                                            <label>Tìm kiếm giáo viên</label>
+                                            <input
+                                                type="text"
+                                                className="excel-select"
+                                                placeholder="Nhập tên hoặc mã GV..."
+                                                value={teacherSearch}
+                                                onChange={(e) => setTeacherSearch(e.target.value)}
+                                            />
+
+                                            {teacherSearch && (
+                                                <div className="excel-search-results">
+                                                    {registrations
+                                                        .filter(r =>
+                                                            (r.teacher_name + r.teacher_code).toLowerCase()
+                                                                .includes(teacherSearch.toLowerCase())
+                                                        )
+                                                        .map((r, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                className="excel-search-item"
+                                                                onClick={() => {
+                                                                    setSelectedTeacher(r.teacher_name);
+                                                                    setTeacherSearch("");
+                                                                }}
+                                                            >
+                                                                {r.teacher_code} - {r.teacher_name}
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            )}
+
+                                            {selectedTeacher && (
+                                                <div style={{ marginBottom: 10 }}>
+                                                    <strong>Đã chọn:</strong> {selectedTeacher}
+                                                </div>
+                                            )}
+
+
+                                            <label>Lọc theo trạng thái</label>
+                                            <select
+                                                className="excel-select"
+                                                value={exportStatus}
+                                                onChange={(e) => setExportStatus(e.target.value)}
+                                            >
+                                                <option value="ALL">Tất cả</option>
+                                                <option value="REGISTERED">Chờ duyệt</option>
+                                                <option value="COMPLETED">Đã duyệt</option>
+                                                <option value="NOT_COMPLETED">Từ chối</option>
+                                                <option value="CARRYOVER">Dời môn</option>
+                                            </select>
+
+                                            <div className="excel-note blue">
+                                                <ul>
+                                                    <li>File Excel sẽ tải xuống tự động</li>
+                                                    <li>Bạn có thể chỉnh sửa và import lại</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="excel-footer">
+                                                <button className="btn-cancel" onClick={() => setShowExcelModal(false)}>Đóng</button>
+                                                <button
+                                                    className="btn-primary"
+                                                    onClick={() => exportRegistrationsExcel(exportStatus, selectedTeacher)}
+                                                >
+                                                    <i className="bi bi-download"></i> Xuất file Excel
+                                                </button>
+
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* IMPORT TAB */}
+                                    {excelTab === "import" && (
+                                        <div className="excel-tab-content">
+
+                                            <div className="excel-card">
+                                                <i className="bi bi-info-circle"></i>
+                                                <div>
+                                                    <h4>Nhập dữ liệu từ Excel</h4>
+                                                    <p>Nhấn để chọn file Excel cần nhập.</p>
+                                                </div>
+                                            </div>
+
+                                            <label className="excel-upload-box">
+                                                <i className="bi bi-cloud-arrow-up"></i>
+                                                <p>Nhấn để chọn file Excel</p>
+                                                <span>Hỗ trợ .xlsx, .xls</span>
+
+                                                <input
+                                                    type="file"
+                                                    hidden
+                                                    accept=".xlsx,.xls"
+                                                    onChange={async (e) => {
+                                                        if (!e.target.files?.[0]) return;
+
+                                                        setLoading(true);
+
+                                                        try {
+                                                            const result = await importRegistrationsExcel(e.target.files[0]);
+                                                            setImportResult(result);
+                                                            showToast("Import hoàn tất", `Tổng: ${result.totalRows}, thành công: ${result.successCount}, lỗi: ${result.errorCount}`, "success");
+
+                                                            await loadRegistrations();
+                                                        } catch (err) {
+                                                            showToast("Lỗi import", err.response?.data || err.message, "danger");
+                                                        }
+
+                                                        setLoading(false);
+                                                        e.target.value = "";
+                                                    }}
+                                                />
+
+
+
+                                            </label>
+
+                                            {importResult && importResult.errorCount > 0 && (
+                                                <div className="excel-note blue" style={{ marginTop: 10 }}>
+                                                    <strong>Kết quả import:</strong>
+                                                    <div>Tổng dòng: {importResult.totalRows}</div>
+                                                    <div>Thành công: {importResult.successCount}</div>
+                                                    <div>Bỏ qua (trùng): {importResult.skippedCount}</div>
+                                                    <div>Lỗi: {importResult.errorCount}</div>
+                                                    {importResult.errors && importResult.errors.length > 0 && (
+                                                        <ul style={{ marginTop: 8, maxHeight: 150, overflowY: "auto", fontSize: 13 }}>
+                                                            {importResult.errors.map((err, idx) => (
+                                                                <li key={idx}>
+                                                                    Dòng {err.rowIndex}: {err.message}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="excel-footer">
+                                                <button className="btn-cancel" onClick={() => setShowExcelModal(false)}>Đóng</button>
+                                            </div>
+
+                                        </div>
+                                    )}
+
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+
+
+
                 </div>
 
                 <div className="filter-table-wrapper">
@@ -229,10 +628,10 @@ const SubjectRegistrationManagement = () => {
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                 >
                                     <option value="">Tất cả</option>
-                                    {/* value phải TRÙNG với reg.status (registered/completed/not_completed) */}
                                     <option value="registered">Chờ duyệt</option>
                                     <option value="completed">Đã duyệt</option>
                                     <option value="not_completed">Từ chối</option>
+                                    <option value="carryover">Dời môn</option>
                                 </select>
                             </div>
 
@@ -256,85 +655,88 @@ const SubjectRegistrationManagement = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                    <tr>
-                                        <th width="5%">#</th>
-                                        <th width="10%">Mã GV</th>
-                                        <th width="15%">Tên Giáo viên</th>
-                                        <th width="20%">Tên Môn học</th>
-                                        <th width="10%">Quý</th>
-                                        <th width="12%">Ngày đăng ký</th>
-                                        <th width="10%">Trạng thái</th>
-                                        <th width="13%" className="text-center">
-                                            Thao tác
-                                        </th>
-                                    </tr>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="10%">Mã GV</th>
+                                    <th width="15%">Tên Giáo viên</th>
+                                    <th width="18%">Tên Môn học</th>
+                                    <th width="12%">Chương trình</th>{/* system_name */}
+                                    <th width="8%">Kỳ học</th>          {/* semester */}
+                                    <th width="10%">Hạn hoàn thành</th>{/* year + quarter */}
+                                    <th width="10%">Ngày đăng ký</th>  {/* registration_date */}
+                                    <th width="10%">Trạng thái</th>
+                                    <th width="12%" className="text-center">Thao tác</th>
+                                </tr>
                                 </thead>
                                 <tbody>
-                                    {pageRegistrations.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="8" className="text-center">
-                                                <div className="empty-state">
-                                                    <i className="bi bi-inbox"></i>
-                                                    <p>Không tìm thấy đăng ký nào</p>
+                                {pageRegistrations.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="10" className="text-center">
+                                            <div className="empty-state">
+                                                <i className="bi bi-inbox"></i>
+                                                <p>Không tìm thấy đăng ký nào</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    pageRegistrations.map((reg, index) => (
+                                        <tr key={reg.id} className="fade-in">
+                                            <td>{startIndex + index + 1}</td>
+                                            <td>
+                          <span className="teacher-code">
+                            {reg.teacher_code}
+                          </span>
+                                            </td>
+                                            <td>{reg.teacher_name}</td>
+                                            <td>{reg.subject_name}</td>
+                                            <td>{reg.system_name}</td>
+                                            <td>{reg.semester}</td>
+
+                                            <td>{formatDeadline(reg.year, reg.quarter)}</td>
+                                            <td>{reg.registration_date}</td>
+                                            <td>{getStatusBadge(reg.status)}</td>
+                                            <td className="text-center">
+                                                <div className="action-buttons">
+                                                    {/* Chỉ cho duyệt / từ chối khi đang ở trạng thái đã đăng ký */}
+                                                    {(reg.status === 'registered' || reg.status === 'carryover') && (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-success btn-action"
+                                                                onClick={() =>
+                                                                    handleStatusChange(reg.id, 'COMPLETED')
+                                                                }
+                                                                title="Duyệt"
+                                                            >
+                                                                <i className="bi bi-check-circle"></i>
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-danger btn-action"
+                                                                onClick={() =>
+                                                                    handleStatusChange(reg.id, 'NOT_COMPLETED')
+                                                                }
+                                                                title="Từ chối"
+                                                            >
+                                                                <i className="bi bi-x-circle"></i>
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    <button
+                                                        className="btn btn-sm btn-info btn-action"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/subject-registration-detail/${reg.id}`
+                                                            )
+                                                        }
+                                                        title="Chi tiết"
+                                                    >
+                                                        <i className="bi bi-eye"></i>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ) : (
-                                        pageRegistrations.map((reg, index) => (
-                                            <tr key={reg.id} className="fade-in">
-                                                <td>{startIndex + index + 1}</td>
-                                                <td>
-                                                    <span className="teacher-code">
-                                                        {reg.teacher_code}
-                                                    </span>
-                                                </td>
-                                                <td>{reg.teacher_name}</td>
-                                                <td>{reg.subject_name}</td>
-                                                <td>{reg.quarter ? `${reg.quarter}` : 'N/A'}</td>
-                                                <td>{reg.registration_date}</td>
-                                                <td>{getStatusBadge(reg.status)}</td>
-                                                <td className="text-center">
-                                                    <div className="action-buttons">
-                                                        {/* Chỉ cho duyệt / từ chối khi đang ở trạng thái đã đăng ký */}
-                                                        {reg.status === 'registered' && (
-                                                            <>
-                                                                <button
-                                                                    className="btn btn-sm btn-success btn-action"
-                                                                    onClick={() =>
-                                                                        handleStatusChange(reg.id, 'COMPLETED')
-                                                                    }
-                                                                    title="Duyệt"
-                                                                >
-                                                                    <i className="bi bi-check-circle"></i>
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-sm btn-danger btn-action"
-                                                                    onClick={() =>
-                                                                        handleStatusChange(reg.id, 'NOT_COMPLETED')
-                                                                    }
-                                                                    title="Từ chối"
-                                                                >
-                                                                    <i className="bi bi-x-circle"></i>
-                                                                </button>
-                                                            </>
-                                                        )}
-
-                                                        <button
-                                                            className="btn btn-sm btn-info btn-action"
-                                                            onClick={() =>
-                                                                navigate(
-                                                                    `/subject-registration-detail/${reg.id}`
-                                                                )
-                                                            }
-                                                            title="Chi tiết"
-                                                        >
-                                                            <i className="bi bi-eye"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                    ))
+                                )}
                                 </tbody>
                             </table>
                         </div>
@@ -343,8 +745,9 @@ const SubjectRegistrationManagement = () => {
                             <nav aria-label="Page navigation" className="mt-4">
                                 <ul className="pagination justify-content-center">
                                     <li
-                                        className={`page-item ${currentPage === 1 ? 'disabled' : ''
-                                            }`}
+                                        className={`page-item ${
+                                            currentPage === 1 ? 'disabled' : ''
+                                        }`}
                                     >
                                         <button
                                             className="page-link"
@@ -366,8 +769,9 @@ const SubjectRegistrationManagement = () => {
                                             return (
                                                 <li
                                                     key={page}
-                                                    className={`page-item ${currentPage === page ? 'active' : ''
-                                                        }`}
+                                                    className={`page-item ${
+                                                        currentPage === page ? 'active' : ''
+                                                    }`}
                                                 >
                                                     <button
                                                         className="page-link"
@@ -381,8 +785,9 @@ const SubjectRegistrationManagement = () => {
                                         return null;
                                     })}
                                     <li
-                                        className={`page-item ${currentPage === totalPages ? 'disabled' : ''
-                                            }`}
+                                        className={`page-item ${
+                                            currentPage === totalPages ? 'disabled' : ''
+                                        }`}
                                     >
                                         <button
                                             className="page-link"

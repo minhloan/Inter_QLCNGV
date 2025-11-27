@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import MainLayout from "../../components/Layout/MainLayout";
-import DeleteModal from "../../components/Teacher/DeleteModal";
+import DeleteSubjectSystemModal from "../../components/Subject/DeleteSubjectSystemModal";
 import Toast from "../../components/Common/Toast";
 import Loading from "../../components/Common/Loading";
 
@@ -228,10 +228,10 @@ const AdminManageSubjectSystem = () => {
                             <table className="table table-hover table-bordered">
                                 <thead className="table-light">
                                 <tr>
-                                    <th>System Code</th>
-                                    <th>System Name</th>
-                                    <th>Status</th>
-                                    <th style={{ width: "120px" }}>Actions</th>
+                                    <th>Mã hệ đào tạo</th>
+                                    <th>Tên hệ đào tạo</th>
+                                    <th>Trạng thái</th>
+                                    <th style={{ width: "120px" }}>Thao tác</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -320,8 +320,8 @@ const AdminManageSubjectSystem = () => {
 
                 {/* DELETE MODAL */}
                 {showDeleteModal && (
-                    <DeleteModal
-                        teacher={deleteItem}
+                    <DeleteSubjectSystemModal
+                        system={deleteItem}
                         onConfirm={confirmDelete}
                         onClose={() => setShowDeleteModal(false)}
                     />

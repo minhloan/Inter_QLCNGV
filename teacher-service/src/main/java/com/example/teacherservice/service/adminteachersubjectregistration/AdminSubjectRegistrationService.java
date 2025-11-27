@@ -1,7 +1,10 @@
 package com.example.teacherservice.service.adminteachersubjectregistration;
 
 import com.example.teacherservice.dto.adminteachersubjectregistration.AdminSubjectRegistrationDto;
+import com.example.teacherservice.dto.adminteachersubjectregistration.ImportResultDto;
 import com.example.teacherservice.enums.RegistrationStatus;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -11,4 +14,8 @@ public interface AdminSubjectRegistrationService {
 
     AdminSubjectRegistrationDto updateStatus(String id, RegistrationStatus status);
     AdminSubjectRegistrationDto getById(String id);
+
+    void exportExcel(HttpServletResponse response, String status, String teacher);
+
+    ImportResultDto importExcel(MultipartFile file);
 }

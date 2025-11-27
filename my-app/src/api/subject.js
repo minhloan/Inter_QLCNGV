@@ -27,10 +27,16 @@ export const saveSubject = async (subjectData) => {
     const payload = {
         subjectCode: subjectData.subjectCode,
         subjectName: subjectData.subjectName,
-        hours: subjectData.hours,                       // ⭐ đổi credit → hours
-        semester: subjectData.semester,                 // ⭐ new enum
+        hours:
+            subjectData.hours === "" || subjectData.hours === null
+                ? null
+                : Number(subjectData.hours),
+        semester:
+            subjectData.semester === "" || subjectData.semester === null
+                ? null
+                : subjectData.semester,
         description: subjectData.description || null,
-        systemId: subjectData.systemId,
+        systemId: subjectData.systemId || null,
         isActive: subjectData.isActive,
         imageFileId: subjectData.imageFileId || null,
     };
@@ -38,7 +44,6 @@ export const saveSubject = async (subjectData) => {
     const response = await api.post("/save", payload);
     return response.data;
 };
-
 export const searchSubjects = async ({
                                          keyword = "",
                                          system,
@@ -65,10 +70,16 @@ export const updateSubject = async (subjectData) => {
     const payload = {
         id: subjectData.id,
         subjectName: subjectData.subjectName || null,
-        hours: subjectData.hours ?? null,                 // ⭐ đổi credit → hours
-        semester: subjectData.semester ?? null,           // ⭐ thêm học kỳ
+        hours:
+            subjectData.hours === "" || subjectData.hours === null
+                ? null
+                : Number(subjectData.hours),
+        semester:
+            subjectData.semester === "" || subjectData.semester === null
+                ? null
+                : subjectData.semester,
         description: subjectData.description || null,
-        systemId: subjectData.systemId ?? subjectData.system ?? null,
+        systemId: subjectData.systemId || null,
         isActive: subjectData.isActive,
         imageFileId: subjectData.imageFileId || null,
     };

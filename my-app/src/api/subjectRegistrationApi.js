@@ -24,9 +24,28 @@ export const filterSubjectRegistrations = async (body = {}) => {
     return res.data; // Danh such SubjectRegistrationsDto
 };
 
+export const carryOverSubject = async (registrationId, payload) => {
+    const res = await api.post(`/${registrationId}/carry-over`, payload);
+    return res.data;
+};
 
+export const exportPlanByYear = async (year) => {
+    return api.get("/plan/export", {
+        params: { year },
+        responseType: "blob",
+    });
+};
 
+export const importPlanByYear = async (year, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
 
+    const res = await api.post("/plan/import", formData, {
+        params: { year },
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
 
-
-
+    return res.data; // ImportPlanResultDto
+};

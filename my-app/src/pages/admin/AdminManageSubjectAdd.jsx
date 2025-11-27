@@ -59,15 +59,8 @@ const AdminManageSubjectAdd = () => {
         if (!formData.subjectName.trim()) newErrors.subjectName = 'Vui lòng nhập tên môn học';
 
         // HOURS
-        if (!formData.hours.toString().trim()) {
-            newErrors.hours = 'Vui lòng nhập số giờ';
-        } else if (isNaN(Number(formData.hours)) || Number(formData.hours) <= 0) {
+        if (formData.hours && (isNaN(Number(formData.hours)) || Number(formData.hours) <= 0)) {
             newErrors.hours = 'Số giờ phải là số dương';
-        }
-
-        // SEMESTER
-        if (!formData.semester) {
-            newErrors.semester = "Vui lòng chọn học kỳ";
         }
 
         if (!formData.systemId) newErrors.systemId = 'Vui lòng chọn hệ đào tạo';
@@ -184,7 +177,7 @@ const AdminManageSubjectAdd = () => {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => setImagePreview(reader.result);
-            reader.readAsDataAsURL(file);
+            reader.readAsDataURL(file);
         } else {
             setImagePreview(null);
         }
@@ -309,28 +302,37 @@ const AdminManageSubjectAdd = () => {
                                     {/* HOURS + SYSTEM + STATUS */}
                                     <div className="form-row">
                                         <div className="form-group">
-                                            <label className="form-label">Số giờ *</label>
+                                            <label className="form-label">Số giờ</label>
                                             <input
                                                 type="number"
                                                 id="hours"
                                                 name="hours"
                                                 className={`form-control ${errors.hours ? "is-invalid" : ""}`}
-                                                value={formData.hours}
-                                                onChange={handleChange}
-                                                placeholder="Nhập số giờ"
-                                                min="1"
+                                                value={formData.hours ?? ""}
+                                                onChange={(e) =>
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        hours: e.target.value === "" ? null : e.target.value
+                                                    }))
+                                                }
+                                                placeholder="Không bắt buộc"
                                             />
                                             {errors.hours && <div className="invalid-feedback">{errors.hours}</div>}
                                         </div>
 
                                         <div className="form-group">
-                                            <label className="form-label">Học kỳ *</label>
+                                            <label className="form-label">Học kỳ</label>
                                             <select
                                                 id="semester"
                                                 name="semester"
-                                                className={`form-select ${errors.semester ? "is-invalid" : ""}`}
-                                                value={formData.semester}
-                                                onChange={handleChange}
+                                                className="form-select"
+                                                value={formData.semester ?? ""}
+                                                onChange={(e) =>
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        semester: e.target.value === "" ? null : e.target.value
+                                                    }))
+                                                }
                                             >
                                                 <option value="">Chọn học kỳ</option>
                                                 <option value="SEMESTER_1">Học kỳ 1</option>

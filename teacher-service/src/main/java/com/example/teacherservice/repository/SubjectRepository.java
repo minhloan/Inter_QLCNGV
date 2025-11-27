@@ -2,8 +2,11 @@ package com.example.teacherservice.repository;
 
 import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.model.Subject;
+import com.example.teacherservice.model.SubjectSystem;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,6 +14,29 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SubjectRepository extends JpaRepository<Subject, String> {
+
+    @Query("SELECT s FROM SubjectSystem s " +
+            "WHERE LOWER(:sheet) LIKE CONCAT('%', LOWER(s.systemName), '%') " +
+            "   OR LOWER(s.systemName) LIKE CONCAT('%', LOWER(:sheet), '%')")
+    SubjectSystem findMatchingSystem(@Param("sheet") String sheet);
+
+    @Query("""
+           SELECT ss
+           FROM SubjectSystem ss
+           WHERE (:keyword IS NULL OR :keyword = '' 
+                 OR lower(ss.systemCode) LIKE lower(concat('%', :keyword, '%'))
+                 OR lower(ss.systemName) LIKE lower(concat('%', :keyword, '%')))
+             AND (:isActive IS NULL OR ss.isActive = :isActive)
+           """)
+    List<SubjectSystem> searchWithFilters(
+            @Param("keyword") String keyword,
+            @Param("isActive") Boolean isActive
+    );
+
+    List<Subject> findBySystem(SubjectSystem system);
+
+
+
 
     @EntityGraph(attributePaths = {"system"})
     List<Subject> findAll();
@@ -20,6 +46,10 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
     boolean existsBySubjectCode(String subjectCode);
 
     boolean existsBySubjectCodeIgnoreCase(String subjectCode);
+
+    Optional<Subject> findBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
+
+    boolean existsBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
 
     boolean existsBySystem_Id(String systemId);
 
@@ -49,5 +79,15 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     @Query("SELECT COUNT(s) FROM Subject s WHERE s.isActive = :isActive")
     long countByIsActive(boolean isActive);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Subject s SET s.isActive = :active WHERE s.system.id = :systemId")
+    void updateSubjectsActiveBySystem(@Param("systemId") String systemId,
+                                      @Param("active") Boolean active);
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Subject s WHERE s.system.id = :systemId")
+    void deleteBySystemId(@Param("systemId") String systemId);
 
 }

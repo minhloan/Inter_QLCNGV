@@ -1,7 +1,6 @@
 package com.example.teacherservice.service.subjectsystem;
 
 import com.example.teacherservice.exception.NotFoundException;
-import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectSystem;
 import com.example.teacherservice.repository.SubjectRepository;
 import com.example.teacherservice.repository.SubjectSystemRepository;
@@ -9,6 +8,7 @@ import com.example.teacherservice.request.subjectsystem.SubjectSystemCreateReque
 import com.example.teacherservice.request.subjectsystem.SubjectSystemUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -20,9 +20,6 @@ public class SubjectSystemServiceImpl implements SubjectSystemService {
     private final SubjectSystemRepository subjectSystemRepository;
     private final SubjectRepository subjectRepository;
 
-    // -------------------------------------------------
-    // GET ALL
-    // -------------------------------------------------
     @Override
     public List<SubjectSystem> getAll() {
         return subjectSystemRepository.findAll();
@@ -33,9 +30,6 @@ public class SubjectSystemServiceImpl implements SubjectSystemService {
         return subjectSystemRepository.findByIsActiveTrue();
     }
 
-    // -------------------------------------------------
-    // SEARCH
-    // -------------------------------------------------
     @Override
     public List<SubjectSystem> search(String keyword) {
         if (!StringUtils.hasText(keyword)) return getAll();
@@ -48,18 +42,12 @@ public class SubjectSystemServiceImpl implements SubjectSystemService {
         return subjectSystemRepository.searchWithFilters(kw, isActive);
     }
 
-    // -------------------------------------------------
-    // GET BY ID
-    // -------------------------------------------------
     @Override
     public SubjectSystem getById(String id) {
         return subjectSystemRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("System not found"));
     }
 
-    // -------------------------------------------------
-    // CREATE
-    // -------------------------------------------------
     @Override
     public SubjectSystem createSystem(SubjectSystemCreateRequest req) {
 
@@ -76,13 +64,14 @@ public class SubjectSystemServiceImpl implements SubjectSystemService {
         return subjectSystemRepository.save(system);
     }
 
-    // -------------------------------------------------
-    // UPDATE
-    // -------------------------------------------------
     @Override
+    @Transactional
     public SubjectSystem updateSystem(SubjectSystemUpdateRequest req) {
 
         SubjectSystem system = getById(req.getId());
+
+        // Lưu trạng thái cũ (Boolean, không phải boolean)
+        Boolean oldStatus = system.getIsActive();
 
         if (StringUtils.hasText(req.getSystemCode())) {
             system.setSystemCode(req.getSystemCode());
@@ -96,21 +85,26 @@ public class SubjectSystemServiceImpl implements SubjectSystemService {
             system.setIsActive(req.getIsActive());
         }
 
-        return subjectSystemRepository.save(system);
+        SubjectSystem saved = subjectSystemRepository.save(system);
+
+        if (req.getIsActive() != null && (oldStatus == null || !oldStatus.equals(req.getIsActive()))) {
+            subjectRepository.updateSubjectsActiveBySystem(system.getId(), req.getIsActive());
+        }
+
+        return saved;
     }
 
     @Override
+    @Transactional
     public void deleteSystem(String id) {
 
-        boolean inUse = subjectRepository.existsBySystem_Id(id);
-        if (inUse) {
-            throw new IllegalStateException("Không thể xoá hệ đào tạo vì còn môn học đang sử dụng");
-        }
+        // Xóa tất cả môn thuộc hệ đào tạo này
+        subjectRepository.deleteBySystemId(id);
 
+        // Xóa hệ đào tạo
         SubjectSystem sys = getById(id);
         subjectSystemRepository.delete(sys);
     }
-
 
     @Override
     public boolean isInUse(String systemId) {

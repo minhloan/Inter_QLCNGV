@@ -26,12 +26,9 @@ public class SubjectServiceImpl implements SubjectService {
     private final SubjectSystemRepository systemRepository;
     private final FileService fileService;
 
-    // =========================================================================
     // CREATE
-    // =========================================================================
     @Override
     public Subject saveSubject(SubjectCreateRequest request) {
-
 
         SubjectSystem system = null;
         if (StringUtils.hasText(request.getSystemId())) {
@@ -42,8 +39,21 @@ public class SubjectServiceImpl implements SubjectService {
         Subject subject = new Subject();
         subject.setSubjectCode(request.getSubjectCode());
         subject.setSubjectName(request.getSubjectName());
-        subject.setHours(request.getHours());
-        subject.setSemester(request.getSemester());
+
+        // HOURS OPTIONAL
+        if (request.getHours() != null) {
+            subject.setHours(request.getHours());
+        } else {
+            subject.setHours(null);
+        }
+
+        // SEMESTER OPTIONAL
+        if (request.getSemester() != null) {
+            subject.setSemester(request.getSemester());
+        } else {
+            subject.setSemester(null);
+        }
+
         subject.setDescription(request.getDescription());
         subject.setSystem(system);
         subject.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
@@ -55,9 +65,8 @@ public class SubjectServiceImpl implements SubjectService {
 
         return subjectRepository.save(subject);
     }
-    // =========================================================================
+
     // READ
-    // =========================================================================
     @Override
     public Subject getSubjectById(String id) {
         return findSubjectById(id);
@@ -69,28 +78,34 @@ public class SubjectServiceImpl implements SubjectService {
                 .orElseThrow(() -> new NotFoundException("Subject not found"));
     }
 
-    // =========================================================================
     // UPDATE
-    // =========================================================================
     @Override
     public Subject updateSubject(SubjectUpdateRequest request) {
 
         Subject toUpdate = findSubjectById(request.getId());
-
         if (StringUtils.hasText(request.getSubjectName())) {
             toUpdate.setSubjectName(request.getSubjectName());
         }
+
+        // HOURS OPTIONAL
         if (request.getHours() != null) {
             toUpdate.setHours(request.getHours());
+        } else {
+            toUpdate.setHours(null);
         }
+
+        // SEMESTER OPTIONAL
         if (request.getSemester() != null) {
             toUpdate.setSemester(request.getSemester());
+        } else {
+            toUpdate.setSemester(null);
         }
+
         if (request.getDescription() != null) {
             toUpdate.setDescription(request.getDescription());
         }
 
-        // Update system
+        // SYSTEM
         if (request.getSystemId() != null) {
             if (!request.getSystemId().isBlank()) {
                 SubjectSystem sys = systemRepository.findById(request.getSystemId())
@@ -105,11 +120,11 @@ public class SubjectServiceImpl implements SubjectService {
             toUpdate.setIsActive(request.getIsActive());
         }
 
+        // IMAGE
         if (request.getImageFileId() != null) {
             if ("__DELETE__".equals(request.getImageFileId())) {
                 toUpdate.setImage_subject(null);
-            }
-            else if (!request.getImageFileId().isBlank()) {
+            } else if (!request.getImageFileId().isBlank()) {
                 File img = fileService.findFileById(request.getImageFileId());
                 toUpdate.setImage_subject(img);
             }
@@ -117,27 +132,19 @@ public class SubjectServiceImpl implements SubjectService {
 
         return subjectRepository.save(toUpdate);
     }
-    // =========================================================================
+
     // DELETE (SOFT DELETE)
-    // =========================================================================
     @Override
     public void deleteSubjectById(String id) {
         Subject subject = findSubjectById(id);
         subjectRepository.delete(subject);
     }
 
-
-    // =========================================================================
-    // GET ALL (RAW)
-    // =========================================================================
     @Override
     public List<Subject> getAllSubjects() {
         return subjectRepository.findAll();
     }
 
-    // =========================================================================
-    // SEARCH + FILTER
-    // =========================================================================
     @Override
     public List<Subject> searchSubjects(String keyword,
                                         String systemId,
@@ -147,9 +154,6 @@ public class SubjectServiceImpl implements SubjectService {
         return subjectRepository.searchWithFilters(kw, systemId, isActive, semester);
     }
 
-    // =========================================================================
-    // DTO MAPPERS
-    // =========================================================================
     @Override
     public List<SubjectDto> getAll() {
         return subjectRepository.findAll().stream()
@@ -185,6 +189,7 @@ public class SubjectServiceImpl implements SubjectService {
                 .systemName(s.getSystem() != null ? s.getSystem().getSystemName() : null)
                 .isActive(s.getIsActive())
                 .imageFileId(s.getImage_subject() != null ? s.getImage_subject().getId() : null)
+                .isNewSubject(s.getIsNewSubject())
                 .build();
     }
 }

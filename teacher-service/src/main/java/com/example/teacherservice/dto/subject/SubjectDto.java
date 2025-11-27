@@ -19,4 +19,5 @@ public class SubjectDto {
     private String imageFileId;
     private Integer hours;
     private String semester;
+    private Boolean isNewSubject;
 }

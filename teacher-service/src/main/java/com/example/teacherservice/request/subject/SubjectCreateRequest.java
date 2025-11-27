@@ -24,9 +24,9 @@ public class SubjectCreateRequest {
 
     // id file ảnh
     private String imageFileId;
-    @NotNull(message = "Hours is required")
     private Integer hours;
 
-    @NotNull(message = "Semester is required")
     private Semester semester;
+
+
 }

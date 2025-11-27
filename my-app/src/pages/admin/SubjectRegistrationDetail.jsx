@@ -14,6 +14,7 @@ const mapStatusInfo = (status) => {
         registered: { label: "Đang chờ duyệt", class: "warning" },
         completed: { label: "Đã duyệt", class: "success" },
         not_completed: { label: "Từ chối", class: "danger" },
+        carryover: { label: "Dời môn", class: "info" },
     };
     return map[key] || { label: status, class: "secondary" };
 };
@@ -123,14 +124,14 @@ const SubjectRegistrationDetail = () => {
                                 <div className="table-responsive">
                                     <table className="table table-borderless detail-table mb-0">
                                         <tbody>
-                                            <tr>
-                                                <td>Mã giáo viên:</td>
-                                                <td className="text-break">{data.teacherCode}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Tên giáo viên:</td>
-                                                <td className="text-break">{data.teacherName}</td>
-                                            </tr>
+                                        <tr>
+                                            <td>Mã giáo viên:</td>
+                                            <td className="text-break">{data.teacherCode}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Tên giáo viên:</td>
+                                            <td className="text-break">{data.teacherName}</td>
+                                        </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -141,14 +142,14 @@ const SubjectRegistrationDetail = () => {
                                 <div className="table-responsive">
                                     <table className="table table-borderless detail-table mb-0">
                                         <tbody>
-                                            <tr>
-                                                <td>Tên môn:</td>
-                                                <td className="text-break">{data.subjectName}</td>
-                                            </tr>
-                                            <tr>
-                                                <td>Mã môn:</td>
-                                                <td className="text-break">{data.subjectCode}</td>
-                                            </tr>
+                                        <tr>
+                                            <td>Tên môn:</td>
+                                            <td className="text-break">{data.subjectName}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Mã môn:</td>
+                                            <td className="text-break">{data.subjectCode}</td>
+                                        </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -175,7 +176,7 @@ const SubjectRegistrationDetail = () => {
                         </div>
 
                         <div className="detail-section">
-                            <h5>Ghi chú / Lý do</h5>
+                            <h5>Lý Do / Dời Môn</h5>
                             <p className="mb-0 text-break">{data.notes}</p>
                         </div>
                     </div>

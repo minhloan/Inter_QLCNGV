@@ -15,6 +15,8 @@ public class SubjectRegistrationsDto {
     private String subjectId;
     private String subjectCode;
     private String subjectName;
+    private String systemName;
+    private String semester;
     private Integer year;
     private Quarter quarter;
     private String reasonForCarryOver;

@@ -48,4 +48,9 @@ public interface SubjectRegistrationRepository extends JpaRepository<SubjectRegi
 
     @Query("SELECT sr FROM SubjectRegistration sr WHERE sr.teacher.id = :teacherId")
     List<SubjectRegistration> findByTeacherId(@Param("teacherId") String teacherId);
+    @Override
+    @EntityGraph(attributePaths = {"teacher", "subject"})
+    List<SubjectRegistration> findAll();
+
+
 }
