@@ -603,7 +603,8 @@ const TrialTeachingDetail = () => {
                                         </button>
                                     </div>
 
-                                    {trial?.evaluations && trial.evaluations.length > 0 && (
+                                    {/* BM06.40 - Export cho tất cả attendees (chủ tọa, thư ký, thành viên) */}
+                                    {attendees && attendees.length > 0 && (
                                         <div className="col-md-6">
                                             <div className="dropdown w-100">
                                                 <button
@@ -616,15 +617,21 @@ const TrialTeachingDetail = () => {
                                                     BM06.40 - Phiếu đánh giá (Excel)
                                                 </button>
                                                 <ul className="dropdown-menu w-100">
-                                                    {trial.evaluations.map((evaluation) => {
+                                                    {attendees.map((attendee) => {
                                                         const roleLabel =
-                                                            evaluation.attendeeRole === 'CHU_TOA'
+                                                            attendee.attendeeRole === 'CHU_TOA'
                                                                 ? 'Chủ tọa'
-                                                                : evaluation.attendeeRole === 'THU_KY'
+                                                                : attendee.attendeeRole === 'THU_KY'
                                                                 ? 'Thư ký'
                                                                 : 'Thành viên';
+                                                        
+                                                        // Kiểm tra xem attendee này đã có evaluation chưa
+                                                        const hasEvaluation = trial?.evaluations?.some(
+                                                            evaluation => evaluation.attendeeId === attendee.id
+                                                        );
+                                                        
                                                         return (
-                                                            <li key={evaluation.id}>
+                                                            <li key={attendee.id}>
                                                                 <button
                                                                     className="dropdown-item"
                                                                     onClick={async () => {
@@ -632,7 +639,7 @@ const TrialTeachingDetail = () => {
                                                                             setLoading(true);
                                                                             const res = await exportTrialEvaluationForm(
                                                                                 id,
-                                                                                evaluation.attendeeId
+                                                                                attendee.id
                                                                             );
                                                                             const blob = res.data;
                                                                             const url =
@@ -643,7 +650,7 @@ const TrialTeachingDetail = () => {
                                                                                 (trial.teacherName || 'GiangVien')
                                                                                     .replace(/\s+/g, '_');
                                                                             const safeEval =
-                                                                                (evaluation.attendeeName ||
+                                                                                (attendee.attendeeName ||
                                                                                     'NguoiDanhGia').replace(
                                                                                     /\s+/g,
                                                                                     '_'
@@ -657,7 +664,7 @@ const TrialTeachingDetail = () => {
                                                                             document.body.removeChild(a);
                                                                             showToast(
                                                                                 'Thành công',
-                                                                                'Đã xuất phiếu đánh giá',
+                                                                                `Đã xuất phiếu đánh giá của ${attendee.attendeeName || roleLabel}`,
                                                                                 'success'
                                                                             );
                                                                         } catch (error) {
@@ -675,9 +682,18 @@ const TrialTeachingDetail = () => {
                                                                         }
                                                                     }}
                                                                 >
-                                                                    {evaluation.attendeeName || 'Người đánh giá'}{' '}
-                                                                    {evaluation.attendeeRole &&
-                                                                        ` (${roleLabel})`}
+                                                                    <div className="d-flex justify-content-between align-items-center">
+                                                                        <span>
+                                                                            {attendee.attendeeName || 'Người đánh giá'}{' '}
+                                                                            {attendee.attendeeRole &&
+                                                                                ` (${roleLabel})`}
+                                                                        </span>
+                                                                        {!hasEvaluation && (
+                                                                            <span className="badge bg-warning text-dark ms-2">
+                                                                                Chưa đánh giá
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </button>
                                                             </li>
                                                         );

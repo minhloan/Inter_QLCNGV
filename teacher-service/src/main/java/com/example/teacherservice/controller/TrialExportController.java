@@ -50,6 +50,7 @@ public class TrialExportController {
 
     /**
      * BM06.40 - Export Phiếu đánh giá giảng thử (Excel)
+     * Cho phép export ngay cả khi chưa có evaluation (sẽ export template trống)
      */
     @GetMapping("/{trialId}/evaluation-form/{attendeeId}")
     public ResponseEntity<byte[]> exportEvaluationForm(
@@ -57,7 +58,15 @@ public class TrialExportController {
             @PathVariable String attendeeId) {
         try {
             TrialTeachingDto trial = trialTeachingService.getTrialById(trialId);
-            TrialEvaluationDto evaluation = evaluationService.getEvaluationByAttendeeId(attendeeId);
+            
+            // Tìm evaluation nếu có, nếu không có thì để null (sẽ export template trống)
+            TrialEvaluationDto evaluation = null;
+            try {
+                evaluation = evaluationService.getEvaluationByAttendeeId(attendeeId);
+            } catch (com.example.teacherservice.exception.NotFoundException e) {
+                log.info("No evaluation found for attendeeId: {}, exporting empty template", attendeeId);
+                // Cho phép export template trống nếu chưa có evaluation
+            }
             
             byte[] document = exportService.generateEvaluationForm(trial, evaluation);
             
