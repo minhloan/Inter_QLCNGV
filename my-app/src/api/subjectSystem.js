@@ -13,7 +13,6 @@ export const getAllSubjectSystems = async () => {
 
 // ======================
 // LẤY SUBJECT SYSTEM ĐANG HOẠT ĐỘNG
-// ⭐ Dùng cho dropdown thêm/sửa môn học
 // ======================
 export const listActiveSystems = async () => {
     const res = await api.get("/active");
@@ -47,4 +46,20 @@ export const updateSubjectSystem = async (payload) => {
 export const deleteSubjectSystem = async (id) => {
     const res = await api.delete(`/delete/${id}`);
     return res.data;
+};
+
+export const exportSubjectSystem = async (id) => {
+    return api.get(`/${id}/export-template`, {
+        responseType: "blob",
+    });
+};
+
+export const importSubjectSystem = async (id, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/${id}/import-template`, formData, {
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    });
 };

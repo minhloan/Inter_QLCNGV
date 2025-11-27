@@ -147,6 +147,10 @@ const AdminManageSubjectEdit = () => {
 
     // ================== SAVE ==================
     const handleSave = async () => {
+        if (!formData.subjectCode.trim()) {
+            return showToast("Lỗi", "Mã môn học không được để trống", "danger");
+        }
+
         if (!formData.subjectName.trim()) {
             return showToast("Lỗi", "Tên môn học không được để trống", "danger");
         }
@@ -163,6 +167,7 @@ const AdminManageSubjectEdit = () => {
 
             const payload = {
                 id: formData.id,
+                subjectCode: formData.subjectCode.trim(),
                 subjectName: formData.subjectName.trim(),
                 hours:
                     formData.hours === "" || formData.hours === null
@@ -221,7 +226,12 @@ const AdminManageSubjectEdit = () => {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Mã môn học</label>
-                                    <input className="form-control" value={formData.subjectCode} disabled />
+                    <input
+                        className="form-control"
+                        name="subjectCode"
+                        value={formData.subjectCode}
+                        onChange={handleInputChange}
+                    />
                                 </div>
 
                                 <div className="form-group">

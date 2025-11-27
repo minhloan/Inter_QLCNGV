@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import MainLayout from "../../components/Layout/MainLayout";
@@ -8,7 +8,9 @@ import Loading from "../../components/Common/Loading";
 
 import {
     getAllSubjectSystems,
-    deleteSubjectSystem
+    deleteSubjectSystem,
+    exportSubjectSystem,
+    importSubjectSystem
 } from "../../api/subjectSystem";
 
 const AdminManageSubjectSystem = () => {
@@ -31,6 +33,8 @@ const AdminManageSubjectSystem = () => {
     });
 
     const [hasLoaded, setHasLoaded] = useState(false);
+    const fileInputRef = useRef(null);
+    const [importTarget, setImportTarget] = useState(null);
 
     const pageSize = 10;
     const [currentPage, setCurrentPage] = useState(1);
@@ -125,6 +129,72 @@ const AdminManageSubjectSystem = () => {
         setStatusFilter("");
         setSortBy("code_asc");
         setCurrentPage(1);
+    };
+
+    const handleExport = async (sys) => {
+        if (!sys) return;
+        try {
+            setLoading(true);
+            const res = await exportSubjectSystem(sys.id);
+
+            const blob = new Blob([res.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `khung_${sys.systemCode || "subject-system"}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            showToast("Thành công", "Đã xuất khung chương trình", "success");
+        } catch (err) {
+            console.error(err);
+            showToast(
+                "Lỗi",
+                err.response?.data?.message || "Không thể xuất khung chương trình",
+                "danger"
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleImportClick = (sys) => {
+        setImportTarget(sys);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleImportFile = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file || !importTarget) return;
+
+        try {
+            setLoading(true);
+            await importSubjectSystem(importTarget.id, file);
+            showToast(
+                "Thành công",
+                `Đã import khung cho ${importTarget.systemName}`,
+                "success"
+            );
+        } catch (err) {
+            console.error(err);
+            showToast(
+                "Lỗi",
+                err.response?.data?.message || "Không thể import khung chương trình",
+                "danger"
+            );
+        } finally {
+            setLoading(false);
+            setImportTarget(null);
+            if (event.target) event.target.value = "";
+        }
     };
 
     const confirmDelete = async () => {
@@ -231,7 +301,7 @@ const AdminManageSubjectSystem = () => {
                                     <th>Mã hệ đào tạo</th>
                                     <th>Tên hệ đào tạo</th>
                                     <th>Trạng thái</th>
-                                    <th style={{ width: "120px" }}>Thao tác</th>
+                                    <th style={{ width: "180px" }}>Thao tác</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -255,19 +325,38 @@ const AdminManageSubjectSystem = () => {
                                             )}
                                         </td>
                                         <td>
-                                            <button
-                                                className="btn btn-sm btn-primary me-2"
-                                                onClick={() => handleEdit(sys)}
-                                            >
-                                                <i className="bi bi-pencil"></i>
-                                            </button>
+                                            <div className="d-flex gap-2 flex-wrap">
+                                                <button
+                                                    className="btn btn-sm btn-warning"
+                                                    onClick={() => handleImportClick(sys)}
+                                                    title="Import Excel khung chương trình"
+                                                >
+                                                    <i className="bi bi-upload"></i>
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm btn-success"
+                                                    onClick={() => handleExport(sys)}
+                                                    title="Xuất khung chương trình"
+                                                >
+                                                    <i className="bi bi-download"></i>
+                                                </button>
 
-                                            <button
-                                                className="btn btn-sm btn-danger"
-                                                onClick={() => handleDelete(sys)}
-                                            >
-                                                <i className="bi bi-trash"></i>
-                                            </button>
+                                                <button
+                                                    className="btn btn-sm btn-primary"
+                                                    onClick={() => handleEdit(sys)}
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <i className="bi bi-pencil"></i>
+                                                </button>
+
+                                                <button
+                                                    className="btn btn-sm btn-danger"
+                                                    onClick={() => handleDelete(sys)}
+                                                    title="Xóa hệ"
+                                                >
+                                                    <i className="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -317,6 +406,14 @@ const AdminManageSubjectSystem = () => {
                         )}
                     </div>
                 </div>
+
+                <input
+                    type="file"
+                    accept=".xlsx"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleImportFile}
+                />
 
                 {/* DELETE MODAL */}
                 {showDeleteModal && (

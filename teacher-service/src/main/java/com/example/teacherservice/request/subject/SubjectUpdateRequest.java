@@ -11,6 +11,7 @@ public class SubjectUpdateRequest {
     private String id;
 
     private String subjectName;
+    private String subjectCode;
     private String description;
 
     private String systemId;

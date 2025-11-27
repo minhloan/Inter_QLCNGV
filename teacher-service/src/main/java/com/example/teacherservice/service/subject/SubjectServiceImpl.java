@@ -84,7 +84,12 @@ public class SubjectServiceImpl implements SubjectService {
 
         Subject toUpdate = findSubjectById(request.getId());
         if (StringUtils.hasText(request.getSubjectName())) {
-            toUpdate.setSubjectName(request.getSubjectName());
+            toUpdate.setSubjectName(request.getSubjectName().trim());
+        }
+
+        if (request.getSubjectCode() != null) {
+            String code = request.getSubjectCode().trim();
+            toUpdate.setSubjectCode(code.isEmpty() ? null : code);
         }
 
         // HOURS OPTIONAL

@@ -20,3 +20,9 @@ export const exportSubjectsExcel = () => {
         responseType: "blob",
     });
 };
+
+export const exportAllSkillsExcel = () => {
+    return excelApi.get("/export-all-skill", {
+        responseType: "blob",
+    });
+};

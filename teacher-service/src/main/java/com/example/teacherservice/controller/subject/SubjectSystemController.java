@@ -3,13 +3,18 @@ package com.example.teacherservice.controller.subject;
 import com.example.teacherservice.model.SubjectSystem;
 import com.example.teacherservice.request.subjectsystem.SubjectSystemCreateRequest;
 import com.example.teacherservice.request.subjectsystem.SubjectSystemUpdateRequest;
+import com.example.teacherservice.service.subject.SubjectExportService;
+import com.example.teacherservice.service.subject.SubjectImportService;
 import com.example.teacherservice.service.subjectsystem.SubjectSystemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,6 +22,8 @@ import java.util.List;
 public class SubjectSystemController {
 
     private final SubjectSystemService subjectSystemService;
+    private final SubjectExportService subjectExportService;
+    private final SubjectImportService subjectImportService;
 
     // ===================== GET ALL =====================
     @GetMapping("/getAll")
@@ -70,5 +77,26 @@ public class SubjectSystemController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         subjectSystemService.deleteSystem(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/export-template")
+    public void exportProgramTemplate(
+            @PathVariable String id,
+            HttpServletResponse response
+    ) {
+        subjectExportService.exportSystemTemplate(id, response);
+    }
+
+    @PostMapping("/{id}/import-template")
+    public ResponseEntity<Map<String, Object>> importProgramTemplate(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        int total = subjectImportService.importSystemTemplate(id, file);
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "message", "Import thành công",
+                "total", total
+        ));
     }
 }

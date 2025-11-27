@@ -69,6 +69,10 @@ export const getSubjectById = async (subjectId) => {
 export const updateSubject = async (subjectData) => {
     const payload = {
         id: subjectData.id,
+        subjectCode:
+            subjectData.subjectCode === undefined || subjectData.subjectCode === null
+                ? null
+                : subjectData.subjectCode,
         subjectName: subjectData.subjectName || null,
         hours:
             subjectData.hours === "" || subjectData.hours === null

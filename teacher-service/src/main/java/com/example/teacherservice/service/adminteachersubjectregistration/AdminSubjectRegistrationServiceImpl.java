@@ -16,6 +16,7 @@ import com.example.teacherservice.service.notification.NotificationService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -116,7 +117,6 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
             // ===== 2. LẤY DỮ LIỆU =====
             List<SubjectRegistration> list = subjectRegistrationRepository.findAll();
 
-            // --- Lọc theo trạng thái ---
             if (statusParam != null && !statusParam.equalsIgnoreCase("ALL")) {
                 try {
                     RegistrationStatus st = RegistrationStatus.valueOf(statusParam.toUpperCase());
@@ -126,7 +126,6 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
                 } catch (Exception ignored) {}
             }
 
-            // --- Lọc theo giáo viên ---
             if (teacherParam != null && !teacherParam.isBlank()) {
                 list = list.stream()
                         .filter(r -> r.getTeacher().getUsername().equalsIgnoreCase(teacherParam)
@@ -159,50 +158,43 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
                     Row row = sheet.getRow(rowIndex);
                     if (row == null) row = sheet.createRow(rowIndex);
 
-                    // 0: STT
-                    Cell c0 = getOrCreate(row, 0);
-                    c0.setCellValue(stt);
-                    c0.setCellStyle(borderCenter);
+                    // STT
+                    getOrCreate(row, 0).setCellValue(stt);
+                    getOrCreate(row, 0).setCellStyle(borderCenter);
 
-                    // 1: HỌ TÊN
-                    Cell c1 = getOrCreate(row, 1);
-                    c1.setCellValue(teacherName);
-                    c1.setCellStyle(borderLeft);
+                    // Họ tên
+                    getOrCreate(row, 1).setCellValue(teacherName);
+                    getOrCreate(row, 1).setCellStyle(borderLeft);
 
-                    // 2: MÔN CHUẨN BỊ
-                    Cell c2 = getOrCreate(row, 2);
-                    c2.setCellValue(reg.getSubject().getSubjectName());
-                    c2.setCellStyle(borderLeft);
+                    // Môn
+                    getOrCreate(row, 2).setCellValue(reg.getSubject().getSubjectName());
+                    getOrCreate(row, 2).setCellStyle(borderLeft);
 
-                    // 3: CHƯƠNG TRÌNH
-                    Cell c3 = getOrCreate(row, 3);
-                    c3.setCellValue(reg.getSubject().getSystem().getSystemCode());
-                    c3.setCellStyle(borderCenter);
+                    // Chương trình
+                    getOrCreate(row, 3).setCellValue(reg.getSubject().getSystem().getSystemCode());
+                    getOrCreate(row, 3).setCellStyle(borderCenter);
 
-                    // 4: HỌC KỲ
-                    Cell c4 = getOrCreate(row, 4);
-                    c4.setCellValue(reg.getSubject().getSemester().name());
-                    c4.setCellStyle(borderCenter);
+                    // Học kỳ
+                    getOrCreate(row, 4).setCellValue(reg.getSubject().getSemester().name());
+                    getOrCreate(row, 4).setCellStyle(borderCenter);
 
-                    // 5: HÌNH THỨC CHUẨN BỊ
-                    Cell c5 = getOrCreate(row, 5);
-                    c5.setCellValue(reg.getReasonForCarryOver());
-                    c5.setCellStyle(borderLeft);
+                    // Hình thức chuẩn bị
+                    getOrCreate(row, 5).setCellValue(
+                            reg.getReasonForCarryOver() == null ? "" : reg.getReasonForCarryOver()
+                    );
+                    getOrCreate(row, 5).setCellStyle(borderLeft);
 
-                    // 6: HẠN HOÀN THÀNH
-                    Cell c6 = getOrCreate(row, 6);
-                    c6.setCellValue(formatDeadline(reg));
-                    c6.setCellStyle(borderCenter);
+                    // Deadline
+                    getOrCreate(row, 6).setCellValue(formatDeadline(reg));
+                    getOrCreate(row, 6).setCellStyle(borderCenter);
 
-                    // 7: GHI CHÚ (template)
-                    Cell noteCell2 = getOrCreate(row, noteCol);
-                    noteCell2.setCellValue("");
-                    noteCell2.setCellStyle(borderLeft);
+                    // GHI CHÚ (template)
+                    getOrCreate(row, noteCol).setCellValue("");
+                    getOrCreate(row, noteCol).setCellStyle(borderLeft);
 
-                    // 8: MÃ MÔN THI
-                    Cell codeCell2 = getOrCreate(row, codeCol);
-                    codeCell2.setCellValue(reg.getSubject().getSubjectCode());
-                    codeCell2.setCellStyle(borderCenter);
+                    // Mã môn thi
+                    getOrCreate(row, codeCol).setCellValue(reg.getSubject().getSubjectCode());
+                    getOrCreate(row, codeCol).setCellStyle(borderCenter);
 
                     rowIndex++;
                 }
@@ -215,22 +207,37 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
                 stt++;
             }
 
-            // ===== 5. SỬA FOOTER NGÀY =====
-            int year = java.time.LocalDate.now().getYear();
-            String footer = "Ngày     /     / " + year;
+            // ===== 5. GHI FOOTER LUÔN LUÔN Ở DƯỚI ====
+            int footerRow = rowIndex + 3;
 
-            for (Row row : sheet) {
-                if (row == null) continue;
-                for (Cell cell : row) {
-                    if (cell == null) continue;
-                    if (cell.toString().contains("Ngày")) {
-                        cell.setCellValue(footer);
-                        break;
-                    }
-                }
-            }
+            Row leftDateRow = sheet.getRow(footerRow);
+            if (leftDateRow == null) leftDateRow = sheet.createRow(footerRow);
 
-            // ===== 6. TRẢ FILE =====
+            Cell leftDate = leftDateRow.createCell(1);
+            leftDate.setCellValue("Ngày      /      /  " + java.time.LocalDate.now().getYear());
+
+            Row leftSignerRow = sheet.getRow(footerRow + 1);
+            if (leftSignerRow == null) leftSignerRow = sheet.createRow(footerRow + 1);
+
+            leftSignerRow.createCell(1).setCellValue("NGƯỜI LẬP");
+
+            Row rightDateRow = sheet.getRow(footerRow);
+            Cell rightDate = rightDateRow.createCell(8);
+            rightDate.setCellValue("Ngày      /      /  " + java.time.LocalDate.now().getYear());
+
+            Row rightSignerRow = sheet.getRow(footerRow + 1);
+            if (rightSignerRow == null) rightSignerRow = sheet.createRow(footerRow + 1);
+
+            rightSignerRow.createCell(8).setCellValue("BỘ PHẬN ĐÀO TẠO");
+
+            // ===== 6. FORCE EXCEL FOCUS TO FOOTER =====
+            // ===== 6. FORCE EXCEL FOCUS TO FOOTER =====
+            CellAddress footerAddress = new CellAddress(footerRow + 5, 0);
+            sheet.setActiveCell(footerAddress);
+            sheet.showInPane(footerRow, 0);
+
+
+            // ===== 7. TRẢ FILE =====
             response.setContentType(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader(
@@ -244,6 +251,8 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
             throw new RuntimeException("Export lỗi: " + e.getMessage());
         }
     }
+
+
 
 
     private Cell getOrCreate(Row row, int col) {

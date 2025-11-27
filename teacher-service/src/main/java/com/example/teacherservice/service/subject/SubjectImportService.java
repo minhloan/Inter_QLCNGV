@@ -1,6 +1,7 @@
 package com.example.teacherservice.service.subject;
 
 import com.example.teacherservice.enums.Semester;
+import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectSystem;
 import com.example.teacherservice.repository.SubjectRepository;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +24,21 @@ public class SubjectImportService {
 
     private final SubjectRepository subjectRepo;
     private final SubjectSystemRepository systemRepo;
+
+    public int importSystemTemplate(String systemId, MultipartFile file) {
+        SubjectSystem system = systemRepo.findById(systemId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy hệ đào tạo"));
+
+        try (InputStream in = file.getInputStream();
+             Workbook workbook = WorkbookFactory.create(in)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            return importTemplateSheet(sheet, system);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Import Excel khung chương trình thất bại: " + e.getMessage(), e);
+        }
+    }
 
     public int importExcel(MultipartFile file) {
         int totalImported = 0;
@@ -156,12 +173,6 @@ public class SubjectImportService {
 
             String code = ExcelUtils.getString(row, col.get("code"));
 
-            // ⭐⭐⭐ THÊM YÊU CẦU MỚI — NẾU KHÔNG CÓ MÃ → BỎ QUA ⭐⭐⭐
-            if (code == null || code.isBlank()) {
-                System.out.println("⛔ Bỏ qua vì không có mã: " + name);
-                continue;
-            }
-
             // ------------------ DETECT NEW ------------------
             boolean isNew = false;
             String sheetName = sheet.getSheetName().trim().toLowerCase();
@@ -199,7 +210,12 @@ public class SubjectImportService {
             // ------------------ TẠO MÔN MỚI ------------------
             Subject s = new Subject();
             s.setSubjectName(name.trim());
-            s.setSubjectCode(code.trim());
+            if (code == null || code.isBlank()) {
+                System.out.println("⚠ Không có mã skill cho môn: " + name + " → lưu tạm với mã trống");
+                s.setSubjectCode(null);
+            } else {
+                s.setSubjectCode(code.trim());
+            }
             s.setDescription(desc);
             s.setHours(col.containsKey("hours") ? ExcelUtils.getInt(row, col.get("hours")) : null);
             s.setSemester(currentSemester);
@@ -217,4 +233,165 @@ public class SubjectImportService {
 
         return count;
     }
+
+    private int importTemplateSheet(Sheet sheet, SubjectSystem system) {
+        Semester currentSemester = null;
+        int count = 0;
+
+        for (Row row : sheet) {
+            String rowText = buildRowText(row);
+
+            Semester detected = detectSemester(rowText);
+            if (detected != null) {
+                currentSemester = detected;
+                continue;
+            }
+
+            if (isHeaderRow(rowText)) {
+                if (currentSemester == null) {
+                    currentSemester = Semester.SEMESTER_1;
+                }
+                continue;
+            }
+
+            String name = ExcelUtils.getString(row, 1);
+            String code = ExcelUtils.getString(row, 2);
+            String note = ExcelUtils.getString(row, 3);
+            String isNew = ExcelUtils.getString(row, 4);
+            String multiplierStr = ExcelUtils.getString(row, 5);
+
+            if ((name == null || name.isBlank()) && (code == null || code.isBlank())) {
+                continue; // empty row
+            }
+
+            if (name == null || name.isBlank()) name = note;
+            if (name == null || name.isBlank()) continue;
+            if (currentSemester == null) {
+                currentSemester = Semester.SEMESTER_1;
+            }
+
+            Subject subject = new Subject();
+
+            subject.setSystem(system);
+            subject.setSubjectName(name.trim());
+            if (code == null || code.isBlank()) {
+                subject.setSubjectCode(null);
+            } else {
+                subject.setSubjectCode(code.trim());
+            }
+            subject.setDescription(note);
+            subject.setSemester(currentSemester);
+            subject.setIsActive(true);
+            subject.setIsNewSubject(isTrue(isNew));
+            subject.setHours(parseMultiplier(multiplierStr));
+
+            subjectRepo.save(subject);
+            count++;
+        }
+
+        return count;
+    }
+
+    private Semester detectSemester(String text) {
+        if (text == null || text.isBlank()) return null;
+        String normalized = normalize(text);
+
+        if (containsKeyword(normalized, "1")) {
+            return Semester.SEMESTER_1;
+        }
+        if (containsKeyword(normalized, "2")) {
+            return Semester.SEMESTER_2;
+        }
+        if (containsKeyword(normalized, "3")) {
+            return Semester.SEMESTER_3;
+        }
+        if (containsKeyword(normalized, "4")) {
+            return Semester.SEMESTER_4;
+        }
+        return null;
+    }
+
+    private boolean isHeaderRow(String normalizedRowText) {
+        if (normalizedRowText == null) return false;
+        return (normalizedRowText.contains("ten mon") && normalizedRowText.contains("skill"))
+                || normalizedRowText.contains("stt");
+    }
+
+    private boolean containsKeyword(String normalized, String number) {
+        return normalized.contains("hoc ky " + number)
+                || normalized.contains("hoc ky" + number)
+                || normalized.contains("hk" + number)
+                || normalized.contains("semester " + number)
+                || normalized.contains("semester" + number);
+    }
+
+    private String buildRowText(Row row) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < row.getLastCellNum(); i++) {
+            String v = ExcelUtils.getString(row, i);
+            if (v != null) {
+                sb.append(normalize(v)).append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private String normalize(String input) {
+        if (input == null) return null;
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return normalized.toLowerCase().trim();
+    }
+
+    private boolean isTrue(String value) {
+        if (value == null) return false;
+        String normalized = value.trim().toLowerCase();
+        return normalized.equals("true")
+                || normalized.equals("1")
+                || normalized.equals("yes")
+                || normalized.equals("x")
+                || normalized.equals("new");
+    }
+
+    private Integer parseMultiplier(String value) {
+        try {
+            if (value == null || value.isBlank()) return null;
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+//    private String generateCodeFromName(String name) {
+//        String base = normalize(name)
+//                .replaceAll("[^a-z0-9]", "")
+//                .toUpperCase();
+//        if (base.isBlank()) base = "AUTO";
+//        if (base.length() > MAX_CODE_LENGTH - 5) {
+//            base = base.substring(0, MAX_CODE_LENGTH - 5);
+//        }
+//
+//        String suffix = Long.toString(System.currentTimeMillis(), 36).toUpperCase();
+//        if (suffix.length() > 4) {
+//            suffix = suffix.substring(suffix.length() - 4);
+//        }
+//
+//        return safeCode(base + suffix);
+//    }
+//
+//    private String safeCode(String code) {
+//        if (code == null || code.isBlank()) {
+//            return generateCodeFromName("AUTO");
+//        }
+//
+//        String normalized = code.toUpperCase().replaceAll("[^A-Z0-9-]", "-");
+//        normalized = normalized.replaceAll("-{2,}", "-").replaceAll("^-|-$", "");
+//        if (normalized.length() > MAX_CODE_LENGTH) {
+//            normalized = normalized.substring(0, MAX_CODE_LENGTH);
+//        }
+//        if (normalized.isBlank()) {
+//            return generateCodeFromName("AUTO");
+//        }
+//        return normalized;
+//    }
 }

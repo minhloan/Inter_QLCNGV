@@ -49,6 +49,8 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     Optional<Subject> findBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
 
+    Optional<Subject> findBySubjectCodeIgnoreCaseAndSystem(String subjectCode, SubjectSystem system);
+
     boolean existsBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
 
     boolean existsBySystem_Id(String systemId);

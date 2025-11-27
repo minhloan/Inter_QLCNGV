@@ -7,7 +7,7 @@ import Loading from '../../components/Common/Loading';
 import { getAllSubjects, deleteSubject } from '../../api/subject';
 import { listActiveSystems } from '../../api/subjectSystem';
 import { getFile } from '../../api/file';
-import { importSubjectsExcel, exportSubjectsExcel } from "../../api/subjectExcel";
+import { exportSubjectsExcel, exportAllSkillsExcel } from "../../api/subjectExcel";
 
 const AdminManageSubject = () => {
     const navigate = useNavigate();
@@ -28,7 +28,6 @@ const AdminManageSubject = () => {
     const [hasLoaded, setHasLoaded] = useState(false);
 
     const [subjectImages, setSubjectImages] = useState({});
-    const [selectedFile, setSelectedFile] = useState(null);
     const pageSize = 12;
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -155,26 +154,6 @@ const AdminManageSubject = () => {
         setShowDeleteModal(true);
     };
 
-    // IMPORT
-    const handleImport = async () => {
-        if (!selectedFile) {
-            showToast("Lỗi", "Vui lòng chọn file Excel (.xlsx)", "danger");
-            return;
-        }
-
-        try {
-            setLoading(true);
-            await importSubjectsExcel(selectedFile);
-            showToast("Thành công", "Import excel thành công!", "success");
-            setSelectedFile(null);
-            await loadSubjects();
-        } catch (err) {
-            showToast("Lỗi", "Không import được file Excel", "danger");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleExport = async () => {
         try {
             const res = await exportSubjectsExcel();
@@ -195,6 +174,25 @@ const AdminManageSubject = () => {
         } catch (err) {
             console.error(err);
             showToast("Lỗi", "Xuất Excel thất bại", "danger");
+        }
+    };
+
+    const handleExportAllSkill = async () => {
+        try {
+            const res = await exportAllSkillsExcel();
+            const blob = new Blob([res.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "all_skill_in_aptech.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast("Thành công", "Đã xuất danh sách All Skill", "success");
+        } catch (err) {
+            showToast("Lỗi", "Xuất All Skill thất bại", "danger");
         }
     };
     const confirmDelete = async () => {
@@ -240,29 +238,13 @@ const AdminManageSubject = () => {
                             <i className="bi bi-diagram-3"></i> Trang Hệ Đào Tạo
                         </button>
 
-                        {/* EXPORT */}
-                        <button className="btn btn-success me-2" onClick={handleExport}>
+                {/* EXPORT */}
+                <button className="btn btn-success me-2" onClick={handleExport}>
                             <i className="bi bi-download"></i> Xuất Excel
                         </button>
 
-                        {/* FILE INPUT */}
-                        <label className="btn btn-warning me-2">
-                            <i className="bi bi-upload"></i> Chọn File Excel
-                            <input
-                                type="file"
-                                hidden
-                                accept=".xlsx"
-                                onChange={(e) => setSelectedFile(e.target.files[0])}
-                            />
-                        </label>
-
-                        {/* IMPORT */}
-                        <button
-                            className="btn btn-primary me-2"
-                            disabled={!selectedFile}
-                            onClick={handleImport}
-                        >
-                            <i className="bi bi-upload"></i> Import Excel
+                        <button className="btn btn-outline-success me-2" onClick={handleExportAllSkill}>
+                            <i className="bi bi-cloud-download"></i> Xuất All Skill
                         </button>
 
                         <button className="btn btn-primary" onClick={handleAdd}>
@@ -270,10 +252,6 @@ const AdminManageSubject = () => {
                         </button>
                     </div>
                 </div>
-
-                {selectedFile && (
-                    <p className="mt-2"><strong>Đã chọn:</strong> {selectedFile.name}</p>
-                )}
 
                 <p className="page-subtitle subject-count">
                     Tổng số môn học: {filteredSubjects.length}
@@ -364,23 +342,35 @@ const AdminManageSubject = () => {
                                         </div>
 
                                         <div className="course-card-body">
-                                            <h3>{subject.subjectName}</h3>
-                                            <p>
-                                                {subject.subjectCode}
-                                                {subject.isNewSubject && (
-                                                    <span
-                                                        style={{
-                                                            color: "red",
-                                                            fontWeight: 700,
-                                                            marginLeft: "6px",
-                                                            fontSize: "0.8rem"
-                                                        }}
-                                                    >
-                                                        NEW
-                                                    </span>
-                                                )}
-                                                {" • "}
-                                                {subject.hours} giờ • {subject.semesterLabel} • {subject.systemName}
+                                            <h3
+                                                className="subject-title"
+                                                title={subject.subjectName}
+                                                style={{
+                                                    display: "-webkit-box",
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: "vertical",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    minHeight: "3.4rem",
+                                                }}
+                                            >
+                                                {subject.subjectName}
+                                            </h3>
+                                            <p className="subject-meta" title={`${subject.subjectCode} • ${subject.semesterLabel} • ${subject.systemName}`}>
+                                                <span className="subject-code">
+                                                    {subject.subjectCode}
+                                                    {subject.isNewSubject && (
+                                                        <span className="subject-badge-new">NEW</span>
+                                                    )}
+                                                </span>
+                                                <span className="subject-meta-divider">•</span>
+                                                <span>{subject.hours} giờ</span>
+                                                <span className="subject-meta-divider">•</span>
+                                                <span>{subject.semesterLabel}</span>
+                                                <span className="subject-meta-divider">•</span>
+                                                <span className="subject-system" title={subject.systemName}>
+                                                    {subject.systemName}
+                                                </span>
                                             </p>
 
                                             <div className="action-buttons">

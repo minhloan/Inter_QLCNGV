@@ -20,17 +20,17 @@ import lombok.*;
 @AllArgsConstructor
 public class Subject extends BaseEntity {
 
-    @Column(name = "subject_code", nullable = false, length = 20)
+    @Column(name = "subject_code", length = 200)
     private String subjectCode;
 
-    @Column(name = "subject_name", nullable = false, length = 100)
+    @Column(name = "subject_name", length = 200)
     private String subjectName;
 
     @Column(name = "hours")
     private Integer hours;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "semester", nullable = false)
+    @Column(name = "semester")
     private Semester semester;
 
     @Column(name = "description", columnDefinition = "TEXT")
