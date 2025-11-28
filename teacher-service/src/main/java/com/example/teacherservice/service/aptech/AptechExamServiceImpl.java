@@ -248,7 +248,7 @@ public class AptechExamServiceImpl implements AptechExamService {
             exam.setOcrSubjectCode(ocrResult.getOcrSubjectName());
             
             // Verify subject matches
-            String expectedCode = exam.getSubject().getSubjectCode();
+            String expectedCode = exam.getSubject().getSkillCode();
             subjectMatch = ocrResult.getOcrSubjectName().contains(expectedCode);
             if (!subjectMatch) {
 
@@ -377,7 +377,7 @@ public class AptechExamServiceImpl implements AptechExamService {
                 .teacherCode(exam.getTeacher().getUsername())
                 .teacherName(exam.getTeacher().getUsername())
                 .subjectId(exam.getSubject().getId())
-                .subjectCode(exam.getSubject().getSubjectCode())
+                .subjectCode(exam.getSubject().getSkillCode())
                 .subjectName(exam.getSubject().getSubjectName())
                 .attempt(exam.getAttempt())
                 .score(exam.getScore())
@@ -1310,7 +1310,7 @@ public class AptechExamServiceImpl implements AptechExamService {
 
     private String formatSubjectDisplay(AptechExam exam) {
         if (exam == null || exam.getSubject() == null) return "";
-        String code = exam.getSubject().getSubjectCode();
+        String code = exam.getSubject().getSkillCode();
         String name = exam.getSubject().getSubjectName();
         if (code != null && !code.isBlank()) {
             return code + (name != null && !name.isBlank() ? "-" + name : "");

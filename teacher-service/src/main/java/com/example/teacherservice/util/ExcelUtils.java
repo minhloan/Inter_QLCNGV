@@ -1,8 +1,13 @@
 package com.example.teacherservice.util;
 
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
 
 public class ExcelUtils {
+
+    private static final DataFormatter FORMATTER = new DataFormatter();
 
     public static String getString(Row row, Integer index) {
         try {
@@ -10,11 +15,12 @@ public class ExcelUtils {
             Cell cell = row.getCell(index);
             if (cell == null) return null;
 
-            return switch (cell.getCellType()) {
-                case STRING -> cell.getStringCellValue().trim();
-                case NUMERIC -> String.valueOf((int) cell.getNumericCellValue());
-                default -> String.valueOf(cell);
-            };
+            FormulaEvaluator evaluator = row.getSheet().getWorkbook()
+                    .getCreationHelper()
+                    .createFormulaEvaluator();
+
+            String value = FORMATTER.formatCellValue(cell, evaluator);
+            return value != null ? value.trim() : null;
 
         } catch (Exception e) {
             return null;

@@ -22,6 +22,7 @@ import AuditLogManagement from './pages/admin/AuditLogManagement';
 import AdminManageSubjectSystem from "./pages/admin/AdminManageSubjectSystem.jsx";
 import AdminManageSubjectSystemAdd from "./pages/admin/AdminManageSubjectSystemAdd.jsx";
 import AdminManageSubjectSystemEdit from "./pages/admin/AdminManageSubjectSystemEdit.jsx";
+import AdminManageSubjectAssignment from "./pages/admin/AdminManageSubjectAssignment.jsx";
 
 
 // Teacher pages
@@ -267,6 +268,15 @@ function AppRoutes() {
             element={
                 <ProtectedRoute requiredRole="Manage-Leader">
                     <AdminManageSubjectSystemEdit />
+                </ProtectedRoute>
+            }
+        />
+
+        <Route
+            path="/manage-subject-system-assign/:systemId"
+            element={
+                <ProtectedRoute requiredRole="Manage-Leader">
+                    <AdminManageSubjectAssignment />
                 </ProtectedRoute>
             }
         />

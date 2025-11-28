@@ -180,8 +180,8 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 .teacherCode(trial.getTeacher().getTeacherCode())
                 .subjectId(trial.getSubject().getId())
                 .subjectName(trial.getSubject().getSubjectName())
-                .subjectCode(trial.getSubject().getSubjectCode())
-                .subjectDescription(trial.getSubject().getDescription())
+                .subjectCode(trial.getSubject().getSkillCode())
+                .subjectDescription(trial.getSubject().getSkillName())
                 .systemName(trial.getSubject().getSystem() != null ? trial.getSubject().getSystem().getSystemName() : "")
                 .teachingDate(trial.getTeachingDate())
                 .teachingTime(trial.getTeachingTime())
@@ -243,7 +243,7 @@ public class TrialTeachingServiceImpl implements TrialTeachingService {
                 && !trial.getSubject().getSubjectName().isBlank()) {
             return trial.getSubject().getSubjectName();
         }
-        return trial.getSubject().getSubjectCode();
+        return trial.getSubject().getSkillCode();
     }
 
     private void notifyTeacherTrialCreated(TrialTeaching trial) {

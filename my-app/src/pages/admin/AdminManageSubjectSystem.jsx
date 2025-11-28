@@ -342,6 +342,14 @@ const AdminManageSubjectSystem = () => {
                                                 </button>
 
                                                 <button
+                                                    className="btn btn-sm btn-info text-white"
+                                                    onClick={() => navigate(`/manage-subject-system-assign/${sys.id}`)}
+                                                    title="Quản lý môn trong hệ"
+                                                >
+                                                    <i className="bi bi-diagram-3"></i>
+                                                </button>
+
+                                                <button
                                                     className="btn btn-sm btn-primary"
                                                     onClick={() => handleEdit(sys)}
                                                     title="Chỉnh sửa"

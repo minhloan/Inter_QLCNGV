@@ -4,8 +4,10 @@ import com.example.teacherservice.dto.subject.SubjectDto;
 import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.exception.NotFoundException;
 import com.example.teacherservice.model.File;
+import com.example.teacherservice.model.Skill;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectSystem;
+import com.example.teacherservice.repository.SkillRepository;
 import com.example.teacherservice.repository.SubjectRepository;
 import com.example.teacherservice.repository.SubjectSystemRepository;
 import com.example.teacherservice.request.subject.SubjectCreateRequest;
@@ -24,6 +26,7 @@ public class SubjectServiceImpl implements SubjectService {
 
     private final SubjectRepository subjectRepository;
     private final SubjectSystemRepository systemRepository;
+    private final SkillRepository skillRepository;
     private final FileService fileService;
 
     // CREATE
@@ -37,7 +40,21 @@ public class SubjectServiceImpl implements SubjectService {
         }
 
         Subject subject = new Subject();
-        subject.setSubjectCode(request.getSubjectCode());
+        
+        // Find or create Skill if skillCode provided (via subjectCode param)
+        if (StringUtils.hasText(request.getSubjectCode())) {
+            Skill skill = skillRepository.findBySkillCode(request.getSubjectCode())
+                    .orElseGet(() -> {
+                        Skill newSkill = Skill.builder()
+                                .skillCode(request.getSubjectCode())
+                                .skillName(request.getDescription())
+                                .isActive(true)
+                                .build();
+                        return skillRepository.save(newSkill);
+                    });
+            subject.setSkill(skill);
+        }
+        
         subject.setSubjectName(request.getSubjectName());
 
         // HOURS OPTIONAL
@@ -54,7 +71,6 @@ public class SubjectServiceImpl implements SubjectService {
             subject.setSemester(null);
         }
 
-        subject.setDescription(request.getDescription());
         subject.setSystem(system);
         subject.setIsActive(request.getIsActive() != null ? request.getIsActive() : true);
 
@@ -87,9 +103,19 @@ public class SubjectServiceImpl implements SubjectService {
             toUpdate.setSubjectName(request.getSubjectName().trim());
         }
 
-        if (request.getSubjectCode() != null) {
+        // Update Skill if code/description provided
+        if (request.getSubjectCode() != null && !request.getSubjectCode().isBlank()) {
             String code = request.getSubjectCode().trim();
-            toUpdate.setSubjectCode(code.isEmpty() ? null : code);
+            Skill skill = skillRepository.findBySkillCode(code)
+                    .orElseGet(() -> {
+                        Skill newSkill = Skill.builder()
+                                .skillCode(code)
+                                .skillName(request.getDescription())
+                                .isActive(true)
+                                .build();
+                        return skillRepository.save(newSkill);
+                    });
+            toUpdate.setSkill(skill);
         }
 
         // HOURS OPTIONAL
@@ -104,10 +130,6 @@ public class SubjectServiceImpl implements SubjectService {
             toUpdate.setSemester(request.getSemester());
         } else {
             toUpdate.setSemester(null);
-        }
-
-        if (request.getDescription() != null) {
-            toUpdate.setDescription(request.getDescription());
         }
 
         // SYSTEM
@@ -185,11 +207,11 @@ public class SubjectServiceImpl implements SubjectService {
     public SubjectDto toDto(Subject s) {
         return SubjectDto.builder()
                 .id(s.getId())
-                .subjectCode(s.getSubjectCode())
+                .subjectCode(s.getSkillCode())
                 .subjectName(s.getSubjectName())
                 .hours(s.getHours())
                 .semester(s.getSemester() != null ? s.getSemester().name() : null)
-                .description(s.getDescription())
+                .description(s.getSkillName())
                 .systemId(s.getSystem() != null ? s.getSystem().getId() : null)
                 .systemName(s.getSystem() != null ? s.getSystem().getSystemName() : null)
                 .isActive(s.getIsActive())

@@ -35,21 +35,23 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     List<Subject> findBySystem(SubjectSystem system);
 
-
-
-
-    @EntityGraph(attributePaths = {"system"})
+    @EntityGraph(attributePaths = {"system", "skill"})
     List<Subject> findAll();
 
-    Optional<Subject> findBySubjectCode(String subjectCode);
+    // Refactored methods using Skill relationship
+    Optional<Subject> findBySkill_SkillCode(String skillCode);
 
-    boolean existsBySubjectCode(String subjectCode);
+    Optional<Subject> findBySkill_SkillCodeIgnoreCase(String skillCode);
 
-    boolean existsBySubjectCodeIgnoreCase(String subjectCode);
+    boolean existsBySkill_SkillCode(String skillCode);
+
+    boolean existsBySkill_SkillCodeIgnoreCase(String skillCode);
 
     Optional<Subject> findBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
 
-    Optional<Subject> findBySubjectCodeIgnoreCaseAndSystem(String subjectCode, SubjectSystem system);
+    Optional<Subject> findBySubjectNameIgnoreCase(String subjectName);
+
+    Optional<Subject> findBySkill_SkillCodeIgnoreCaseAndSystem(String skillCode, SubjectSystem system);
 
     boolean existsBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
 
@@ -59,7 +61,7 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     @Query("""
            select s from Subject s
-           where lower(s.subjectCode) like lower(concat('%', :keyword, '%'))
+           where lower(s.skill.skillCode) like lower(concat('%', :keyword, '%'))
               or lower(s.subjectName) like lower(concat('%', :keyword, '%'))
            """)
     List<Subject> searchByKeyword(@Param("keyword") String keyword);
@@ -67,7 +69,7 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
     @Query("""
        select s from Subject s
        where (:keyword is null or :keyword = '' 
-              or lower(s.subjectCode) like lower(concat('%', :keyword, '%'))
+              or lower(s.skill.skillCode) like lower(concat('%', :keyword, '%'))
               or lower(s.subjectName) like lower(concat('%', :keyword, '%')))
          and (:systemId is null or s.system.id = :systemId)
          and (:isActive is null or s.isActive = :isActive)

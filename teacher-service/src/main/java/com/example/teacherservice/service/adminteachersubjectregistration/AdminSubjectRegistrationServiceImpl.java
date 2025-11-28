@@ -193,7 +193,7 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
                     getOrCreate(row, noteCol).setCellStyle(borderLeft);
 
                     // Mã môn thi
-                    getOrCreate(row, codeCol).setCellValue(reg.getSubject().getSubjectCode());
+                    getOrCreate(row, codeCol).setCellValue(reg.getSubject().getSkillCode());
                     getOrCreate(row, codeCol).setCellStyle(borderCenter);
 
                     rowIndex++;
@@ -373,7 +373,7 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
                     }
 
                     // === Tìm môn theo FULL code ===
-                    Subject subject = subjectRepository.findBySubjectCode(fullSubjectCode).orElse(null);
+                    Subject subject = subjectRepository.findBySkill_SkillCode(fullSubjectCode).orElse(null);
                     if (subject == null) {
                         addRowError(result, excelRow,
                                 "Không tìm thấy môn trong DB: " + fullSubjectCode);
@@ -596,7 +596,7 @@ public class AdminSubjectRegistrationServiceImpl implements AdminSubjectRegistra
         dto.setTeacherName(reg.getTeacher().getUsername());
         dto.setSubjectId(reg.getSubject().getId());
         dto.setSubjectName(reg.getSubject().getSubjectName());
-        dto.setSubjectCode(reg.getSubject().getSubjectCode());
+        dto.setSubjectCode(reg.getSubject().getSkillCode());
         dto.setSystemName(
                 reg.getSubject().getSystem() != null
                         ? reg.getSubject().getSystem().getSystemName()

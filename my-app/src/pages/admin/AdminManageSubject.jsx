@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import DeleteSubjectModal from '../../components/Subject/DeleteSubjectModal';
@@ -7,7 +7,7 @@ import Loading from '../../components/Common/Loading';
 import { getAllSubjects, deleteSubject } from '../../api/subject';
 import { listActiveSystems } from '../../api/subjectSystem';
 import { getFile } from '../../api/file';
-import { exportSubjectsExcel, exportAllSkillsExcel } from "../../api/subjectExcel";
+import { exportSubjectsExcel, exportAllSkillsExcel, importSubjectsExcel } from "../../api/subjectExcel";
 
 const AdminManageSubject = () => {
     const navigate = useNavigate();
@@ -28,6 +28,7 @@ const AdminManageSubject = () => {
     const [hasLoaded, setHasLoaded] = useState(false);
 
     const [subjectImages, setSubjectImages] = useState({});
+    const fileInputRef = useRef(null);
     const pageSize = 12;
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -103,7 +104,7 @@ const AdminManageSubject = () => {
                     try {
                         const url = await getFile(s.imageFileId);
                         imgs[s.id] = url;
-                    } catch {}
+                    } catch { }
                 })
             );
             setSubjectImages(imgs);
@@ -128,12 +129,19 @@ const AdminManageSubject = () => {
             );
         }
 
+        const safeValue = (value) => (value ?? '').toString();
+
         f.sort((a, b) => {
+            const codeA = safeValue(a.subjectCode);
+            const codeB = safeValue(b.subjectCode);
+            const nameA = safeValue(a.subjectName);
+            const nameB = safeValue(b.subjectName);
+
             switch (sortBy) {
-                case 'code_asc': return a.subjectCode.localeCompare(b.subjectCode);
-                case 'code_desc': return b.subjectCode.localeCompare(a.subjectCode);
-                case 'name_asc': return a.subjectName.localeCompare(b.subjectName);
-                case 'name_desc': return b.subjectName.localeCompare(a.subjectName);
+                case 'code_asc': return codeA.localeCompare(codeB);
+                case 'code_desc': return codeB.localeCompare(codeA);
+                case 'name_asc': return nameA.localeCompare(nameB);
+                case 'name_desc': return nameB.localeCompare(nameA);
                 default: return 0;
             }
         });
@@ -238,13 +246,20 @@ const AdminManageSubject = () => {
                             <i className="bi bi-diagram-3"></i> Trang Hệ Đào Tạo
                         </button>
 
-                {/* EXPORT */}
-                <button className="btn btn-success me-2" onClick={handleExport}>
+                        {/* EXPORT */}
+                        <button className="btn btn-success me-2" onClick={handleExport}>
                             <i className="bi bi-download"></i> Xuất Excel
                         </button>
 
                         <button className="btn btn-outline-success me-2" onClick={handleExportAllSkill}>
                             <i className="bi bi-cloud-download"></i> Xuất All Skill
+                        </button>
+
+                        <button
+                            className="btn btn-outline-primary me-2"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <i className="bi bi-upload"></i> Import All Skill
                         </button>
 
                         <button className="btn btn-primary" onClick={handleAdd}>
@@ -480,6 +495,31 @@ const AdminManageSubject = () => {
                         onClose={() => setToast(prev => ({ ...prev, show: false }))}
                     />
                 )}
+
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".xlsx,.xls"
+                    style={{ display: "none" }}
+                    onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                            setLoading(true);
+                            const res = await importSubjectsExcel(file);
+                            showToast("Thành công", res || "Import hoàn tất");
+                            loadSubjects();
+                        } catch (err) {
+                            console.error(err);
+                            showToast("Lỗi", err.response?.data?.message || "Import thất bại", "danger");
+                        } finally {
+                            setLoading(false);
+                            if (fileInputRef.current) {
+                                fileInputRef.current.value = "";
+                            }
+                        }
+                    }}
+                />
             </div>
         </MainLayout>
     );

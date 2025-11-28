@@ -2,9 +2,13 @@ package com.example.teacherservice.service.subject;
 
 import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.exception.NotFoundException;
+import com.example.teacherservice.model.Skill;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectSystem;
+import com.example.teacherservice.model.SubjectSystemAssignment;
+import com.example.teacherservice.repository.SkillRepository;
 import com.example.teacherservice.repository.SubjectRepository;
+import com.example.teacherservice.repository.SubjectSystemAssignmentRepository;
 import com.example.teacherservice.repository.SubjectSystemRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +30,8 @@ public class SubjectExportService {
 
     private final SubjectSystemRepository systemRepo;
     private final SubjectRepository subjectRepo;
+    private final SubjectSystemAssignmentRepository assignmentRepo;
+    private final SkillRepository skillRepo;
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MM/yyyy");
 
     private static final String TITLE_LINE_1 = "KHUNG CHƯƠNG TRÌNH ĐÀO TẠO LẬP TRÌNH VIÊN QUỐC TẾ";
@@ -39,8 +45,9 @@ public class SubjectExportService {
 
             for (SubjectSystem system : systems) {
 
-                List<Subject> subjects = subjectRepo.findBySystem(system);
-                if (subjects == null || subjects.isEmpty()) continue;
+                List<SubjectSystemAssignment> assignments =
+                        assignmentRepo.findBySystemAndIsActive(system, true);
+                if (assignments == null || assignments.isEmpty()) continue;
 
                 String safeSheet = WorkbookUtil.createSafeSheetName(
                         system.getSystemName().length() > 31
@@ -50,7 +57,7 @@ public class SubjectExportService {
 
                 Sheet sheet = workbook.createSheet(safeSheet);
 
-                createSystemSheet(sheet, subjects, workbook);
+                createSystemSheet(sheet, assignments, workbook);
             }
 
             response.setContentType(
@@ -70,7 +77,8 @@ public class SubjectExportService {
         SubjectSystem system = systemRepo.findById(systemId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy hệ đào tạo"));
 
-        List<Subject> subjects = subjectRepo.findBySystem(system);
+        List<SubjectSystemAssignment> assignments =
+                assignmentRepo.findBySystemAndIsActive(system, true);
 
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Khung chương trình");
@@ -81,21 +89,26 @@ public class SubjectExportService {
             int rowIndex = 0;
             rowIndex = writeTitleBlock(sheet, rowIndex, system, styles);
 
-            Map<Semester, List<Subject>> groups = subjects.stream()
-                    .filter(sub -> sub.getSemester() != null)
-                    .collect(Collectors.groupingBy(Subject::getSemester));
+            Map<Semester, List<SubjectSystemAssignment>> groups = assignments.stream()
+                    .filter(sub -> resolveSemester(sub) != null)
+                    .collect(Collectors.groupingBy(this::resolveSemester));
 
             for (Semester semester : Semester.values()) {
-                List<Subject> list = new ArrayList<>(groups.getOrDefault(semester, List.of()));
-                list.sort(Comparator.comparing(Subject::getSubjectCode, Comparator.nullsLast(String::compareTo))
-                        .thenComparing(Subject::getSubjectName, Comparator.nullsLast(String::compareTo)));
+                List<SubjectSystemAssignment> list = new ArrayList<>(groups.getOrDefault(semester, List.of()));
+                list.sort(Comparator.comparing(
+                                (SubjectSystemAssignment a) -> nullSafe(a.getSubject().getSkillCode()),
+                                Comparator.nullsLast(String::compareTo))
+                        .thenComparing(a -> nullSafe(a.getSubject().getSubjectName()),
+                                Comparator.nullsLast(String::compareTo)));
                 rowIndex = writeSemesterBlock(sheet, rowIndex, semester, list, styles);
                 rowIndex++; // blank line between blocks
             }
 
-            List<Subject> noSemester = subjects.stream()
-                    .filter(sub -> sub.getSemester() == null)
-                    .sorted(Comparator.comparing(Subject::getSubjectName, Comparator.nullsLast(String::compareTo)))
+            List<SubjectSystemAssignment> noSemester = assignments.stream()
+                    .filter(sub -> resolveSemester(sub) == null)
+                    .sorted(Comparator.comparing(
+                            a -> nullSafe(a.getSubject().getSubjectName()),
+                            Comparator.nullsLast(String::compareTo)))
                     .toList();
 
             if (!noSemester.isEmpty()) {
@@ -125,39 +138,23 @@ public class SubjectExportService {
 
             Row header = sheet.createRow(rowIndex++);
             createCell(header, 0, "STT", styles.tableHeader);
-            createCell(header, 1, "Tên Skill", styles.tableHeader);
-            createCell(header, 2, "Mã Skill", styles.tableHeader);
-            createCell(header, 3, "Skill Name", styles.tableHeader);
-            createCell(header, 4, "Ghi chú", styles.tableHeader);
+            createCell(header, 1, "Skill No", styles.tableHeader);
+            createCell(header, 2, "Skill Name", styles.tableHeader);
+            createCell(header, 3, "Ghi chú", styles.tableHeader);
 
-            List<Subject> subjects = subjectRepo.findAll().stream()
-                    .sorted(Comparator.comparing(
-                            s -> Optional.ofNullable(s.getSubjectCode()).orElse(""),
-                            String.CASE_INSENSITIVE_ORDER))
-                    .toList();
+            List<Skill> skills = skillRepo.findAllByOrderBySkillCodeAsc();
 
             int order = 1;
-            for (Subject subject : subjects) {
+            for (Skill skill : skills) {
                 Row row = sheet.createRow(rowIndex++);
                 createCell(row, 0, String.valueOf(order++), styles.dataCenter);
                 createCell(row, 1,
-                        nullSafe(subject.getSubjectName()), styles.dataLeftWrap);
-                createCell(row, 2,
-                        nullSafe(subject.getSubjectCode()), styles.dataCenter);
+                        nullSafe(skill.getSkillCode()), styles.dataCenter);
+                createCell(row, 2, nullSafe(skill.getSkillName()), styles.dataLeftWrap);
 
-                String skillName = subject.getDescription() != null && !subject.getDescription().isBlank()
-                        ? subject.getDescription()
-                        : subject.getSubjectName();
-                createCell(row, 3, nullSafe(skillName), styles.dataLeftWrap);
-
-                Cell noteCell = row.createCell(4);
-                if (Boolean.TRUE.equals(subject.getIsNewSubject())) {
-                    noteCell.setCellValue("New " + formatMonth(subject.getUpdateTimestamp()));
-                    noteCell.setCellStyle(styles.newBadge);
-                } else {
-                    noteCell.setCellValue("");
-                    noteCell.setCellStyle(styles.dataLeft);
-                }
+                Cell noteCell = row.createCell(3);
+                noteCell.setCellValue("");
+                noteCell.setCellStyle(styles.dataLeft);
             }
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -168,7 +165,7 @@ public class SubjectExportService {
         }
     }
 
-    private void createSystemSheet(Sheet sheet, List<Subject> subjects, Workbook wb) {
+    private void createSystemSheet(Sheet sheet, List<SubjectSystemAssignment> assignments, Workbook wb) {
 
         CellStyle headerStyle = wb.createCellStyle();
         Font font = wb.createFont();
@@ -186,14 +183,14 @@ public class SubjectExportService {
         rowIndex++;
 
         // --- Separate null semester ---
-        List<Subject> noSemester = subjects.stream()
-                .filter(s -> s.getSemester() == null)
+        List<SubjectSystemAssignment> noSemester = assignments.stream()
+                .filter(s -> resolveSemester(s) == null)
                 .collect(Collectors.toList());
 
-        Map<Semester, List<Subject>> groups =
-                subjects.stream()
-                        .filter(s -> s.getSemester() != null)
-                        .collect(Collectors.groupingBy(Subject::getSemester));
+        Map<Semester, List<SubjectSystemAssignment>> groups =
+                assignments.stream()
+                        .filter(s -> resolveSemester(s) != null)
+                        .collect(Collectors.groupingBy(this::resolveSemester));
 
 
         // ============================================
@@ -209,9 +206,9 @@ public class SubjectExportService {
         // CASE 2: GHÉP NULL SEMESTER → HK1
         // ============================================
         if (!noSemester.isEmpty()) {
-            List<Subject> sem1 = groups.getOrDefault(Semester.SEMESTER_1, new ArrayList<>());
+            List<SubjectSystemAssignment> sem1 = groups.getOrDefault(Semester.SEMESTER_1, new ArrayList<>());
             sem1.addAll(noSemester);
-            sem1.sort(Comparator.comparing(Subject::getSubjectName));
+            sem1.sort(Comparator.comparing(a -> nullSafe(a.getSubject().getSubjectName())));
             groups.put(Semester.SEMESTER_1, sem1);
         }
 
@@ -219,7 +216,7 @@ public class SubjectExportService {
         // CASE 3: EXPORT THEO TỪNG HỌC KỲ BÌNH THƯỜNG
         // ============================================
         for (Semester sem : Semester.values()) {
-            List<Subject> list = groups.get(sem);
+            List<SubjectSystemAssignment> list = groups.get(sem);
             if (list == null || list.isEmpty()) continue;
 
             Row semRow = sheet.createRow(rowIndex++);
@@ -251,14 +248,15 @@ public class SubjectExportService {
     // ----------------------------------------
     // ROW CHO ALL SKILL
     // ----------------------------------------
-    private int writeAllSkillRows(Sheet sheet, List<Subject> list, int rowIndex) {
-        list.sort(Comparator.comparing(Subject::getSubjectName));
+    private int writeAllSkillRows(Sheet sheet, List<SubjectSystemAssignment> list, int rowIndex) {
+        list.sort(Comparator.comparing(a -> nullSafe(a.getSubject().getSubjectName())));
 
-        for (Subject s : list) {
+        for (SubjectSystemAssignment assignment : list) {
+            Subject s = assignment.getSubject();
             Row r = sheet.createRow(rowIndex++);
 
             r.createCell(0).setCellValue(s.getSubjectName());
-            r.createCell(1).setCellValue(s.getSubjectCode() == null ? "" : s.getSubjectCode());
+            r.createCell(1).setCellValue(s.getSkillCode() == null ? "" : s.getSkillCode());
 
             // Cột NEW?
             r.createCell(2).setCellValue(
@@ -286,21 +284,23 @@ public class SubjectExportService {
     // ----------------------------------------
     // ROW NORMAL
     // ----------------------------------------
-    private int writeNormalRows(Sheet sheet, List<Subject> list, int rowIndex) {
-        list.sort(Comparator.comparing(Subject::getSubjectName));
+    private int writeNormalRows(Sheet sheet, List<SubjectSystemAssignment> list, int rowIndex) {
+        list.sort(Comparator.comparing(a -> nullSafe(a.getSubject().getSubjectName())));
 
-        for (Subject s : list) {
+        for (SubjectSystemAssignment assignment : list) {
+            Subject s = assignment.getSubject();
             Row r = sheet.createRow(rowIndex++);
 
             r.createCell(0).setCellValue(s.getSubjectName());
-            r.createCell(1).setCellValue(s.getSubjectCode() == null ? "" : s.getSubjectCode());
+            r.createCell(1).setCellValue(s.getSkillCode() == null ? "" : s.getSkillCode());
 
             Cell hourCell = r.createCell(2);
-            if (s.getHours() != null) hourCell.setCellValue(s.getHours());
+            Integer hours = assignment.getHours() != null ? assignment.getHours() : s.getHours();
+            if (hours != null) hourCell.setCellValue(hours);
             else hourCell.setCellValue("");
 
             r.createCell(3).setCellValue(
-                    s.getDescription() == null ? "" : s.getDescription()
+                    s.getSkillName() == null ? "" : s.getSkillName()
             );
         }
 
@@ -315,11 +315,10 @@ public class SubjectExportService {
     }
 
     private void configureAllSkillColumns(Sheet sheet) {
-        sheet.setColumnWidth(0, 256 * 6);
-        sheet.setColumnWidth(1, 256 * 40);
-        sheet.setColumnWidth(2, 256 * 15);
-        sheet.setColumnWidth(3, 256 * 40);
-        sheet.setColumnWidth(4, 256 * 18);
+        sheet.setColumnWidth(0, 256 * 6);   // STT
+        sheet.setColumnWidth(1, 256 * 15);  // Mã Skill
+        sheet.setColumnWidth(2, 256 * 50);  // Skill Name
+        sheet.setColumnWidth(3, 256 * 18);  // Ghi chú
     }
 
     private int writeTitleBlock(Sheet sheet, int rowIndex, SubjectSystem system, ExportStyles styles) {
@@ -342,7 +341,7 @@ public class SubjectExportService {
             Sheet sheet,
             int rowIndex,
             Semester semester,
-            List<Subject> subjects,
+            List<SubjectSystemAssignment> assignments,
             ExportStyles styles
     ) {
         String label = "Học kỳ " + semester.name().replace("SEMESTER_", "");
@@ -356,7 +355,7 @@ public class SubjectExportService {
         createCell(header, 2, "Skill No", styles.tableHeader);
         createCell(header, 3, "Ghi chú", styles.tableHeader);
 
-        if (subjects.isEmpty()) {
+        if (assignments.isEmpty()) {
             Row emptyRow = sheet.createRow(rowIndex++);
             createCell(emptyRow, 1, "Hiện chưa có môn học cho học kỳ này", styles.emptyRow);
             sheet.addMergedRegion(new CellRangeAddress(emptyRow.getRowNum(), emptyRow.getRowNum(), 1, 3));
@@ -364,12 +363,13 @@ public class SubjectExportService {
         }
 
         int order = 1;
-        for (Subject subject : subjects) {
+        for (SubjectSystemAssignment assignment : assignments) {
+            Subject subject = assignment.getSubject();
             Row row = sheet.createRow(rowIndex++);
             createCell(row, 0, String.valueOf(order++), styles.dataCenter);
             createCell(row, 1, nullSafe(subject.getSubjectName()), styles.dataLeft);
-            createCell(row, 2, nullSafe(subject.getSubjectCode()), styles.dataCenter);
-            createCell(row, 3, nullSafe(subject.getDescription()), styles.dataLeftWrap);
+            createCell(row, 2, nullSafe(subject.getSkillCode()), styles.dataCenter);
+            createCell(row, 3, nullSafe(subject.getSkillName()), styles.dataLeftWrap);
         }
 
         return rowIndex;
@@ -379,7 +379,7 @@ public class SubjectExportService {
             Sheet sheet,
             int rowIndex,
             String title,
-            List<Subject> subjects,
+            List<SubjectSystemAssignment> assignments,
             ExportStyles styles
     ) {
         rowIndex = writeMergedRow(sheet, rowIndex, title, styles.customHeader);
@@ -391,12 +391,13 @@ public class SubjectExportService {
         createCell(header, 3, "Ghi chú", styles.tableHeader);
 
         int order = 1;
-        for (Subject subject : subjects) {
+        for (SubjectSystemAssignment assignment : assignments) {
+            Subject subject = assignment.getSubject();
             Row row = sheet.createRow(rowIndex++);
             createCell(row, 0, String.valueOf(order++), styles.dataCenter);
             createCell(row, 1, nullSafe(subject.getSubjectName()), styles.dataLeft);
-            createCell(row, 2, nullSafe(subject.getSubjectCode()), styles.dataCenter);
-            createCell(row, 3, nullSafe(subject.getDescription()), styles.dataLeftWrap);
+            createCell(row, 2, nullSafe(subject.getSkillCode()), styles.dataCenter);
+            createCell(row, 3, nullSafe(subject.getSkillName()), styles.dataLeftWrap);
         }
         return rowIndex;
     }
@@ -416,6 +417,14 @@ public class SubjectExportService {
 
     private String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    private Semester resolveSemester(SubjectSystemAssignment assignment) {
+        if (assignment.getSemester() != null) {
+            return assignment.getSemester();
+        }
+        Subject subject = assignment.getSubject();
+        return subject != null ? subject.getSemester() : null;
     }
 
     private String formatMonth(LocalDateTime dateTime) {

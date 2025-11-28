@@ -282,8 +282,8 @@ public class ReportService {
                 .map(reg -> {
                     Map<String, Object> subjectData = new java.util.HashMap<>();
                     subjectData.put("subjectName", reg.getSubject().getSubjectName());
-                    subjectData.put("subjectCode", reg.getSubject().getSubjectCode());
-                    subjectData.put("className", "APTECH" + (reg.getSubject().getSubjectCode().hashCode() % 10 + 1)); // Mock class name
+                    subjectData.put("subjectCode", reg.getSubject().getSkillCode());
+                    subjectData.put("className", "APTECH" + (reg.getSubject().getSkillCode().hashCode() % 10 + 1)); // Mock class name
 //                    subjectData.put("totalHours", reg.getSubject().getCredit() * 15); // Mock hours
                     subjectData.put("status", reg.getStatus().toString());
                     subjectData.put("notes", "");
@@ -381,7 +381,7 @@ public class ReportService {
                 .map(exam -> {
                     Map<String, Object> examInfo = new java.util.HashMap<>();
                     examInfo.put("subjectName", exam.getSubject().getSubjectName());
-                    examInfo.put("subjectCode", exam.getSubject().getSubjectCode());
+                    examInfo.put("subjectCode", exam.getSubject().getSkillCode());
                     examInfo.put("examDate", exam.getExamDate());
                     examInfo.put("score", exam.getScore());
                     examInfo.put("result", exam.getResult().toString());
@@ -443,7 +443,7 @@ public class ReportService {
                 .map(trial -> {
                     Map<String, Object> trialInfo = new java.util.HashMap<>();
                     trialInfo.put("subjectName", trial.getSubject().getSubjectName());
-                    trialInfo.put("subjectCode", trial.getSubject().getSubjectCode());
+                    trialInfo.put("subjectCode", trial.getSubject().getSkillCode());
                     trialInfo.put("teachingDate", trial.getTeachingDate());
                     trialInfo.put("location", trial.getLocation());
                     trialInfo.put("status", trial.getStatus().toString());
@@ -611,7 +611,7 @@ public class ReportService {
                     Map<String, Object> subjectData = new java.util.HashMap<>();
                     subjectData.put("subjectId", reg.getSubject().getId());
                     subjectData.put("subjectName", reg.getSubject().getSubjectName());
-                    subjectData.put("subjectCode", reg.getSubject().getSubjectCode());
+                    subjectData.put("subjectCode", reg.getSubject().getSkillCode());
                     subjectData.put("year", reg.getYear());
                     subjectData.put("quarter", reg.getQuarter());
                     subjectData.put("status", reg.getStatus().toString());
@@ -630,7 +630,7 @@ public class ReportService {
                     Map<String, Object> examData = new java.util.HashMap<>();
                     examData.put("examId", exam.getId());
                     examData.put("subjectName", exam.getSubject().getSubjectName());
-                    examData.put("subjectCode", exam.getSubject().getSubjectCode());
+                    examData.put("subjectCode", exam.getSubject().getSkillCode());
                     examData.put("examDate", exam.getExamDate());
                     examData.put("score", exam.getScore());
                     examData.put("result", exam.getResult().toString());
@@ -649,7 +649,7 @@ public class ReportService {
                     Map<String, Object> trialData = new java.util.HashMap<>();
                     trialData.put("trialId", trial.getId());
                     trialData.put("subjectName", trial.getSubject().getSubjectName());
-                    trialData.put("subjectCode", trial.getSubject().getSubjectCode());
+                    trialData.put("subjectCode", trial.getSubject().getSkillCode());
                     trialData.put("teachingDate", trial.getTeachingDate());
                     trialData.put("location", trial.getLocation());
                     trialData.put("status", trial.getStatus().toString());
@@ -716,7 +716,7 @@ public class ReportService {
                     Map<String, Object> evidenceData = new java.util.HashMap<>();
                     evidenceData.put("evidenceId", ev.getId());
                     evidenceData.put("subjectName", ev.getSubject().getSubjectName());
-                    evidenceData.put("subjectCode", ev.getSubject().getSubjectCode());
+                    evidenceData.put("subjectCode", ev.getSubject().getSkillCode());
                     evidenceData.put("submittedDate", ev.getSubmittedDate());
                     evidenceData.put("status", ev.getStatus().toString());
                     evidenceData.put("ocrFullName", ev.getOcrFullName());
@@ -737,7 +737,7 @@ public class ReportService {
                     Map<String, Object> assignmentData = new java.util.HashMap<>();
                     assignmentData.put("assignmentId", assignment.getId());
                     assignmentData.put("subjectName", assignment.getScheduleClass().getSubject().getSubjectName());
-                    assignmentData.put("subjectCode", assignment.getScheduleClass().getSubject().getSubjectCode());
+                    assignmentData.put("subjectCode", assignment.getScheduleClass().getSubject().getSkillCode());
                     assignmentData.put("year", assignment.getScheduleClass().getYear());
                     assignmentData.put("quarter", quarterToInt(assignment.getScheduleClass().getQuarter()));
                     assignmentData.put("status", assignment.getStatus().toString());

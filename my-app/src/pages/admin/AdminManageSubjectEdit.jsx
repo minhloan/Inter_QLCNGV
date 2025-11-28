@@ -107,7 +107,7 @@ const AdminManageSubjectEdit = () => {
                     try {
                         const blobUrl = await getFile(fileId);
                         setImagePreview(blobUrl);
-                    } catch {}
+                    } catch { }
                 }
             } catch {
                 showToast("Lỗi", "Không thể tải dữ liệu môn học", "danger");
@@ -226,12 +226,13 @@ const AdminManageSubjectEdit = () => {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Mã môn học</label>
-                    <input
-                        className="form-control"
-                        name="subjectCode"
-                        value={formData.subjectCode}
-                        onChange={handleInputChange}
-                    />
+                                    <input
+                                        className="form-control"
+                                        name="subjectCode"
+                                        value={formData.subjectCode}
+                                        onChange={handleInputChange}
+                                        placeholder="Nhập mã môn học (Skill No)"
+                                    />
                                 </div>
 
                                 <div className="form-group">

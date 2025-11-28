@@ -76,7 +76,7 @@ const AdminManageSubjectAdd = () => {
             try {
                 const list = await listActiveSystems();
                 setSystemOptions(list);
-            } catch {}
+            } catch { }
         };
         loadSystems();
     }, []);
@@ -279,7 +279,6 @@ const AdminManageSubjectAdd = () => {
                                                 value={formData.subjectCode}
                                                 onChange={handleChange}
                                                 placeholder="Nhập mã môn học"
-                                                disabled={isEditMode}
                                             />
                                             {errors.subjectCode && <div className="invalid-feedback">{errors.subjectCode}</div>}
                                         </div>

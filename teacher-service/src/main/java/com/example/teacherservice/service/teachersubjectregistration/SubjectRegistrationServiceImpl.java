@@ -82,7 +82,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 .id(e.getId())
                 .teacherId(e.getTeacher().getId())
                 .subjectId(e.getSubject().getId())
-                .subjectCode(e.getSubject().getSubjectCode())
+                .subjectCode(e.getSubject().getSkillCode())
                 .subjectName(e.getSubject().getSubjectName())
                 .systemName(
                         e.getSubject().getSystem() != null ?
@@ -394,7 +394,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
                     // MÃ MÔN THI (đúng cột, không lộn nữa)
                     Cell cCode = getOrCreate(row, codeCol);
-                    cCode.setCellValue(reg.getSubject().getSubjectCode());
+                    cCode.setCellValue(reg.getSubject().getSkillCode());
                     cCode.setCellStyle(borderCenter);
 
                     rowIndex++;
@@ -532,7 +532,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                         continue;
                     }
 
-                    Subject subject = SubjectRepository.findBySubjectCode(subjectCode)
+                    Subject subject = SubjectRepository.findBySkill_SkillCode(subjectCode)
                             .orElseThrow(() -> new RuntimeException("Không tìm thấy môn: " + subjectCode));
 
                     // =========================
