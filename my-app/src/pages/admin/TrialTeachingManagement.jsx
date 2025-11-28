@@ -26,6 +26,7 @@ const TrialTeachingManagement = () => {
         month: new Date().getMonth() + 1
     });
     const [exporting, setExporting] = useState(false);
+    const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -179,12 +180,26 @@ const TrialTeachingManagement = () => {
                         <button className="back-button" onClick={() => navigate(-1)}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className="page-title">Quản lý Giảng thử</h1>
+                        <h1 className="page-title">Quản lý đánh giá giảng dạy</h1>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button className="btn btn-success" onClick={() => setShowExportModal(true)}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất thống kê BM06.42
-                        </button>
+                    <div className="content-actions">
+                        <div className="position-relative d-inline-block">
+                            <button
+                                className="btn btn-outline-secondary dropdown-toggle"
+                                onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                                onBlur={() => setTimeout(() => setShowActionsDropdown(false), 200)}
+                            >
+                                <i className="bi bi-gear"></i> Tiện ích
+                            </button>
+                            {showActionsDropdown && (
+                                <div className="dropdown-menu show" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 1000, minWidth: '220px' }}>
+                                    <button className="dropdown-item" onClick={() => setShowExportModal(true)}>
+                                        <i className="bi bi-file-earmark-excel me-2"></i> Xuất thống kê BM06.42
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
                         <button className="btn btn-primary" onClick={() => navigate('/trial-teaching-add')}>
                             <i className="bi bi-plus-circle"></i> Thêm Lịch Giảng thử
                         </button>

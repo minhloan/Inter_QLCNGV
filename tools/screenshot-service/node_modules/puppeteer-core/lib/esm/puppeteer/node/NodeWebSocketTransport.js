@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import NodeWebSocket from 'ws';
-import { packageVersion } from '../generated/version.js';
+import { packageVersion } from '../util/version.js';
 /**
  * @internal
  */
@@ -14,6 +14,7 @@ export class NodeWebSocketTransport {
             const ws = new NodeWebSocket(url, [], {
                 followRedirects: true,
                 perMessageDeflate: false,
+                allowSynchronousEvents: false,
                 maxPayload: 256 * 1024 * 1024, // 256Mb
                 headers: {
                     'User-Agent': `Puppeteer ${packageVersion}`,

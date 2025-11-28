@@ -14,7 +14,10 @@ import { debugError } from './util.js';
  */
 export class CallbackRegistry {
     #callbacks = new Map();
-    #idGenerator = createIncrementalIdGenerator();
+    #idGenerator;
+    constructor(idGenerator) {
+        this.#idGenerator = idGenerator;
+    }
     create(label, timeout, request) {
         const callback = new Callback(this.#idGenerator(), label, timeout);
         this.#callbacks.set(callback.id, callback);
@@ -24,17 +27,14 @@ export class CallbackRegistry {
         catch (error) {
             // We still throw sync errors synchronously and clean up the scheduled
             // callback.
-            callback.promise
-                .valueOrThrow()
-                .catch(debugError)
-                .finally(() => {
+            callback.promise.catch(debugError).finally(() => {
                 this.#callbacks.delete(callback.id);
             });
             callback.reject(error);
             throw error;
         }
         // Must only have sync code up until here.
-        return callback.promise.valueOrThrow().finally(() => {
+        return callback.promise.finally(() => {
             this.#callbacks.delete(callback.id);
         });
     }
@@ -44,6 +44,13 @@ export class CallbackRegistry {
             return;
         }
         this._reject(callback, message, originalMessage);
+    }
+    rejectRaw(id, error) {
+        const callback = this.#callbacks.get(id);
+        if (!callback) {
+            return;
+        }
+        callback.reject(error);
     }
     _reject(callback, errorMessage, originalMessage) {
         let error;
@@ -114,7 +121,7 @@ export class Callback {
         return this.#id;
     }
     get promise() {
-        return this.#deferred;
+        return this.#deferred.valueOrThrow();
     }
     get error() {
         return this.#error;
@@ -122,14 +129,5 @@ export class Callback {
     get label() {
         return this.#label;
     }
-}
-/**
- * @internal
- */
-export function createIncrementalIdGenerator() {
-    let id = 0;
-    return () => {
-        return ++id;
-    };
 }
 //# sourceMappingURL=CallbackRegistry.js.map

@@ -29,7 +29,7 @@ export const getFileAsDataUrl = async (fileId) => {
     const response = await api.get(`/get/${fileId}`, {
       responseType: 'blob'
     });
-    
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);

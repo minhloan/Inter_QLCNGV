@@ -9,7 +9,7 @@ import { getAllUsers, searchUsers, deleteUser, exportUsers, importUsers } from '
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
-  
+
   // List states
   const [allTeachers, setAllTeachers] = useState([]); // Lưu tất cả dữ liệu từ server để filter client-side
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,7 +39,7 @@ const ManageTeacher = () => {
     try {
       setLoading(true);
       const response = await getAllUsers(page, size);
-      
+
       const mappedTeachers = (response.content || []).map(user => ({
         id: user.id,
         username: user.username,
@@ -71,7 +71,7 @@ const ManageTeacher = () => {
     try {
       setLoading(true);
       const response = await searchUsers(term.trim(), page, size);
-      
+
       const mappedTeachers = (response.content || []).map(user => ({
         id: user.id,
         username: user.username,
@@ -97,9 +97,9 @@ const ManageTeacher = () => {
   // Filter và sort client-side sử dụng useMemo để tránh re-render không cần thiết
   const filteredTeachers = useMemo(() => {
     if (allTeachers.length === 0) return [];
-    
+
     let filtered = [...allTeachers];
-    
+
     // Apply status filter nếu có
     if (statusFilter) {
       filtered = filtered.filter(teacher => teacher.status === statusFilter);
@@ -179,7 +179,7 @@ const ManageTeacher = () => {
 
   const confirmDelete = async () => {
     if (!deleteTeacher) return;
-    
+
     try {
       setLoading(true);
       // Call API to delete user
@@ -213,7 +213,7 @@ const ManageTeacher = () => {
     try {
       setExporting(true);
       const blob = await exportUsers(activeStatus);
-      
+
       // Tạo URL từ blob và trigger download
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -225,11 +225,11 @@ const ManageTeacher = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
-      const statusText = activeStatus === 'ACTIVE' ? 'đang hoạt động' : 
-                        activeStatus === 'INACTIVE' ? 'không hoạt động' : 'tất cả';
+
+      const statusText = activeStatus === 'ACTIVE' ? 'đang hoạt động' :
+        activeStatus === 'INACTIVE' ? 'không hoạt động' : 'tất cả';
       showToast('Thành công', `Export danh sách giáo viên ${statusText} thành công`, 'success');
-      
+
       // Đóng modal sau khi export thành công
       setTimeout(() => {
         setShowExportImportModal(false);
@@ -255,22 +255,22 @@ const ManageTeacher = () => {
     try {
       setImporting(true);
       const result = await importUsers(file);
-      
+
       // Hiển thị kết quả
       const successCount = result.created + result.updated;
       const errorCount = result.errors ? result.errors.length : 0;
-      
+
       let message = `Import thành công: ${result.created} tạo mới, ${result.updated} cập nhật`;
       if (errorCount > 0) {
         message += `. Có ${errorCount} lỗi`;
       }
-      
+
       showToast(
-        'Thành công', 
-        message, 
+        'Thành công',
+        message,
         errorCount > 0 ? 'warning' : 'success'
       );
-      
+
       // Hiển thị chi tiết lỗi nếu có
       if (result.errors && result.errors.length > 0) {
         console.error('Import errors:', result.errors);
@@ -279,14 +279,14 @@ const ManageTeacher = () => {
           .join('\n');
         alert('Chi tiết lỗi:\n' + errorDetails);
       }
-      
+
       // Reload danh sách sau khi import
       if (searchTerm.trim()) {
         await handleSearch(searchTerm, 1, serverPageSize);
       } else {
         await loadTeachers(1, serverPageSize);
       }
-      
+
       // Đóng modal sau khi import thành công
       setTimeout(() => {
         setShowExportImportModal(false);
@@ -317,8 +317,8 @@ const ManageTeacher = () => {
             <h1 className="page-title">Quản lý Giáo viên</h1>
           </div>
           <div className="content-actions">
-            <button 
-              onClick={() => setShowExportImportModal(true)} 
+            <button
+              onClick={() => setShowExportImportModal(true)}
               className="btn btn-success btn-export-import"
               disabled={loading || !hasLoaded}
               style={{
@@ -344,159 +344,159 @@ const ManageTeacher = () => {
           )}
 
           {hasLoaded && !loading && (
-          <div className="filter-table-wrapper">
-            {/* Filter Section */}
-            <div className="filter-section">
-              <div className="filter-row">
-                <div className="filter-group">
-                  <label className="filter-label">Tìm kiếm</label>
-                  <div className="search-input-group">
-                    <i className="bi bi-search"></i>
-                    <input
-                      type="text"
-                      className="filter-input"
-                      placeholder="Tìm kiếm theo username, email..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            <div className="filter-table-wrapper">
+              {/* Filter Section */}
+              <div className="filter-section">
+                <div className="filter-row">
+                  <div className="filter-group">
+                    <label className="filter-label">Tìm kiếm</label>
+                    <div className="search-input-group">
+                      <i className="bi bi-search"></i>
+                      <input
+                        type="text"
+                        className="filter-input"
+                        placeholder="Tìm kiếm theo username, email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="filter-group">
+                    <label className="filter-label">Trạng thái</label>
+                    <select
+                      className="filter-select"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">Tất cả</option>
+                      <option value="active">Hoạt động</option>
+                      <option value="inactive">Không hoạt động</option>
+                    </select>
+                  </div>
+                  <div className="filter-group">
+                    <label className="filter-label">Sắp xếp</label>
+                    <select
+                      className="filter-select"
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                    >
+                      <option value="name_asc">Username A-Z</option>
+                      <option value="name_desc">Username Z-A</option>
+                    </select>
+                  </div>
+                  <div className="filter-group">
+                    <button className="btn btn-secondary" onClick={handleReset} style={{ width: '100%' }}>
+                      <i className="bi bi-arrow-clockwise"></i>
+                      Reset
+                    </button>
                   </div>
                 </div>
-                <div className="filter-group">
-                  <label className="filter-label">Trạng thái</label>
-                  <select
-                    className="filter-select"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">Tất cả</option>
-                    <option value="active">Hoạt động</option>
-                    <option value="inactive">Không hoạt động</option>
-                  </select>
-                </div>
-                <div className="filter-group">
-                  <label className="filter-label">Sắp xếp</label>
-                  <select
-                    className="filter-select"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                  >
-                    <option value="name_asc">Username A-Z</option>
-                    <option value="name_desc">Username Z-A</option>
-                  </select>
-                </div>
-                <div className="filter-group">
-                  <button className="btn btn-secondary" onClick={handleReset} style={{ width: '100%' }}>
-                    <i className="bi bi-arrow-clockwise"></i>
-                    Reset
-                  </button>
-                </div>
               </div>
-            </div>
 
-            {/* Table Section */}
-            <div className="table-container">
-              <div className="table-responsive">
-                <table className="table table-hover align-middle">
-                  <thead>
-                    <tr>
-                      <th width="5%">#</th>
-                      <th width="20%">Username</th>
-                      <th width="20%">Email</th>
-                      <th width="15%">Số điện thoại</th>
-                      <th width="10%">Trạng thái</th>
-                      <th width="15%" className="text-center">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageTeachers.length === 0 ? (
+              {/* Table Section */}
+              <div className="table-container">
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead>
                       <tr>
-                        <td colSpan="6" className="text-center">
-                          <div className="empty-state">
-                            <i className="bi bi-inbox"></i>
-                            <p>Không tìm thấy giáo viên nào</p>
-                          </div>
-                        </td>
+                        <th width="5%">#</th>
+                        <th width="20%">Username</th>
+                        <th width="20%">Email</th>
+                        <th width="15%">Số điện thoại</th>
+                        <th width="10%">Trạng thái</th>
+                        <th width="15%" className="text-center">Thao tác</th>
                       </tr>
-                    ) : (
-                      pageTeachers.map((teacher, index) => (
-                        <tr key={teacher.id} className="fade-in">
-                          <td><span className="teacher-code">{startIndex + index + 1}</span></td>
-                          <td>{teacher.username || 'N/A'}</td>
-                          <td>{teacher.email || 'N/A'}</td>
-                          <td>{teacher.phone || 'N/A'}</td>
-                          <td>
-                            <span className={`badge badge-status ${teacher.status === 'active' ? 'active' : 'inactive'}`}>
-                              {teacher.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-                            </span>
-                          </td>
-                          <td className="text-center">
-                            <div className="action-buttons">
-                              <button
-                                className="btn btn-sm btn-primary btn-action"
-                                onClick={() => handleEdit(teacher)}
-                                title="Sửa"
-                              >
-                                <i className="bi bi-pencil"></i>
-                              </button>
-                              <button
-                                className="btn btn-sm btn-danger btn-action"
-                                onClick={() => handleDelete(teacher)}
-                                title="Xóa"
-                              >
-                                <i className="bi bi-trash"></i>
-                              </button>
+                    </thead>
+                    <tbody>
+                      {pageTeachers.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="text-center">
+                            <div className="empty-state">
+                              <i className="bi bi-inbox"></i>
+                              <p>Không tìm thấy giáo viên nào</p>
                             </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        pageTeachers.map((teacher, index) => (
+                          <tr key={teacher.id} className="fade-in">
+                            <td><span className="teacher-code">{startIndex + index + 1}</span></td>
+                            <td>{teacher.username || 'N/A'}</td>
+                            <td>{teacher.email || 'N/A'}</td>
+                            <td>{teacher.phone || 'N/A'}</td>
+                            <td>
+                              <span className={`badge badge-status ${teacher.status === 'active' ? 'active' : 'inactive'}`}>
+                                {teacher.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              <div className="action-buttons">
+                                <button
+                                  className="btn btn-sm btn-primary btn-action"
+                                  onClick={() => handleEdit(teacher)}
+                                  title="Sửa"
+                                >
+                                  <i className="bi bi-pencil"></i>
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-danger btn-action"
+                                  onClick={() => handleDelete(teacher)}
+                                  title="Xóa"
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-              {totalFilteredPages > 1 && (
-                <nav aria-label="Page navigation" className="mt-4">
-                  <ul className="pagination justify-content-center">
-                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                      <button
-                        className="page-link"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <i className="bi bi-chevron-left"></i>
-                      </button>
-                    </li>
-                    {[...Array(totalFilteredPages)].map((_, i) => {
-                      const page = i + 1;
-                      if (
-                        page === 1 ||
-                        page === totalFilteredPages ||
-                        (page >= currentPage - 2 && page <= currentPage + 2)
-                      ) {
-                        return (
-                          <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                            <button className="page-link" onClick={() => setCurrentPage(page)}>
-                              {page}
-                            </button>
-                          </li>
-                        );
-                      }
-                      return null;
-                    })}
-                    <li className={`page-item ${currentPage === totalFilteredPages ? 'disabled' : ''}`}>
-                      <button
-                        className="page-link"
-                        onClick={() => setCurrentPage(prev => Math.min(totalFilteredPages, prev + 1))}
-                        disabled={currentPage === totalFilteredPages}
-                      >
-                        <i className="bi bi-chevron-right"></i>
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
-              )}
+                {totalFilteredPages > 1 && (
+                  <nav aria-label="Page navigation" className="mt-4">
+                    <ul className="pagination justify-content-center">
+                      <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                        <button
+                          className="page-link"
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <i className="bi bi-chevron-left"></i>
+                        </button>
+                      </li>
+                      {[...Array(totalFilteredPages)].map((_, i) => {
+                        const page = i + 1;
+                        if (
+                          page === 1 ||
+                          page === totalFilteredPages ||
+                          (page >= currentPage - 2 && page <= currentPage + 2)
+                        ) {
+                          return (
+                            <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                              <button className="page-link" onClick={() => setCurrentPage(page)}>
+                                {page}
+                              </button>
+                            </li>
+                          );
+                        }
+                        return null;
+                      })}
+                      <li className={`page-item ${currentPage === totalFilteredPages ? 'disabled' : ''}`}>
+                        <button
+                          className="page-link"
+                          onClick={() => setCurrentPage(prev => Math.min(totalFilteredPages, prev + 1))}
+                          disabled={currentPage === totalFilteredPages}
+                        >
+                          <i className="bi bi-chevron-right"></i>
+                        </button>
+                      </li>
+                    </ul>
+                  </nav>
+                )}
+              </div>
             </div>
-          </div>
           )}
         </>
 
@@ -519,6 +519,14 @@ const ManageTeacher = () => {
             onImport={handleImport}
             exporting={exporting}
             importing={importing}
+            title="Xuất / Nhập dữ liệu Giáo viên"
+            exportTitle="Xuất danh sách giáo viên ra Excel"
+            exportDescription="Chọn trạng thái để xuất dữ liệu. File Excel sẽ chứa tất cả thông tin của giáo viên."
+            filterOptions={[
+              { label: "Tất cả giáo viên", value: "" },
+              { label: "Chỉ giáo viên đang hoạt động", value: "ACTIVE" },
+              { label: "Chỉ giáo viên không hoạt động", value: "INACTIVE" }
+            ]}
           />
         )}
 

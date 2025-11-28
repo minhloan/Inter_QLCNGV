@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import TrialEvaluationModal from '../../components/TrialEvaluationModal';
 import TrialAttendeeModal from '../../components/TrialAttendeeModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { getTrialById, updateTrialStatus, adminOverrideTrialResult, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes, exportTrialStatistics } from '../../api/trial';
@@ -17,7 +16,6 @@ const TrialTeachingDetail = () => {
     const [trial, setTrial] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
     const [attendees, setAttendees] = useState([]);
-    const [showEvaluationModal, setShowEvaluationModal] = useState(false);
     const [showAttendeeModal, setShowAttendeeModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
@@ -439,9 +437,8 @@ const TrialTeachingDetail = () => {
                                                         return (
                                                             <li
                                                                 key={page}
-                                                                className={`page-item ${
-                                                                    page === currentCertPage ? 'active' : ''
-                                                                }`}
+                                                                className={`page-item ${page === currentCertPage ? 'active' : ''
+                                                                    }`}
                                                             >
                                                                 <button
                                                                     className="page-link"
@@ -453,9 +450,8 @@ const TrialTeachingDetail = () => {
                                                         );
                                                     })}
                                                     <li
-                                                        className={`page-item ${
-                                                            currentCertPage === totalCertPages ? 'disabled' : ''
-                                                        }`}
+                                                        className={`page-item ${currentCertPage === totalCertPages ? 'disabled' : ''
+                                                            }`}
                                                     >
                                                         <button
                                                             className="page-link"
@@ -484,8 +480,16 @@ const TrialTeachingDetail = () => {
                         {/* Action Buttons */}
                         <div className="trial-action-buttons">
                             {canEvaluate() && (
-                                <button className="btn btn-trial-evaluate" onClick={() => setShowEvaluationModal(true)}>
-                                    <i className="bi bi-star"></i> ĐÁNH GIÁ GIẢNG THỬ
+                                <button
+                                    className="btn btn-trial-evaluate"
+                                    onClick={() => navigate(`/teacher/trial-evaluation/${id}`, {
+                                        state: {
+                                            attendees: attendees,
+                                            evaluation: evaluation
+                                        }
+                                    })}
+                                >
+                                    <i className="bi bi-star"></i> Chấm đánh giá
                                 </button>
                             )}
                             {isManageLeader && (
@@ -622,14 +626,14 @@ const TrialTeachingDetail = () => {
                                                             attendee.attendeeRole === 'CHU_TOA'
                                                                 ? 'Chủ tọa'
                                                                 : attendee.attendeeRole === 'THU_KY'
-                                                                ? 'Thư ký'
-                                                                : 'Thành viên';
-                                                        
+                                                                    ? 'Thư ký'
+                                                                    : 'Thành viên';
+
                                                         // Kiểm tra xem attendee này đã có evaluation chưa
                                                         const hasEvaluation = trial?.evaluations?.some(
                                                             evaluation => evaluation.attendeeId === attendee.id
                                                         );
-                                                        
+
                                                         return (
                                                             <li key={attendee.id}>
                                                                 <button
@@ -652,9 +656,9 @@ const TrialTeachingDetail = () => {
                                                                             const safeEval =
                                                                                 (attendee.attendeeName ||
                                                                                     'NguoiDanhGia').replace(
-                                                                                    /\s+/g,
-                                                                                    '_'
-                                                                                );
+                                                                                        /\s+/g,
+                                                                                        '_'
+                                                                                    );
                                                                             const filename = `BM06.40-Phieu_danh_gia_giang_thu-${safeTeacher}-${safeEval}.xlsx`;
                                                                             a.href = url;
                                                                             a.download = filename;
@@ -736,18 +740,6 @@ const TrialTeachingDetail = () => {
                 </div>
 
                 {/* Modals */}
-                {showEvaluationModal && (
-                    <TrialEvaluationModal
-                        trialId={id}
-                        trial={trial}
-                        evaluation={evaluation}
-                        attendees={attendees}
-                        onClose={() => setShowEvaluationModal(false)}
-                        onSuccess={() => { setShowEvaluationModal(false); loadTrialData(); }}
-                        onToast={showToast}
-                    />
-                )}
-
                 {showAttendeeModal && (
                     <TrialAttendeeModal
                         trialId={id}

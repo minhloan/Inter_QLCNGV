@@ -22,6 +22,7 @@ const AdminManageSubject = () => {
 
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteSubjectItem, setDeleteSubjectItem] = useState(null);
+    const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
@@ -241,26 +242,34 @@ const AdminManageSubject = () => {
                     </div>
 
                     <div className="content-actions">
-
-                        <button className="btn btn-outline-primary me-2" onClick={handleGoToSystems}>
-                            <i className="bi bi-diagram-3"></i> Trang Hệ Đào Tạo
-                        </button>
-
-                        {/* EXPORT */}
-                        <button className="btn btn-success me-2" onClick={handleExport}>
-                            <i className="bi bi-download"></i> Xuất Excel
-                        </button>
-
-                        <button className="btn btn-outline-success me-2" onClick={handleExportAllSkill}>
-                            <i className="bi bi-cloud-download"></i> Xuất All Skill
-                        </button>
-
-                        <button
-                            className="btn btn-outline-primary me-2"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <i className="bi bi-upload"></i> Import All Skill
-                        </button>
+                        <div className="position-relative d-inline-block">
+                            <button
+                                className="btn btn-outline-secondary dropdown-toggle"
+                                onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                                onBlur={() => setTimeout(() => setShowActionsDropdown(false), 200)}
+                            >
+                                <i className="bi bi-gear"></i> Tiện ích
+                            </button>
+                            {showActionsDropdown && (
+                                <div className="dropdown-menu show" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 1000 }}>
+                                    <button className="dropdown-item" onClick={handleGoToSystems}>
+                                        <i className="bi bi-diagram-3 me-2"></i> Trang Hệ Đào Tạo
+                                    </button>
+                                    <button className="dropdown-item" onClick={handleExport}>
+                                        <i className="bi bi-download me-2"></i> Xuất Excel
+                                    </button>
+                                    <button className="dropdown-item" onClick={handleExportAllSkill}>
+                                        <i className="bi bi-cloud-download me-2"></i> Xuất All Skill
+                                    </button>
+                                    <button
+                                        className="dropdown-item"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <i className="bi bi-upload me-2"></i> Import All Skill
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         <button className="btn btn-primary" onClick={handleAdd}>
                             <i className="bi bi-plus-circle"></i> Thêm Môn Học
@@ -521,7 +530,7 @@ const AdminManageSubject = () => {
                     }}
                 />
             </div>
-        </MainLayout>
+        </MainLayout >
     );
 };
 

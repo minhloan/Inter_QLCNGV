@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createIncrementalIdGenerator = exports.Callback = exports.CallbackRegistry = void 0;
+exports.Callback = exports.CallbackRegistry = void 0;
 const Deferred_js_1 = require("../util/Deferred.js");
 const ErrorLike_js_1 = require("../util/ErrorLike.js");
 const Errors_js_1 = require("./Errors.js");
@@ -17,7 +17,10 @@ const util_js_1 = require("./util.js");
  */
 class CallbackRegistry {
     #callbacks = new Map();
-    #idGenerator = createIncrementalIdGenerator();
+    #idGenerator;
+    constructor(idGenerator) {
+        this.#idGenerator = idGenerator;
+    }
     create(label, timeout, request) {
         const callback = new Callback(this.#idGenerator(), label, timeout);
         this.#callbacks.set(callback.id, callback);
@@ -27,17 +30,14 @@ class CallbackRegistry {
         catch (error) {
             // We still throw sync errors synchronously and clean up the scheduled
             // callback.
-            callback.promise
-                .valueOrThrow()
-                .catch(util_js_1.debugError)
-                .finally(() => {
+            callback.promise.catch(util_js_1.debugError).finally(() => {
                 this.#callbacks.delete(callback.id);
             });
             callback.reject(error);
             throw error;
         }
         // Must only have sync code up until here.
-        return callback.promise.valueOrThrow().finally(() => {
+        return callback.promise.finally(() => {
             this.#callbacks.delete(callback.id);
         });
     }
@@ -47,6 +47,13 @@ class CallbackRegistry {
             return;
         }
         this._reject(callback, message, originalMessage);
+    }
+    rejectRaw(id, error) {
+        const callback = this.#callbacks.get(id);
+        if (!callback) {
+            return;
+        }
+        callback.reject(error);
     }
     _reject(callback, errorMessage, originalMessage) {
         let error;
@@ -118,7 +125,7 @@ class Callback {
         return this.#id;
     }
     get promise() {
-        return this.#deferred;
+        return this.#deferred.valueOrThrow();
     }
     get error() {
         return this.#error;
@@ -128,14 +135,4 @@ class Callback {
     }
 }
 exports.Callback = Callback;
-/**
- * @internal
- */
-function createIncrementalIdGenerator() {
-    let id = 0;
-    return () => {
-        return ++id;
-    };
-}
-exports.createIncrementalIdGenerator = createIncrementalIdGenerator;
 //# sourceMappingURL=CallbackRegistry.js.map

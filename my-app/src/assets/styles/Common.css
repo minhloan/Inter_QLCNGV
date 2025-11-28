@@ -65,6 +65,7 @@
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -277,7 +278,7 @@ body {
     background: rgba(0, 0, 0, 0.55);
 }
 
-.mobile-user-info.has-cover > * {
+.mobile-user-info.has-cover>* {
     position: relative;
     z-index: 1;
 }
@@ -446,7 +447,7 @@ body {
     background: rgba(0, 0, 0, 0.45);
 }
 
-.user-dropdown-header > * {
+.user-dropdown-header>* {
     position: relative;
     z-index: 1;
 }
@@ -1086,6 +1087,7 @@ body {
         opacity: 0;
         transform: translateY(12px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1733,13 +1735,14 @@ body {
 }
 
 @media (max-width: 768px) {
+
     .main-content:has(.page-admin-trial),
     .main-content:has(.page-admin-subject-registration),
     .main-content:has(.page-admin-aptech-exam),
     .main-content:has(.page-admin-evidence),
     .main-content:has(.page-admin-manage-teacher),
     .main-content:has(.page-admin-add-teacher),
-.main-content:has(.page-admin-teaching-assignment-detail),
+    .main-content:has(.page-admin-teaching-assignment-detail),
     .main-content:has(.page-admin-subject),
     .main-content:has(.page-admin-add-subject),
     .main-content:has(.page-admin-audit-log),
@@ -1759,7 +1762,7 @@ body {
     .main-content:has(.page-admin-aptech-exam) .content-header,
     .main-content:has(.page-admin-evidence) .content-header,
     .main-content:has(.page-admin-add-teacher) .content-header,
-.main-content:has(.page-admin-teaching-assignment-detail) .content-header,
+    .main-content:has(.page-admin-teaching-assignment-detail) .content-header,
     .main-content:has(.page-admin-subject) .content-header,
     .main-content:has(.page-admin-add-subject) .content-header,
     .main-content:has(.page-admin-audit-log) .content-header,
@@ -1893,7 +1896,7 @@ body {
     margin: 0 -15px;
 }
 
-.form-container .row > [class*="col-"] {
+.form-container .row>[class*="col-"] {
     padding: 0 15px;
 }
 
@@ -2183,7 +2186,7 @@ body {
     transition: background 0.2s ease;
 }
 
-.export-menu-item + .export-menu-item {
+.export-menu-item+.export-menu-item {
     border-top: 1px solid var(--border-color);
 }
 
@@ -2268,7 +2271,8 @@ body {
     background-color: var(--bg-white);
     border-radius: 12px;
     padding: 20px;
-    min-height: auto; /* avoid reserving large space when few rows */
+    min-height: auto;
+    /* avoid reserving large space when few rows */
     box-shadow: var(--shadow);
     overflow-x: auto;
     width: 100%;
@@ -2292,6 +2296,7 @@ body {
     .table-container {
         min-height: auto;
     }
+
     .table-container .empty-state {
         min-height: 150px;
     }
@@ -2299,7 +2304,7 @@ body {
 
 /* Make filter-section and table-container appear connected on desktop */
 /* Remove top border radius from table-container when it follows filter-section */
-.filter-section + .table-container {
+.filter-section+.table-container {
     margin-top: 0 !important;
     border-top-left-radius: 0 !important;
     border-top-right-radius: 0 !important;
@@ -2313,18 +2318,18 @@ body {
 }
 
 /* Fallback for browsers that don't support :has() */
-.filter-section:not(:last-child) + .table-container {
+.filter-section:not(:last-child)+.table-container {
     margin-top: 0 !important;
     border-top-left-radius: 0 !important;
     border-top-right-radius: 0 !important;
 }
 
 /* Additional rule to ensure no gap - target direct children */
-.main-content > .filter-section:has(+ .table-container) {
+.main-content>.filter-section:has(+ .table-container) {
     margin-bottom: 0 !important;
 }
 
-.main-content > .filter-section + .table-container {
+.main-content>.filter-section+.table-container {
     margin-top: 0 !important;
 }
 
@@ -2338,8 +2343,9 @@ body {
     z-index: 2;
 }
 
-.filter-section + .table-container {
-    margin-top: -1px !important; /* overlap to remove seam */
+.filter-section+.table-container {
+    margin-top: -1px !important;
+    /* overlap to remove seam */
     border-top-left-radius: 0 !important;
     border-top-right-radius: 0 !important;
     border-top: none !important;
@@ -2348,8 +2354,7 @@ body {
 }
 
 /* Ensure filter-section and table-container are truly connected on desktop */
-@media (min-width: 769px) {
-}
+@media (min-width: 769px) {}
 
 .table-responsive {
     width: 100%;
@@ -2740,18 +2745,18 @@ body {
 }
 
 /* Fix term title section to prevent layout shift */
-.content-header + .filter-card {
+.content-header+.filter-card {
     margin-top: 0;
 }
 
 /* Ensure filter card maintains position */
-.content-header.mb-4 + .filter-card {
+.content-header.mb-4+.filter-card {
     margin-top: 0;
     position: relative;
     z-index: 1;
 }
 
-.filter-card + div.mb-3 {
+.filter-card+div.mb-3 {
     margin-top: 0;
     min-height: 30px;
     display: block;
@@ -2777,7 +2782,8 @@ body {
     max-width: 500px;
     width: 90%;
     max-height: 90vh;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-content.modal-lg {
@@ -2793,6 +2799,52 @@ body {
     gap: 15px;
     min-height: 60px;
     flex-shrink: 0;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+
+    .modal-content,
+    .modal-content.modal-lg {
+        width: 95% !important;
+        max-width: 95% !important;
+        max-height: 90vh;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        padding: 15px;
+    }
+
+    .modal-body {
+        padding: 15px;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 15px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .modal-footer button {
+        width: 100%;
+        margin: 0;
+    }
+
+    .modal-tabs {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-button {
+        padding: 12px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
 }
 
 .modal-title {
@@ -2828,6 +2880,7 @@ body {
 
 .modal-body {
     padding: 20px;
+    overflow-y: auto;
 }
 
 .modal-footer {
@@ -2836,6 +2889,7 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .btn-close {
@@ -2900,6 +2954,71 @@ body {
 .page-item.disabled .page-link {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Modal Tabs */
+.modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-white);
+}
+
+.tab-button {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tab-button:hover {
+    color: var(--orange-primary);
+    background-color: var(--bg-light);
+}
+
+.tab-button.active {
+    color: var(--orange-primary);
+    border-bottom-color: var(--orange-primary);
+    font-weight: 600;
+}
+
+.tab-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Upload Box */
+.upload-box {
+    border: 2px dashed var(--orange-primary);
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #fff9f5;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.upload-box:hover {
+    background-color: #fff0e6;
+}
+
+.upload-box i {
+    font-size: 40px;
+    color: var(--orange-primary);
 }
 
 /* Responsive */
@@ -3040,7 +3159,7 @@ body {
         min-height: auto;
     }
 
-    .filter-card + div.mb-3 {
+    .filter-card+div.mb-3 {
         min-height: auto;
     }
 
@@ -3048,7 +3167,7 @@ body {
     .table-container:has(.empty-state) {
         min-height: auto;
     }
-    
+
     /* When table has many rows, apply min-height to stabilize layout */
     .table-container:has(.table tbody tr:nth-child(8)) {
         min-height: 300px;
@@ -3072,61 +3191,6 @@ body {
         flex: 1;
         min-width: 0;
         flex-wrap: wrap;
-    }
-
-    .content-actions {
-        flex-wrap: wrap;
-        gap: 8px;
-        flex-shrink: 0;
-        justify-content: flex-end;
-        align-items: center;
-        margin-top: 0;
-    }
-
-    .content-actions .btn {
-        white-space: nowrap;
-        padding: 10px 16px;
-        font-size: 13px;
-        flex-shrink: 0;
-    }
-
-    .btn-primary {
-        flex-shrink: 0;
-        padding: 10px 16px;
-        font-size: 13px;
-    }
-
-    .btn-export-import {
-        flex-shrink: 0;
-    }
-
-    /* Khi màn hình quá nhỏ, stack các nút */
-    @media (max-width: 640px) {
-        .content-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .content-actions {
-            width: 100%;
-            margin-top: 12px;
-        }
-
-        .content-actions .btn {
-            flex: 1;
-            min-width: 0;
-        }
-    }
-
-    .back-button {
-        width: 36px;
-        height: 36px;
-        min-width: 36px;
-        min-height: 36px;
-    }
-
-    .back-button i {
-        font-size: 16px;
     }
 
     .page-title {
@@ -3177,14 +3241,7 @@ body {
         min-width: 60px;
     }
 
-    .action-buttons {
-        flex-direction: column;
-        gap: 5px;
-    }
 
-    .action-buttons .btn {
-        width: 100%;
-    }
 
     /* Modal responsive fixes */
     .modal-header {
@@ -3213,6 +3270,18 @@ body {
 
     .modal-footer {
         padding: 15px;
+    }
+
+    .modal-content,
+    .modal-content.modal-lg {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 0 auto;
+    }
+
+    .tab-button {
+        padding: 10px 5px !important;
+        font-size: 14px !important;
     }
 
     /* Attendee modal table fixes */
@@ -3284,12 +3353,7 @@ body {
         min-width: auto;
     }
 
-    .btn-primary {
-        width: 100%;
-        justify-content: center;
-        padding: 12px 20px;
-        font-size: 14px;
-    }
+
 
     .btn-export-import {
         width: 100%;
@@ -3689,4 +3753,3 @@ body {
         grid-template-columns: 1fr;
     }
 }
-

@@ -261,59 +261,40 @@ const AptechExamManagement = () => {
                         </button>
                         <h1 className="page-title">Quản lý Kỳ thi Aptech</h1>
                     </div>
-                    <div
-                        className="aptech-admin-header-actions"
-                        ref={exportMenuRef}
-                        style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '12px',
-                            justifyContent: 'flex-end'
-                        }}
-                    >
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => navigate('/admin/aptech-exam/add')}
-                            style={{ minWidth: '200px' }}
-                        >
-                            <i className="bi bi-plus-circle me-2"></i>
-                            <span>Tạo đợt thi Aptech</span>
-                        </button>
-                        <button
-                            type="button"
-                            className="btn btn-outline-secondary"
-                            onClick={() => navigate('/admin/aptech-exam/sessions')}
-                            style={{ minWidth: '220px' }}
-                        >
-                            <i className="bi bi-calendar-event me-2"></i>
-                            <span>Xem lịch đợt thi</span>
-                        </button>
-                        <div style={{ position: 'relative' }}>
+                    <div className="content-actions">
+                        <div className="position-relative d-inline-block" ref={exportMenuRef}>
                             <button
-                                type="button"
-                                className="btn btn-outline-primary"
-                                onClick={() => setShowExportMenu(prev => !prev)}
-                                style={{ minWidth: '200px' }}
+                                className="btn btn-outline-secondary dropdown-toggle"
+                                onClick={() => setShowExportMenu(!showExportMenu)}
                             >
-                                <i className="bi bi-file-earmark-arrow-down"></i>
-                                <span className="ms-2">Xuất dữ liệu kỳ thi</span>
-                                <i className={`bi ms-2 ${showExportMenu ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                                <i className="bi bi-gear"></i> Tiện ích
                             </button>
                             {showExportMenu && (
-                                <div className="export-menu" role="menu">
-                                    <button type="button" className="export-menu-item" onClick={() => openExportModal('summary')}>
-                                        <strong>Tổng hợp kết quả thi GV Aptech</strong>
+                                <div className="dropdown-menu show" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 1000, minWidth: '250px' }}>
+                                    <button className="dropdown-item" onClick={() => { navigate('/admin/aptech-exam/sessions'); setShowExportMenu(false); }}>
+                                        <i className="bi bi-calendar-event me-2"></i> Xem lịch đợt thi
                                     </button>
-                                    <button type="button" className="export-menu-item" onClick={() => openExportModal('list')}>
-                                        <strong>Danh sách thi chứng nhận Aptech</strong>
+                                    <div className="dropdown-divider"></div>
+                                    <h6 className="dropdown-header">Xuất dữ liệu</h6>
+                                    <button className="dropdown-item" onClick={() => openExportModal('summary')}>
+                                        <i className="bi bi-file-earmark-text me-2"></i> Tổng hợp kết quả thi
                                     </button>
-                                    <button type="button" className="export-menu-item" onClick={() => openExportModal('stats')}>
-                                        <strong>Thống kê giáo viên thi chứng nhận Aptech</strong>
+                                    <button className="dropdown-item" onClick={() => openExportModal('list')}>
+                                        <i className="bi bi-list-check me-2"></i> Danh sách thi chứng nhận
+                                    </button>
+                                    <button className="dropdown-item" onClick={() => openExportModal('stats')}>
+                                        <i className="bi bi-graph-up me-2"></i> Thống kê giáo viên
                                     </button>
                                 </div>
                             )}
                         </div>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => navigate('/admin/aptech-exam/add')}
+                        >
+                            <i className="bi bi-plus-circle"></i> Tạo đợt thi Aptech
+                        </button>
                     </div>
                 </div>
 

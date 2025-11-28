@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
-import TrialEvaluationModal from '../../components/TrialEvaluationModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { getTrialById, exportTrialAssignment, exportTrialEvaluationForm, exportTrialMinutes } from '../../api/trial';
 import { downloadTrialReport, getFile } from '../../api/file';
@@ -17,7 +16,6 @@ const TeacherTrialTeachingDetail = () => {
     const [trial, setTrial] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
     const [attendees, setAttendees] = useState([]);
-    const [showEvaluationModal, setShowEvaluationModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
     const [aptechExams, setAptechExams] = useState([]);
@@ -69,7 +67,7 @@ const TeacherTrialTeachingDetail = () => {
 
             const consolidatedEvaluation = buildConsolidatedEvaluation(trialData);
             setEvaluation(consolidatedEvaluation);
-            
+
             if (trialData.attendees) setAttendees(trialData.attendees);
 
             // Load Aptech certificates for the teacher of this trial
@@ -267,15 +265,20 @@ const TeacherTrialTeachingDetail = () => {
                         <button className="back-button" onClick={() => navigate(getBackPath())}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                            <h1 className="page-title">Chi tiết buổi giảng dạy</h1>
+                        <h1 className="page-title">Chi tiết buổi giảng dạy</h1>
                     </div>
                     {isCurrentUserAssigned() && (
                         <div className="d-flex gap-2 flex-wrap">
-                            <button 
-                                className="btn btn-primary" 
-                                onClick={() => setShowEvaluationModal(true)}
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => navigate(`/teacher/trial-evaluation/${id}`, {
+                                    state: {
+                                        attendeeId: getCurrentUserAttendeeId(),
+                                        evaluation: evaluation
+                                    }
+                                })}
                             >
-                                <i className="bi bi-star"></i> Đánh giá giảng dạy
+                                <i className="bi bi-star"></i> Chấm đánh giá
                             </button>
                         </div>
                     )}
@@ -290,12 +293,12 @@ const TeacherTrialTeachingDetail = () => {
                                 <div className="table-responsive">
                                     <table className="table table-borderless detail-table mb-0">
                                         <tbody>
-                                        <tr><td>Giảng viên:</td><td className="text-break">{trial.teacherName} ({trial.teacherCode})</td></tr>
-                                        <tr><td>Môn học:</td><td className="text-break">{trial.subjectName}</td></tr>
-                                        <tr><td>Ngày giảng:</td><td className="text-break">{trial.teachingDate}</td></tr>
-                                        <tr><td>Địa điểm:</td><td className="text-break">{trial.location || 'N/A'}</td></tr>
-                                        <tr><td>Trạng thái:</td><td>{getStatusBadge(trial.status)}</td></tr>
-                                        {trial.note && <tr><td>Ghi chú:</td><td className="text-break">{trial.note}</td></tr>}
+                                            <tr><td>Giảng viên:</td><td className="text-break">{trial.teacherName} ({trial.teacherCode})</td></tr>
+                                            <tr><td>Môn học:</td><td className="text-break">{trial.subjectName}</td></tr>
+                                            <tr><td>Ngày giảng:</td><td className="text-break">{trial.teachingDate}</td></tr>
+                                            <tr><td>Địa điểm:</td><td className="text-break">{trial.location || 'N/A'}</td></tr>
+                                            <tr><td>Trạng thái:</td><td>{getStatusBadge(trial.status)}</td></tr>
+                                            {trial.note && <tr><td>Ghi chú:</td><td className="text-break">{trial.note}</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
@@ -306,31 +309,31 @@ const TeacherTrialTeachingDetail = () => {
                                     <div className="table-responsive">
                                         <table className="table table-borderless detail-table mb-0">
                                             <tbody>
-                                            {evaluation?.score !== null && evaluation?.score !== undefined && (
-                                                <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
-                                            )}
-                                            {(evaluation?.conclusion || trial?.finalResult) && (
-                                                <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation?.conclusion || trial?.finalResult)}</td></tr>
-                                            )}
-                                            {evaluation?.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
-                                            {evaluation?.imageFileId && canExportDocuments() && (
-                                                <tr>
-                                                    <td>Biên bản:</td>
-                                                    <td>
-                                                        <div className="d-flex gap-2">
-                                                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('pdf')}>
-                                                                <i className="bi bi-file-earmark-pdf"></i> PDF
-                                                            </button>
-                                                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('docx')}>
-                                                                <i className="bi bi-file-earmark-word"></i> DOCX
-                                                            </button>
-                                                            <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('doc')}>
-                                                                <i className="bi bi-file-earmark-word"></i> DOC
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
+                                                {evaluation?.score !== null && evaluation?.score !== undefined && (
+                                                    <tr><td>Điểm số:</td><td>{evaluation.score}/100</td></tr>
+                                                )}
+                                                {(evaluation?.conclusion || trial?.finalResult) && (
+                                                    <tr><td>Kết luận:</td><td>{getConclusionBadge(evaluation?.conclusion || trial?.finalResult)}</td></tr>
+                                                )}
+                                                {evaluation?.comments && <tr><td>Nhận xét:</td><td className="text-break">{evaluation.comments}</td></tr>}
+                                                {evaluation?.imageFileId && canExportDocuments() && (
+                                                    <tr>
+                                                        <td>Biên bản:</td>
+                                                        <td>
+                                                            <div className="d-flex gap-2">
+                                                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('pdf')}>
+                                                                    <i className="bi bi-file-earmark-pdf"></i> PDF
+                                                                </button>
+                                                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('docx')}>
+                                                                    <i className="bi bi-file-earmark-word"></i> DOCX
+                                                                </button>
+                                                                <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownloadReport('doc')}>
+                                                                    <i className="bi bi-file-earmark-word"></i> DOC
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
                                             </tbody>
                                         </table>
                                     </div>
@@ -347,20 +350,20 @@ const TeacherTrialTeachingDetail = () => {
                                 <div className="table-responsive">
                                     <table className="table table-striped">
                                         <thead>
-                                        <tr><th>Tên</th><th>Vai trò</th></tr>
+                                            <tr><th>Tên</th><th>Vai trò</th></tr>
                                         </thead>
                                         <tbody>
-                                        {attendees.map(a => (
-                                            <tr key={a.id}>
-                                                <td>{a.attendeeName}</td>
-                                                <td>
+                                            {attendees.map(a => (
+                                                <tr key={a.id}>
+                                                    <td>{a.attendeeName}</td>
+                                                    <td>
                                                         <span className="badge badge-status secondary">
                                                             {a.attendeeRole === 'CHU_TOA' ? 'Chủ tọa' :
                                                                 a.attendeeRole === 'THU_KY' ? 'Thư ký' : 'Thành viên'}
                                                         </span>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
@@ -383,9 +386,8 @@ const TeacherTrialTeachingDetail = () => {
                                                 onClick={() => setShowCertificates(prev => !prev)}
                                             >
                                                 <i
-                                                    className={`bi ${
-                                                        showCertificates ? 'bi-chevron-up' : 'bi-chevron-down'
-                                                    } me-1`}
+                                                    className={`bi ${showCertificates ? 'bi-chevron-up' : 'bi-chevron-down'
+                                                        } me-1`}
                                                 />
                                                 {showCertificates ? 'Thu gọn' : 'Hiển thị danh sách'}
                                             </button>
@@ -464,9 +466,8 @@ const TeacherTrialTeachingDetail = () => {
                                                 <nav aria-label="Aptech certificates pagination">
                                                     <ul className="pagination pagination-sm justify-content-end mb-0 flex-wrap">
                                                         <li
-                                                            className={`page-item ${
-                                                                currentCertPage === 1 ? 'disabled' : ''
-                                                            }`}
+                                                            className={`page-item ${currentCertPage === 1 ? 'disabled' : ''
+                                                                }`}
                                                         >
                                                             <button
                                                                 className="page-link"
@@ -483,9 +484,8 @@ const TeacherTrialTeachingDetail = () => {
                                                             return (
                                                                 <li
                                                                     key={page}
-                                                                    className={`page-item ${
-                                                                        page === currentCertPage ? 'active' : ''
-                                                                    }`}
+                                                                    className={`page-item ${page === currentCertPage ? 'active' : ''
+                                                                        }`}
                                                                 >
                                                                     <button
                                                                         className="page-link"
@@ -497,9 +497,8 @@ const TeacherTrialTeachingDetail = () => {
                                                             );
                                                         })}
                                                         <li
-                                                            className={`page-item ${
-                                                                currentCertPage === totalCertPages ? 'disabled' : ''
-                                                            }`}
+                                                            className={`page-item ${currentCertPage === totalCertPages ? 'disabled' : ''
+                                                                }`}
                                                         >
                                                             <button
                                                                 className="page-link"
@@ -539,8 +538,8 @@ const TeacherTrialTeachingDetail = () => {
                                 <div className="card-body">
                                     <div className="row g-3">
                                         <div className="col-md-6">
-                                            <button 
-                                                className="btn btn-outline-primary w-100" 
+                                            <button
+                                                className="btn btn-outline-primary w-100"
                                                 onClick={() => handleExportDocument('assignment')}
                                                 disabled={loading}
                                             >
@@ -549,8 +548,8 @@ const TeacherTrialTeachingDetail = () => {
                                             </button>
                                         </div>
                                         <div className="col-md-6">
-                                            <button 
-                                                className="btn btn-outline-success w-100" 
+                                            <button
+                                                className="btn btn-outline-success w-100"
                                                 onClick={() => handleExportDocument('minutes')}
                                                 disabled={loading}
                                             >
@@ -607,23 +606,6 @@ const TeacherTrialTeachingDetail = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Evaluation Modal */}
-                {showEvaluationModal && (
-                    <TrialEvaluationModal
-                        trialId={id}
-                        trial={trial}
-                        evaluation={evaluation}
-                        attendeeId={getCurrentUserAttendeeId()}
-                        attendees={attendees}
-                        onClose={() => setShowEvaluationModal(false)}
-                        onSuccess={() => { 
-                            setShowEvaluationModal(false); 
-                            loadTrialData(); 
-                        }}
-                        onToast={showToast}
-                    />
-                )}
 
                 {toast.show && <Toast title={toast.title} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, show: false }))} />}
                 {loading && <Loading />}

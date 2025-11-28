@@ -297,77 +297,77 @@ const AdminManageSubjectSystem = () => {
                         <div className="table-responsive mt-3 mt-md-0">
                             <table className="table table-hover table-bordered">
                                 <thead className="table-light">
-                                <tr>
-                                    <th>Mã hệ đào tạo</th>
-                                    <th>Tên hệ đào tạo</th>
-                                    <th>Trạng thái</th>
-                                    <th style={{ width: "180px" }}>Thao tác</th>
-                                </tr>
+                                    <tr>
+                                        <th>Mã hệ đào tạo</th>
+                                        <th>Tên hệ đào tạo</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                {pageData.length === 0 && (
-                                    <tr>
-                                        <td colSpan={5} className="text-center text-muted py-4">
-                                            Không tìm thấy hệ đào tạo
-                                        </td>
-                                    </tr>
-                                )}
+                                    {pageData.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="text-center text-muted py-4">
+                                                Không tìm thấy hệ đào tạo
+                                            </td>
+                                        </tr>
+                                    )}
 
-                                {pageData.map((sys) => (
-                                    <tr key={sys.id}>
-                                        <td>{sys.systemCode}</td>
-                                        <td>{sys.systemName}</td>
-                                        <td>
-                                            {sys.isActive ? (
-                                                <span className="badge bg-success">Active</span>
-                                            ) : (
-                                                <span className="badge bg-secondary">Inactive</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <div className="d-flex gap-2 flex-wrap">
-                                                <button
-                                                    className="btn btn-sm btn-warning"
-                                                    onClick={() => handleImportClick(sys)}
-                                                    title="Import Excel khung chương trình"
-                                                >
-                                                    <i className="bi bi-upload"></i>
-                                                </button>
-                                                <button
-                                                    className="btn btn-sm btn-success"
-                                                    onClick={() => handleExport(sys)}
-                                                    title="Xuất khung chương trình"
-                                                >
-                                                    <i className="bi bi-download"></i>
-                                                </button>
+                                    {pageData.map((sys) => (
+                                        <tr key={sys.id}>
+                                            <td>{sys.systemCode}</td>
+                                            <td>{sys.systemName}</td>
+                                            <td>
+                                                {sys.isActive ? (
+                                                    <span className="badge bg-success">Active</span>
+                                                ) : (
+                                                    <span className="badge bg-secondary">Inactive</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div className="d-flex gap-2">
+                                                    <button
+                                                        className="btn btn-sm btn-warning"
+                                                        onClick={() => handleImportClick(sys)}
+                                                        title="Import Excel khung chương trình"
+                                                    >
+                                                        <i className="bi bi-upload"></i>
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm btn-success"
+                                                        onClick={() => handleExport(sys)}
+                                                        title="Xuất khung chương trình"
+                                                    >
+                                                        <i className="bi bi-download"></i>
+                                                    </button>
 
-                                                <button
-                                                    className="btn btn-sm btn-info text-white"
-                                                    onClick={() => navigate(`/manage-subject-system-assign/${sys.id}`)}
-                                                    title="Quản lý môn trong hệ"
-                                                >
-                                                    <i className="bi bi-diagram-3"></i>
-                                                </button>
+                                                    <button
+                                                        className="btn btn-sm btn-info text-white"
+                                                        onClick={() => navigate(`/manage-subject-system-assign/${sys.id}`)}
+                                                        title="Quản lý môn trong hệ"
+                                                    >
+                                                        <i className="bi bi-diagram-3"></i>
+                                                    </button>
 
-                                                <button
-                                                    className="btn btn-sm btn-primary"
-                                                    onClick={() => handleEdit(sys)}
-                                                    title="Chỉnh sửa"
-                                                >
-                                                    <i className="bi bi-pencil"></i>
-                                                </button>
+                                                    <button
+                                                        className="btn btn-sm btn-primary"
+                                                        onClick={() => handleEdit(sys)}
+                                                        title="Chỉnh sửa"
+                                                    >
+                                                        <i className="bi bi-pencil"></i>
+                                                    </button>
 
-                                                <button
-                                                    className="btn btn-sm btn-danger"
-                                                    onClick={() => handleDelete(sys)}
-                                                    title="Xóa hệ"
-                                                >
-                                                    <i className="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                    <button
+                                                        className="btn btn-sm btn-danger"
+                                                        onClick={() => handleDelete(sys)}
+                                                        title="Xóa hệ"
+                                                    >
+                                                        <i className="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>

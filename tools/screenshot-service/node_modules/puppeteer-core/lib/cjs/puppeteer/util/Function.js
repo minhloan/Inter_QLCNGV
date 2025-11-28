@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.interpolateFunction = exports.stringifyFunction = exports.createFunction = void 0;
+exports.interpolateFunction = exports.createFunction = void 0;
+exports.stringifyFunction = stringifyFunction;
 /**
  * @license
  * Copyright 2023 Google Inc.
@@ -27,29 +28,25 @@ exports.createFunction = createFunction;
  */
 function stringifyFunction(fn) {
     let value = fn.toString();
-    try {
-        new Function(`(${value})`);
+    if (value.match(/^(async )*function(\(|\s)/) ||
+        value.match(/^(async )*function\s*\*\s*/)) {
+        return value;
     }
-    catch {
-        // This means we might have a function shorthand (e.g. `test(){}`). Let's
-        // try prefixing.
-        let prefix = 'function ';
-        if (value.startsWith('async ')) {
-            prefix = `async ${prefix}`;
-            value = value.substring('async '.length);
-        }
-        value = `${prefix}${value}`;
-        try {
-            new Function(`(${value})`);
-        }
-        catch {
-            // We tried hard to serialize, but there's a weird beast here.
-            throw new Error('Passed function cannot be serialized!');
-        }
+    const isArrow = value.startsWith('(') ||
+        value.match(/^async\s*\(/) ||
+        value.match(/^(async)*\s*(?:[$_\p{ID_Start}])(?:[$\u200C\u200D\p{ID_Continue}])*\s*=>/u);
+    if (isArrow) {
+        return value;
     }
-    return value;
+    // This means we might have a function shorthand (e.g. `test(){}`). Let's
+    // try prefixing.
+    let prefix = 'function ';
+    if (value.startsWith('async ')) {
+        prefix = `async ${prefix}`;
+        value = value.substring('async '.length);
+    }
+    return `${prefix}${value}`;
 }
-exports.stringifyFunction = stringifyFunction;
 /**
  * Replaces `PLACEHOLDER`s with the given replacements.
  *
@@ -68,7 +65,7 @@ const interpolateFunction = (fn, replacements) => {
     let value = stringifyFunction(fn);
     for (const [name, jsValue] of Object.entries(replacements)) {
         value = value.replace(new RegExp(`PLACEHOLDER\\(\\s*(?:'${name}'|"${name}")\\s*\\)`, 'g'), 
-        // Wrapping this ensures tersers that accidently inline PLACEHOLDER calls
+        // Wrapping this ensures tersers that accidentally inline PLACEHOLDER calls
         // are still valid. Without, we may get calls like ()=>{...}() which is
         // not valid.
         `(${jsValue})`);

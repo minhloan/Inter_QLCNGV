@@ -6,16 +6,23 @@
 import type { ElementHandle } from '../api/ElementHandle.js';
 import type { Frame } from '../api/Frame.js';
 import type { WaitForSelectorOptions } from '../api/Page.js';
-import type PuppeteerUtil from '../injected/injected.js';
+import type { PuppeteerInjectedUtil } from '../injected/injected.js';
 import type { Awaitable, AwaitableIterable } from './types.js';
 /**
  * @internal
  */
-export type QuerySelectorAll = (node: Node, selector: string, PuppeteerUtil: PuppeteerUtil) => AwaitableIterable<Node>;
+export type QuerySelectorAll = (node: Node, selector: string, PuppeteerUtil: PuppeteerInjectedUtil) => AwaitableIterable<Node>;
 /**
  * @internal
  */
-export type QuerySelector = (node: Node, selector: string, PuppeteerUtil: PuppeteerUtil) => Awaitable<Node | null>;
+export type QuerySelector = (node: Node, selector: string, PuppeteerUtil: PuppeteerInjectedUtil) => Awaitable<Node | null>;
+/**
+ * @internal
+ */
+export declare const enum PollingOptions {
+    RAF = "raf",
+    MUTATION = "mutation"
+}
 /**
  * @internal
  */
@@ -43,6 +50,8 @@ export declare class QueryHandler {
      * This will always query the handle in the Puppeteer world and migrate the
      * result to the main world.
      */
-    static waitFor(elementOrFrame: ElementHandle<Node> | Frame, selector: string, options: WaitForSelectorOptions): Promise<ElementHandle<Node> | null>;
+    static waitFor(elementOrFrame: ElementHandle<Node> | Frame, selector: string, options: WaitForSelectorOptions & {
+        polling?: PollingOptions;
+    }): Promise<ElementHandle<Node> | null>;
 }
 //# sourceMappingURL=QueryHandler.d.ts.map
