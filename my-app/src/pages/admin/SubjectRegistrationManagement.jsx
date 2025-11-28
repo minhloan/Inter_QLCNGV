@@ -390,10 +390,10 @@ const SubjectRegistrationManagement = () => {
                                         <th width="10%">Mã GV</th>
                                         <th width="15%">Tên Giáo viên</th>
                                         <th width="18%">Tên Môn học</th>
-                                        <th width="12%">Chương trình</th>{/* system_name */}
-                                        <th width="8%">Kỳ học</th>          {/* semester */}
-                                        <th width="10%">Hạn hoàn thành</th>{/* year + quarter */}
-                                        <th width="10%">Ngày đăng ký</th>  {/* registration_date */}
+                                        <th width="12%">Chương trình</th>
+                                        <th width="8%">Kỳ học</th>
+                                        <th width="10%">Hạn hoàn thành</th>
+                                        <th width="10%">Ngày đăng ký</th>
                                         <th width="10%">Trạng thái</th>
                                         <th width="12%" className="text-center">Thao tác</th>
                                     </tr>

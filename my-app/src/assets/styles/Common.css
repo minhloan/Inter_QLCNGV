@@ -1754,7 +1754,31 @@ body {
     .main-content:has(.page-teacher-evidence),
     .main-content:has(.page-teacher-teaching-assignment),
     .main-content:has(.edit-profile-container) {
-        padding-top: 50px;
+        padding-top: 12px;
+    }
+
+    .content-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 10px;
+        gap: 10px;
+    }
+
+    .content-actions .position-relative {
+        flex: 1;
+    }
+
+    .content-actions .btn {
+        flex: 1;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .content-actions .dropdown-toggle {
+        width: 100%;
+        justify-content: center;
+        display: flex;
+        align-items: center;
     }
 
     .main-content:has(.page-admin-trial) .content-header,
@@ -2774,6 +2798,14 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 1050;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .modal-overlay {
+        align-items: flex-start;
+        padding: 10px;
+    }
 }
 
 .modal-content {
@@ -3438,13 +3470,13 @@ body {
 
 /* Edit Profile Page */
 .edit-profile-container {
-    padding: 30px;
+    /* Removed padding to allow full width */
 }
 
 .edit-profile-content {
     display: flex;
     gap: 30px;
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
 }
 

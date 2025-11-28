@@ -235,9 +235,14 @@ const AdminManageSubjectAdd = () => {
         return <Loading fullscreen={true} message={loadingMessage || "Đang xử lý..."} />;
     }
 
+    const formSectionWidth = '1200px';
+
     return (
         <MainLayout>
-            <div className="page-admin-add-subject">
+            <div
+                className="page-admin-add-subject page-align-with-form"
+                style={{ '--page-section-width': formSectionWidth }}
+            >
 
                 {/* HEADER */}
                 <div className="content-header">
@@ -258,203 +263,218 @@ const AdminManageSubjectAdd = () => {
                 </div>
 
                 {/* FORM */}
-                <form onSubmit={handleSubmit} noValidate>
-                    <div className="edit-profile-container">
-                        <div className="edit-profile-content">
+                <div
+                    className="form-container"
+                >
+                    <form onSubmit={handleSubmit} noValidate>
+                        <div className="form-section">
+                            <h3 className="section-title">THÔNG TIN MÔN HỌC</h3>
 
-                            {/* LEFT SIDE */}
-                            <div className="edit-profile-main">
-                                <div className="form-section">
-                                    <h3 className="section-title">THÔNG TIN MÔN HỌC</h3>
-
-                                    {/* subjectCode + subjectName */}
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label className="form-label">Mã môn học *</label>
-                                            <input
-                                                type="text"
-                                                id="subjectCode"
-                                                name="subjectCode"
-                                                className={`form-control ${errors.subjectCode ? "is-invalid" : ""}`}
-                                                value={formData.subjectCode}
-                                                onChange={handleChange}
-                                                placeholder="Nhập mã môn học"
-                                            />
-                                            {errors.subjectCode && <div className="invalid-feedback">{errors.subjectCode}</div>}
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Tên môn học *</label>
-                                            <input
-                                                type="text"
-                                                id="subjectName"
-                                                name="subjectName"
-                                                className={`form-control ${errors.subjectName ? "is-invalid" : ""}`}
-                                                value={formData.subjectName}
-                                                onChange={handleChange}
-                                                placeholder="Nhập tên môn học"
-                                            />
-                                            {errors.subjectName && <div className="invalid-feedback">{errors.subjectName}</div>}
-                                        </div>
-                                    </div>
-
-                                    {/* HOURS + SYSTEM + STATUS */}
-                                    <div className="form-row">
-                                        <div className="form-group">
-                                            <label className="form-label">Số giờ</label>
-                                            <input
-                                                type="number"
-                                                id="hours"
-                                                name="hours"
-                                                className={`form-control ${errors.hours ? "is-invalid" : ""}`}
-                                                value={formData.hours ?? ""}
-                                                onChange={(e) =>
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        hours: e.target.value === "" ? null : e.target.value
-                                                    }))
-                                                }
-                                                placeholder="Không bắt buộc"
-                                            />
-                                            {errors.hours && <div className="invalid-feedback">{errors.hours}</div>}
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Học kỳ</label>
-                                            <select
-                                                id="semester"
-                                                name="semester"
-                                                className="form-select"
-                                                value={formData.semester ?? ""}
-                                                onChange={(e) =>
-                                                    setFormData(prev => ({
-                                                        ...prev,
-                                                        semester: e.target.value === "" ? null : e.target.value
-                                                    }))
-                                                }
-                                            >
-                                                <option value="">Chọn học kỳ</option>
-                                                <option value="SEMESTER_1">Học kỳ 1</option>
-                                                <option value="SEMESTER_2">Học kỳ 2</option>
-                                                <option value="SEMESTER_3">Học kỳ 3</option>
-                                                <option value="SEMESTER_4">Học kỳ 4</option>
-                                            </select>
-                                            {errors.semester && <div className="invalid-feedback">{errors.semester}</div>}
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Hệ đào tạo *</label>
-                                            <select
-                                                id="systemId"
-                                                name="systemId"
-                                                className={`form-select ${errors.systemId ? "is-invalid" : ""}`}
-                                                value={formData.systemId}
-                                                onChange={handleChange}
-                                            >
-                                                <option value="">Chọn hệ đào tạo</option>
-                                                {systemOptions.map((sys) => (
-                                                    <option key={sys.id} value={sys.id}>
-                                                        {sys.systemName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {errors.systemId && <div className="invalid-feedback">{errors.systemId}</div>}
-                                        </div>
-                                    </div>
-
-                                    {/* DESCRIPTION */}
-                                    <div className="form-group">
-                                        <label className="form-label">Mô tả</label>
-                                        <textarea
-                                            id="description"
-                                            name="description"
-                                            className="form-control"
-                                            rows="4"
-                                            placeholder="Nhập mô tả môn học..."
-                                            value={formData.description}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* ACTION BUTTONS */}
-                                <div className="save-button-container">
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => navigate('/manage-subjects')}
-                                    >
-                                        <i className="bi bi-x-circle" /> Hủy
-                                    </button>
-
-                                    <button type="submit" className="btn-save">
-                                        {isEditMode ? "CẬP NHẬT" : "LƯU MÔN HỌC"}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* RIGHT SIDE — IMAGE UPLOAD */}
-                            <div className="edit-profile-sidebar">
-                                <div className="image-upload-section">
-                                    <h3 className="section-title">ẢNH MÔN HỌC</h3>
-
-                                    <div className="image-placeholder profile-picture-placeholder">
-                                        {imagePreview ? (
-                                            <img
-                                                src={imagePreview}
-                                                alt=""
-                                                style={{
-                                                    width: "100%",
-                                                    height: "100%",
-                                                    objectFit: "cover",
-                                                    borderRadius: "8px"
-                                                }}
-                                            />
-                                        ) : (
-                                            <i className="bi bi-book" style={{ fontSize: 40 }}></i>
-                                        )}
-                                    </div>
-
-                                    <div className="image-upload-actions">
-                                        <label htmlFor="subject-image-upload-add" className="btn btn-primary">
-                                            <i className="bi bi-cloud-upload"></i> Chọn ảnh
-                                        </label>
-
-                                        {imagePreview && (
-                                            <button type="button" className="btn btn-danger" onClick={handleRemoveImage}>
-                                                <i className="bi bi-x-circle"></i> Xóa ảnh
-                                            </button>
-                                        )}
-                                    </div>
-
+                            {/* subjectCode + subjectName */}
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Mã môn học *</label>
                                     <input
-                                        id="subject-image-upload-add"
-                                        type="file"
-                                        accept="image/*"
-                                        style={{ display: "none" }}
-                                        onChange={handleFileChange}
+                                        type="text"
+                                        id="subjectCode"
+                                        name="subjectCode"
+                                        className={`form-control ${errors.subjectCode ? "is-invalid" : ""}`}
+                                        value={formData.subjectCode}
+                                        onChange={handleChange}
+                                        placeholder="Nhập mã môn học"
                                     />
+                                    {errors.subjectCode && <div className="invalid-feedback">{errors.subjectCode}</div>}
+                                </div>
 
-                                    <small className="form-text text-muted">
-                                        Ảnh không bắt buộc
-                                    </small>
+                                <div className="form-group">
+                                    <label className="form-label">Tên môn học *</label>
+                                    <input
+                                        type="text"
+                                        id="subjectName"
+                                        name="subjectName"
+                                        className={`form-control ${errors.subjectName ? "is-invalid" : ""}`}
+                                        value={formData.subjectName}
+                                        onChange={handleChange}
+                                        placeholder="Nhập tên môn học"
+                                    />
+                                    {errors.subjectName && <div className="invalid-feedback">{errors.subjectName}</div>}
                                 </div>
                             </div>
 
+                            {/* HOURS + SYSTEM + STATUS */}
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label className="form-label">Số giờ</label>
+                                    <input
+                                        type="number"
+                                        id="hours"
+                                        name="hours"
+                                        className={`form-control ${errors.hours ? "is-invalid" : ""}`}
+                                        value={formData.hours ?? ""}
+                                        onChange={(e) =>
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                hours: e.target.value === "" ? null : e.target.value
+                                            }))
+                                        }
+                                        placeholder="Không bắt buộc"
+                                    />
+                                    {errors.hours && <div className="invalid-feedback">{errors.hours}</div>}
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Học kỳ</label>
+                                    <select
+                                        id="semester"
+                                        name="semester"
+                                        className="form-select"
+                                        value={formData.semester ?? ""}
+                                        onChange={(e) =>
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                semester: e.target.value === "" ? null : e.target.value
+                                            }))
+                                        }
+                                    >
+                                        <option value="">Chọn học kỳ</option>
+                                        <option value="SEMESTER_1">Học kỳ 1</option>
+                                        <option value="SEMESTER_2">Học kỳ 2</option>
+                                        <option value="SEMESTER_3">Học kỳ 3</option>
+                                        <option value="SEMESTER_4">Học kỳ 4</option>
+                                    </select>
+                                    {errors.semester && <div className="invalid-feedback">{errors.semester}</div>}
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Hệ đào tạo *</label>
+                                    <select
+                                        id="systemId"
+                                        name="systemId"
+                                        className={`form-select ${errors.systemId ? "is-invalid" : ""}`}
+                                        value={formData.systemId}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Chọn hệ đào tạo</option>
+                                        {systemOptions.map((sys) => (
+                                            <option key={sys.id} value={sys.id}>
+                                                {sys.systemName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.systemId && <div className="invalid-feedback">{errors.systemId}</div>}
+                                </div>
+                            </div>
+
+                            {/* DESCRIPTION */}
+                            <div className="form-group">
+                                <label className="form-label">Mô tả</label>
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    className="form-control"
+                                    rows="4"
+                                    placeholder="Nhập mô tả môn học..."
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ACTION BUTTONS */}
+                        <div className="form-actions">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => navigate('/manage-subjects')}
+                            >
+                                <i className="bi bi-x-circle" /> Hủy
+                            </button>
+
+                            <button type="submit" className="btn btn-primary">
+                                <i className="bi bi-check-circle" />
+                                {isEditMode ? "Cập nhật" : "Lưu"}
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* IMAGE UPLOAD SECTION */}
+                    <div style={{
+                        backgroundColor: 'var(--bg-white)',
+                        padding: '30px',
+                        borderRadius: '8px',
+                        boxShadow: 'var(--shadow)',
+                        marginTop: '20px'
+                    }}>
+                        <h3 className="section-title">ẢNH MÔN HỌC</h3>
+
+                        <div style={{
+                            display: 'flex',
+                            gap: '30px',
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap'
+                        }}>
+                            <div className="image-placeholder profile-picture-placeholder" style={{
+                                width: '200px',
+                                height: '200px',
+                                flexShrink: 0
+                            }}>
+                                {imagePreview ? (
+                                    <img
+                                        src={imagePreview}
+                                        alt=""
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            borderRadius: "8px"
+                                        }}
+                                    />
+                                ) : (
+                                    <i className="bi bi-book" style={{ fontSize: 40 }}></i>
+                                )}
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: '250px' }}>
+                                <div className="image-upload-actions" style={{ marginBottom: '12px' }}>
+                                    <label htmlFor="subject-image-upload-add" className="btn btn-primary">
+                                        <i className="bi bi-cloud-upload"></i> Chọn ảnh
+                                    </label>
+
+                                    {imagePreview && (
+                                        <button type="button" className="btn btn-danger" onClick={handleRemoveImage}>
+                                            <i className="bi bi-x-circle"></i> Xóa ảnh
+                                        </button>
+                                    )}
+                                </div>
+
+                                <input
+                                    id="subject-image-upload-add"
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: "none" }}
+                                    onChange={handleFileChange}
+                                />
+
+                                <small className="form-text text-muted">
+                                    Ảnh không bắt buộc. Kích thước đề xuất: 400x400px
+                                </small>
+                            </div>
                         </div>
                     </div>
-                </form>
+                </div>
 
-                {toast.show && (
-                    <Toast
-                        title={toast.title}
-                        message={toast.message}
-                        type={toast.type}
-                        onClose={() => setToast(prev => ({ ...prev, show: false }))}
-                    />
-                )}
-            </div>
-        </MainLayout>
+                {
+                    toast.show && (
+                        <Toast
+                            title={toast.title}
+                            message={toast.message}
+                            type={toast.type}
+                            onClose={() => setToast(prev => ({ ...prev, show: false }))}
+                        />
+                    )
+                }
+            </div >
+        </MainLayout >
     );
 };
 

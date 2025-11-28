@@ -24,6 +24,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Cho phép truy cập từ domain giả
     port: 5173,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
     proxy: {
       '/v1': {
         target: 'http://localhost:8080', // Có thể đổi thành http://api.qlcngv.local:8080  nếu không dùng domain giả

@@ -201,24 +201,30 @@ const AdminManageSubjectEdit = () => {
     // ================== UI ==================
     if (loading) return <Loading fullscreen message="Đang tải dữ liệu môn học..." />;
 
+    const formSectionWidth = '1200px';
+
     return (
         <MainLayout>
-            {/* HEADER */}
-            <div className="content-header">
-                <div className="content-title">
-                    <button className="back-button" onClick={() => navigate(-1)}>
-                        <i className="bi bi-arrow-left"></i>
-                    </button>
-                    <h1 className="page-title">Sửa môn học</h1>
+            <div
+                className="page-admin-edit-subject page-align-with-form"
+                style={{ '--page-section-width': formSectionWidth }}
+            >
+                {/* HEADER */}
+                <div className="content-header">
+                    <div className="content-title">
+                        <button className="back-button" onClick={() => navigate(-1)}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <div className="content-title-text">
+                            <h1 className="page-title">Sửa môn học</h1>
+                            <p className="page-subtitle">Chỉnh sửa thông tin môn học</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            {/* BODY */}
-            <div className="edit-profile-container">
-                <div className="edit-profile-content">
-
-                    {/* LEFT FORM */}
-                    <div className="edit-profile-main">
+                {/* FORM */}
+                <div className="form-container">
+                    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} noValidate>
                         <div className="form-section">
                             <h3 className="section-title">THÔNG TIN MÔN HỌC</h3>
 
@@ -328,20 +334,44 @@ const AdminManageSubjectEdit = () => {
                             </div>
                         </div>
 
-                        {/* SAVE BUTTON */}
-                        <div className="save-button-container">
-                            <button className="btn-save" onClick={handleSave} disabled={saving}>
-                                {saving ? 'Saving...' : 'SAVE'}
+                        {/* ACTION BUTTONS */}
+                        <div className="form-actions">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => navigate(-1)}
+                            >
+                                <i className="bi bi-x-circle" /> Hủy
+                            </button>
+
+                            <button type="submit" className="btn btn-primary" disabled={saving}>
+                                <i className="bi bi-check-circle" />
+                                {saving ? 'Đang lưu...' : 'Cập nhật'}
                             </button>
                         </div>
-                    </div>
+                    </form>
 
-                    {/* RIGHT IMAGE */}
-                    <div className="edit-profile-sidebar">
-                        <div className="image-upload-section">
-                            <h3 className="section-title">ẢNH MÔN HỌC</h3>
+                    {/* IMAGE UPLOAD SECTION */}
+                    <div style={{
+                        backgroundColor: 'var(--bg-white)',
+                        padding: '30px',
+                        borderRadius: '8px',
+                        boxShadow: 'var(--shadow)',
+                        marginTop: '20px'
+                    }}>
+                        <h3 className="section-title">ẢNH MÔN HỌC</h3>
 
-                            <div className="image-placeholder profile-picture-placeholder">
+                        <div style={{
+                            display: 'flex',
+                            gap: '30px',
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap'
+                        }}>
+                            <div className="image-placeholder profile-picture-placeholder" style={{
+                                width: '200px',
+                                height: '200px',
+                                flexShrink: 0
+                            }}>
                                 {imagePreview ? (
                                     <img
                                         src={imagePreview}
@@ -358,28 +388,33 @@ const AdminManageSubjectEdit = () => {
                                 )}
                             </div>
 
-                            <div className="image-upload-actions">
-                                <label htmlFor="subject-image-upload-edit" className="btn btn-primary">
-                                    <i className="bi bi-cloud-upload"></i> Chọn ảnh
-                                </label>
+                            <div style={{ flex: 1, minWidth: '250px' }}>
+                                <div className="image-upload-actions" style={{ marginBottom: '12px' }}>
+                                    <label htmlFor="subject-image-upload-edit" className="btn btn-primary">
+                                        <i className="bi bi-cloud-upload"></i> Chọn ảnh
+                                    </label>
 
-                                {(formData.imageFileId || imagePreview) && (
-                                    <button className="btn btn-danger" onClick={handleClearImage}>
-                                        <i className="bi bi-x-circle"></i> Xóa ảnh
-                                    </button>
-                                )}
+                                    {(formData.imageFileId || imagePreview) && (
+                                        <button type="button" className="btn btn-danger" onClick={handleClearImage}>
+                                            <i className="bi bi-x-circle"></i> Xóa ảnh
+                                        </button>
+                                    )}
+                                </div>
+
+                                <input
+                                    id="subject-image-upload-edit"
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: "none" }}
+                                    onChange={handleImageChange}
+                                />
+
+                                <small className="form-text text-muted">
+                                    Ảnh không bắt buộc. Kích thước đề xuất: 400x400px
+                                </small>
                             </div>
-
-                            <input
-                                id="subject-image-upload-edit"
-                                type="file"
-                                accept="image/*"
-                                style={{ display: "none" }}
-                                onChange={handleImageChange}
-                            />
                         </div>
                     </div>
-
                 </div>
             </div>
 

@@ -142,6 +142,7 @@ const Login = () => {
     try {
       setIsLoading(true);
       setError('');
+      console.log('Google Credential Response:', credentialResponse);
 
       const response = await googleLogin(credentialResponse.credential);
 

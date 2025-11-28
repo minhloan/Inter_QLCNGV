@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/Layout/MainLayout";
 import Toast from "../../components/Common/Toast";
 import Loading from "../../components/Common/Loading";
+import ExportImportModal from "../../components/Teacher/ExportImportModal";
 import {
     listAllSubjectRegistrations,
     registerSubject,
@@ -44,8 +45,7 @@ const TeacherSubjectRegistration = () => {
     const [loading, setLoading] = useState(false);
 
     const [showExcelModal, setShowExcelModal] = useState(false);
-    const [excelTab, setExcelTab] = useState("export");
-
+    // const [excelTab, setExcelTab] = useState("export"); // Removed unused state
 
     const [filtersReset, setFiltersReset] = useState(true);
 
@@ -103,25 +103,25 @@ const TeacherSubjectRegistration = () => {
     // ======================= IMPORT PLAN ==========================
     const [showImportModal, setShowImportModal] = useState(false);
     const [importYear, setImportYear] = useState(currentYear);
-    const [importFile, setImportFile] = useState(null);
+    // const [importFile, setImportFile] = useState(null); // Removed unused state
     const [importResult, setImportResult] = useState(null);
 
     const openImportModal = () => {
         setImportYear(currentYear);
-        setImportFile(null);
+        // setImportFile(null); // Removed unused state
         setImportResult(null);
         setShowImportModal(true);
     };
 
-    const handleImportPlan = async () => {
-        if (!importFile) {
+    const handleImportPlan = async (file) => {
+        if (!file) {
             showToast("Lỗi", "Vui lòng chọn file Excel cần import!", "danger");
             return;
         }
 
         try {
             setLoading(true);
-            const res = await importPlanByYear(importYear, importFile);
+            const res = await importPlanByYear(importYear, file);
             setImportResult(res);
             showToast("Thành công", `Import kế hoạch năm ${importYear} thành công!`, "success");
             await loadRegistrations();
@@ -339,195 +339,64 @@ const TeacherSubjectRegistration = () => {
                         </button>
                         <h1 className="page-title">Đăng ký Môn học</h1>
                     </div>
-                    {/*Import-Export Button*/}
-                    <button
-                        onClick={() => setShowExcelModal(true)}
-                        style={{
-                            padding: "10px 18px",
-                            background: "linear-gradient(90deg, #667eea, #764ba2)",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "10px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            fontWeight: 500,
-                        }}
-                    >
-                        <i className="bi bi-file-earmark-spreadsheet"></i>
-                        Xuất / Nhập Excel
-                    </button>
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => {
-                            // Reset khi mở modal
-                            setRegisterYear(currentYear);
-                            setRegisterQuarter("");
-                            setSelectedSubject("");
-                            setSubjectSearchTerm("");
-                            setShowRegisterModal(true);
-                        }}
-                    >
-                        <i className="bi bi-plus-circle"></i>
-                        Đăng ký Môn mới
-                    </button>
-
-
-
-                    {showExcelModal && (
-                        <div
-                            style={{
-                                position: "fixed",
-                                inset: 0,
-                                background: "rgba(0,0,0,0.35)",
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                                zIndex: 2000,
+                    <div className="content-actions">
+                        <button
+                            className="btn btn-outline-primary"
+                            onClick={() => setShowExcelModal(true)}
+                        >
+                            <i className="bi bi-file-earmark-spreadsheet"></i>
+                            Xuất / Nhập Excel
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                // Reset khi mở modal
+                                setRegisterYear(currentYear);
+                                setRegisterQuarter("");
+                                setSelectedSubject("");
+                                setSubjectSearchTerm("");
+                                setShowRegisterModal(true);
                             }}
                         >
-                            <div
-                                style={{
-                                    width: "640px",
-                                    background: "#fff",
-                                    borderRadius: "14px",
-                                    overflow: "hidden",
-                                    boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
-                                }}
-                            >
-                                {/* HEADER */}
-                                <div
-                                    style={{
-                                        background: "linear-gradient(90deg, #667eea, #764ba2)",
-                                        padding: "16px 20px",
-                                        color: "white",
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                    }}
-                                >
-                                    <h3 style={{ margin: 0, fontSize: "20px" }}>
-                                        <i className="bi bi-file-earmark-excel"></i> Xuất / Nhập dữ liệu Excel
-                                    </h3>
-                                    <button
-                                        onClick={() => setShowExcelModal(false)}
-                                        style={{
-                                            background: "rgba(255,255,255,0.2)",
-                                            border: "none",
-                                            color: "white",
-                                            padding: "6px 10px",
-                                            borderRadius: "6px",
-                                        }}
-                                    >
-                                        Đóng
-                                    </button>
+                            <i className="bi bi-plus-circle"></i>
+                            Đăng ký Môn mới
+                        </button>
+                    </div>
+
+                    <ExportImportModal
+                        isOpen={showExcelModal}
+                        onClose={() => setShowExcelModal(false)}
+                        onExport={handleExportPlan}
+                        onImport={handleImportPlan}
+                        exporting={loading}
+                        importing={loading}
+                        title="Xuất / Nhập Kế hoạch"
+                        exportTitle="Xuất Kế hoạch đăng ký"
+                        exportDescription={`Xuất danh sách môn học đã đăng ký năm ${yearFilter || currentYear} ra file Excel.`}
+                        importTitle="Nhập Kế hoạch năm"
+                        importDescription="Nhập kế hoạch năm từ file Excel (.xlsx)"
+                        importChildren={
+                            importResult && (
+                                <div className="mt-3 alert alert-secondary">
+                                    <p className="mb-0">
+                                        Tổng: <b>{importResult.totalRows}</b> – Thành công:{" "}
+                                        <b>{importResult.successCount}</b> – Lỗi:{" "}
+                                        <b>{importResult.errorCount}</b>
+                                    </p>
                                 </div>
-
-                                {/* TAB */}
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        borderBottom: "1px solid #eee",
-                                    }}
-                                >
-                                    <div
-                                        onClick={() => setExcelTab("export")}
-                                        style={{
-                                            flex: 1,
-                                            padding: "12px",
-                                            textAlign: "center",
-                                            cursor: "pointer",
-                                            fontWeight: 600,
-                                            background: excelTab === "export" ? "#f3f4ff" : "white",
-                                            borderBottom: excelTab === "export" ? "3px solid #667eea" : "none",
-                                        }}
-                                    >
-                                        <i className="bi bi-download"></i> Xuất dữ liệu
-                                    </div>
-
-                                    <div
-                                        onClick={() => setExcelTab("import")}
-                                        style={{
-                                            flex: 1,
-                                            padding: "12px",
-                                            textAlign: "center",
-                                            cursor: "pointer",
-                                            fontWeight: 600,
-                                            background: excelTab === "import" ? "#f3f4ff" : "white",
-                                            borderBottom: excelTab === "import" ? "3px solid #667eea" : "none",
-                                        }}
-                                    >
-                                        <i className="bi bi-upload"></i> Nhập dữ liệu
-                                    </div>
-                                </div>
-
-                                {/* TAB EXPORT */}
-                                {excelTab === "export" && (
-                                    <div style={{ padding: "20px" }}>
-                                        <p><b>Xuất danh sách môn học đã đăng ký ra file Excel.</b></p>
-                                        <div style={{ textAlign: "right" }}>
-                                            <button
-                                                className="btn btn-primary"
-                                                onClick={() => {
-                                                    handleExportPlan();
-                                                    setShowExcelModal(false);
-                                                }}
-                                            >
-                                                <i className="bi bi-download"></i> Xuất file Excel
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* TAB IMPORT */}
-                                {excelTab === "import" && (
-                                    <div style={{ padding: "20px" }}>
-                                        <p><b>Nhập kế hoạch năm từ file Excel (.xlsx)</b></p>
-                                        <div
-                                            style={{
-                                                border: "2px dashed #667eea",
-                                                padding: "30px",
-                                                textAlign: "center",
-                                                borderRadius: "12px",
-                                                cursor: "pointer"
-                                            }}
-                                        >
-                                            <input
-                                                type="file"
-                                                accept=".xlsx"
-                                                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                                            />
-                                            <p style={{ marginTop: "10px" }}>
-                                                Nhấn để chọn file Excel
-                                            </p>
-                                        </div>
-                                        {/* Result */}
-                                        {importResult && (
-                                            <div className="mt-3">
-                                                <p>
-                                                    Tổng: <b>{importResult.totalRows}</b> – Thành công:{" "}
-                                                    <b>{importResult.successCount}</b> – Lỗi:{" "}
-                                                    <b>{importResult.errorCount}</b>
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        <div style={{ textAlign: "right", marginTop: "20px" }}>
-                                            <button
-                                                className="btn btn-success"
-                                                onClick={async () => {
-                                                    await handleImportPlan();
-                                                }}
-                                                disabled={!importFile}
-                                            >
-                                                <i className="bi bi-upload"></i> Import dữ liệu
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            )
+                        }
+                    >
+                        {/* Pass empty children to hide default filter in Export tab */}
+                        <div className="alert alert-light border">
+                            <i className="bi bi-info-circle me-2"></i>
+                            Dữ liệu sẽ được xuất dựa trên bộ lọc năm hiện tại.
                         </div>
-                    )}
+                    </ExportImportModal>
+
+
+
+
                 </div>
                 {/* FILTER + TABLE WRAPPER */}
                 <div className="filter-table-wrapper">
@@ -616,59 +485,59 @@ const TeacherSubjectRegistration = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Mã môn</th>
-                                    <th>Tên môn</th>
-                                    <th>Chương trình</th>
-                                    <th>Kỳ học</th>
-                                    <th>Hạn hoàn thành</th>
-                                    <th>Năm</th>
-                                    <th>Quý</th>
-                                    <th>Ngày đăng ký</th>
-                                    <th>Trạng thái</th>
-                                    <th>Ghi chú</th>
-                                    <th>Hành động</th>
-                                </tr>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Mã môn</th>
+                                        <th>Tên môn</th>
+                                        <th>Chương trình</th>
+                                        <th>Kỳ học</th>
+                                        <th>Hạn hoàn thành</th>
+                                        <th>Năm</th>
+                                        <th>Quý</th>
+                                        <th>Ngày đăng ký</th>
+                                        <th>Trạng thái</th>
+                                        <th>Ghi chú</th>
+                                        <th>Hành động</th>
+                                    </tr>
                                 </thead>
 
 
                                 <tbody>
-                                {pageRegistrations.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="9" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không có đăng ký nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageRegistrations.map((reg, index) => (
-                                        <tr key={reg.id}>
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>{reg.subject_code}</td>
-                                            <td>{reg.subject_name}</td>
-                                            <td>{reg.system_name}</td>
-                                            <td>{reg.semester}</td>
-                                            <td>{reg.deadline}</td>
-                                            <td>{reg.year}</td>
-                                            <td>{reg.quarter ? `QUY${reg.quarter}` : "N/A"}</td>
-                                            <td>{reg.registration_date}</td>
-                                            <td>{getStatusBadge(reg.status)}</td>
-                                            <td>{reg.reason_for_carry_over}</td>
-
-                                            <td>
-                                                <button
-                                                    className="btn btn-warning btn-sm"
-                                                    onClick={() => openCarryOverModal(reg)}
-                                                >
-                                                    <i className="bi bi-arrow-repeat"></i> Dời
-                                                </button>
+                                    {pageRegistrations.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="9" className="text-center">
+                                                <div className="empty-state">
+                                                    <i className="bi bi-inbox"></i>
+                                                    <p>Không có đăng ký nào</p>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
+                                    ) : (
+                                        pageRegistrations.map((reg, index) => (
+                                            <tr key={reg.id}>
+                                                <td>{startIndex + index + 1}</td>
+                                                <td>{reg.subject_code}</td>
+                                                <td>{reg.subject_name}</td>
+                                                <td>{reg.system_name}</td>
+                                                <td>{reg.semester}</td>
+                                                <td>{reg.deadline}</td>
+                                                <td>{reg.year}</td>
+                                                <td>{reg.quarter ? `QUY${reg.quarter}` : "N/A"}</td>
+                                                <td>{reg.registration_date}</td>
+                                                <td>{getStatusBadge(reg.status)}</td>
+                                                <td>{reg.reason_for_carry_over}</td>
+
+                                                <td>
+                                                    <button
+                                                        className="btn btn-warning btn-sm"
+                                                        onClick={() => openCarryOverModal(reg)}
+                                                    >
+                                                        <i className="bi bi-arrow-repeat"></i> Dời
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

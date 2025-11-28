@@ -141,28 +141,28 @@ const EditProfile = () => {
           skills: data.skills || []
         });
 
-          if (data.imageUrl || data.imageCoverUrl) {
-              if (data.imageUrl.startsWith('http')) {
-                  setProfileImage(data.imageUrl);
-                  setProfileCoverImage(data.imageCoverUrl);
-              } else {
-                  try {
-                      const blobUrl = await getFile(data.imageUrl);
-                      const coverImageUrl = data.imageCoverUrl
-                          ? await getFile(data.imageCoverUrl)
-                          : null;
+        if (data.imageUrl || data.imageCoverUrl) {
+          if (data.imageUrl.startsWith('http')) {
+            setProfileImage(data.imageUrl);
+            setProfileCoverImage(data.imageCoverUrl);
+          } else {
+            try {
+              const blobUrl = await getFile(data.imageUrl);
+              const coverImageUrl = data.imageCoverUrl
+                ? await getFile(data.imageCoverUrl)
+                : null;
 
-                      setProfileImage(blobUrl);
-                      setProfileCoverImage(coverImageUrl);
-                  } catch (error) {
-                      if (error.response?.status !== 404) {
-                          console.error('Error loading profile image:', error);
-                      }
-                      setProfileImage(null);
-                      setProfileCoverImage(null);
-                  }
+              setProfileImage(blobUrl);
+              setProfileCoverImage(coverImageUrl);
+            } catch (error) {
+              if (error.response?.status !== 404) {
+                console.error('Error loading profile image:', error);
               }
+              setProfileImage(null);
+              setProfileCoverImage(null);
+            }
           }
+        }
       } catch (error) {
         console.error('Error loading user data:', error);
         showToast('Lỗi', error.response?.data?.message || 'Không thể tải thông tin người dùng', 'danger');
@@ -183,11 +183,11 @@ const EditProfile = () => {
   }, [profileImage]);
 
   useEffect(() => {
-        return () => {
-            if (profileCoverImage && profileCoverImage.startsWith('blob:')) {
-                URL.revokeObjectURL(profileCoverImage);
-            }
-        };
+    return () => {
+      if (profileCoverImage && profileCoverImage.startsWith('blob:')) {
+        URL.revokeObjectURL(profileCoverImage);
+      }
+    };
   }, [profileCoverImage]);
 
   const handleInputChange = (e) => {
@@ -237,29 +237,29 @@ const EditProfile = () => {
     showToast('Thông báo', 'Liên kết xác minh đã được gửi tới email của bạn', 'info');
   };
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setProfileImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileImage(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfileImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-    const handleCoverImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setCoverImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileCoverImage(reader.result);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+  const handleCoverImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCoverImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileCoverImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -456,28 +456,28 @@ const EditProfile = () => {
                     onChange={handleInputChange}
                   />
                 </div>
-                  <div className="form-group">
-                      <label className="form-label">Họ</label>
-                      <input
-                          type="text"
-                          name="lastName"
-                          className="form-control"
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                      />
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">Họ</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    className="form-control"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                  />
+                </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                      <label className="form-label">Họ và tên</label>
-                      <input
-                          type="text"
-                          name="username"
-                          className="form-control"
-                          value={formData.username}
-                          onChange={handleInputChange}
-                      />
-                  </div>
+                  <label className="form-label">Họ và tên</label>
+                  <input
+                    type="text"
+                    name="username"
+                    className="form-control"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                  />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Ngày sinh (DD/MM/YYYY)</label>
                   <input
@@ -490,89 +490,89 @@ const EditProfile = () => {
                   />
                 </div>
               </div>
-                <div className="form-row">
-                    <div className="form-group">
-                        <label className="form-label">Điện thoại</label>
-                        <div
-                          className="input-group"
-                          style={{
-                            display: 'flex',
-                            border: '1px solid #ced4da',
-                            borderRadius: '0.375rem',
-                            overflow: 'hidden',
-                            transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
-                          }}
-                        >
-                          <div
-                            style={{
-                              position: 'relative',
-                              display: 'flex',
-                              alignItems: 'center',
-                              backgroundColor: '#f8f9fa',
-                              borderRight: '1px solid #ced4da',
-                              padding: '0 6px 0 10px',
-                              minWidth: '140px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <select
-                              className="form-select"
-                              style={{
-                                border: 'none',
-                                backgroundColor: 'transparent',
-                                padding: '0.375rem 24px 0.375rem 4px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                appearance: 'none',
-                                backgroundImage: 'none',
-                                outline: 'none',
-                                flex: 1,
-                                color: '#212529'
-                              }}
-                              value={formData.countryCode}
-                              onChange={(e) => setFormData(prev => ({ ...prev, countryCode: e.target.value }))}
-                            >
-                              {countryCodes.map((country) => (
-                                <option key={country.code} value={country.code}>
-                                  {country.name} {country.code}
-                                </option>
-                              ))}
-                            </select>
-                            <span
-                              style={{
-                                position: 'absolute',
-                                right: '10px',
-                                fontSize: '10px',
-                                color: '#6c757d',
-                                pointerEvents: 'none',
-                                zIndex: 1
-                              }}
-                            >
-                              ▼
-                            </span>
-                          </div>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="phoneNumber"
-                            value={formData.phoneNumber}
-                            onChange={handlePhoneChange}
-                            placeholder="Nhập số điện thoại (8-15 chữ số)"
-                            maxLength={15}
-                            style={{
-                              border: 'none',
-                              borderLeft: 'none',
-                              flex: 1,
-                              paddingLeft: '12px'
-                            }}
-                          />
-                        </div>
-                        <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666', marginTop: '4px', display: 'block' }}>
-                          Ví dụ: {formData.countryCode}912345678
-                        </small>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Điện thoại</label>
+                  <div
+                    className="input-group"
+                    style={{
+                      display: 'flex',
+                      border: '1px solid #ced4da',
+                      borderRadius: '0.375rem',
+                      overflow: 'hidden',
+                      transition: 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out'
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f8f9fa',
+                        borderRight: '1px solid #ced4da',
+                        padding: '0 6px 0 10px',
+                        minWidth: '140px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <select
+                        className="form-select"
+                        style={{
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          padding: '0.375rem 24px 0.375rem 4px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          appearance: 'none',
+                          backgroundImage: 'none',
+                          outline: 'none',
+                          flex: 1,
+                          color: '#212529'
+                        }}
+                        value={formData.countryCode}
+                        onChange={(e) => setFormData(prev => ({ ...prev, countryCode: e.target.value }))}
+                      >
+                        {countryCodes.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.name} {country.code}
+                          </option>
+                        ))}
+                      </select>
+                      <span
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          fontSize: '10px',
+                          color: '#6c757d',
+                          pointerEvents: 'none',
+                          zIndex: 1
+                        }}
+                      >
+                        ▼
+                      </span>
                     </div>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handlePhoneChange}
+                      placeholder="Nhập số điện thoại (8-15 chữ số)"
+                      maxLength={15}
+                      style={{
+                        border: 'none',
+                        borderLeft: 'none',
+                        flex: 1,
+                        paddingLeft: '12px'
+                      }}
+                    />
+                  </div>
+                  <small className="form-text text-muted" style={{ fontSize: '12px', color: '#666', marginTop: '4px', display: 'block' }}>
+                    Ví dụ: {formData.countryCode}912345678
+                  </small>
                 </div>
+              </div>
 
             </div>
 
@@ -665,35 +665,35 @@ const EditProfile = () => {
                 </div>
               </div>
             </div>
-              <div className="form-section">
-                  <h3 className="section-title">TRÌNH ĐỘ HỌC VẤN</h3>
-                  <div className="form-row">
-                      <div className="form-group">
-                          <label className="form-label">Trình độ học vấn</label>
-                          <div className="select-wrapper">
-                              <select
-                                  name="qualification"
-                                  className="form-control qualification-select"
-                                  value={formData.qualification}
-                                  onChange={handleInputChange}
-                              >
-                                  <option value="">Chọn trình độ</option>
-                                  <option value="bachelor">Cử nhân</option>
-                                  <option value="master">Thạc sĩ</option>
-                                  <option value="phd">Tiến sĩ</option>
-                                  <option value="assistant_professor">Phó giáo sư</option>
-                                  <option value="professor">Giáo sư</option>
-                                  <option value="specialist">Chuyên viên</option>
-                                  <option value="other">Khác</option>
-                              </select>
-                              <i className="bi bi-chevron-down select-arrow"></i>
-                          </div>
-                      </div>
+            <div className="form-section">
+              <h3 className="section-title">TRÌNH ĐỘ HỌC VẤN</h3>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Trình độ học vấn</label>
+                  <div className="select-wrapper">
+                    <select
+                      name="qualification"
+                      className="form-control qualification-select"
+                      value={formData.qualification}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Chọn trình độ</option>
+                      <option value="bachelor">Cử nhân</option>
+                      <option value="master">Thạc sĩ</option>
+                      <option value="phd">Tiến sĩ</option>
+                      <option value="assistant_professor">Phó giáo sư</option>
+                      <option value="professor">Giáo sư</option>
+                      <option value="specialist">Chuyên viên</option>
+                      <option value="other">Khác</option>
+                    </select>
+                    <i className="bi bi-chevron-down select-arrow"></i>
                   </div>
+                </div>
               </div>
+            </div>
 
 
-              {/* About Me */}
+            {/* About Me */}
             <div className="form-section">
               <h3 className="section-title">GIỚI THIỆU</h3>
               <div className="form-group bio-group">
@@ -789,41 +789,41 @@ const EditProfile = () => {
                 onChange={handleImageChange}
               />
             </div>
-              <div className="image-upload-section">
-                  <h3 className="section-title">ẢNH NỀN</h3>
-                  <div className="image-placeholder cover-image-placeholder">
-                      {profileCoverImage ? (
-                          <img
-                              src={profileCoverImage}
-                              alt="Cover"
-                              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
-                              onError={(e) => {
-                                  console.error('Failed to load cover image:', profileCoverImage);
-                                  e.target.style.display = 'none';
-                                  setProfileCoverImage(null);
-                              }}
-                          />
-                      ) : (
-                          <span>1920 x 1080</span>
-                      )}
-                  </div>
-
-                  <label
-                      htmlFor="cover-image-upload"
-                      className="btn-upload"
-                      style={{ cursor: 'pointer' }}
-                  >
-                      <i className="bi bi-cloud-upload"></i>
-                      UPLOAD
-                  </label>
-                  <input
-                      id="cover-image-upload"
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={handleCoverImageChange}
+            <div className="image-upload-section">
+              <h3 className="section-title">ẢNH NỀN</h3>
+              <div className="image-placeholder cover-image-placeholder">
+                {profileCoverImage ? (
+                  <img
+                    src={profileCoverImage}
+                    alt="Cover"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                    onError={(e) => {
+                      console.error('Failed to load cover image:', profileCoverImage);
+                      e.target.style.display = 'none';
+                      setProfileCoverImage(null);
+                    }}
                   />
+                ) : (
+                  <span>1920 x 1080</span>
+                )}
               </div>
+
+              <label
+                htmlFor="cover-image-upload"
+                className="btn-upload"
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-cloud-upload"></i>
+                UPLOAD
+              </label>
+              <input
+                id="cover-image-upload"
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleCoverImageChange}
+              />
+            </div>
           </div>
         </div>
       </div>
