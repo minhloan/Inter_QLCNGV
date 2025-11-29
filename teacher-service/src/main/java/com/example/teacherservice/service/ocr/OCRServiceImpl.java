@@ -365,8 +365,8 @@ public class OCRServiceImpl implements OCRService {
                 result.setOcrScore(marks);
                 result.setOcrPercentage(percentage);
                 
-                // Aptech PASS threshold: 70%
-                result.setOcrResult(percentage >= 70 ? ExamResult.PASS : ExamResult.FAIL);
+                // Aptech PASS threshold: 60%
+                result.setOcrResult(percentage >= 60 ? ExamResult.PASS : ExamResult.FAIL);
                 
                 log.debug("Extracted Aptech score: {} marks ({}%)", marks, percentage);
             } catch (NumberFormatException e) {

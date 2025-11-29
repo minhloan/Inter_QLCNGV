@@ -5,14 +5,19 @@ import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import {
     exportRegistrationsExcel,
-    getAllRegistrationsForAdmin, importRegistrationsExcel,
+    getAllRegistrationsForAdmin,
+    importRegistrationsExcel,
     updateRegistrationStatus,
+    exportPlanExcel,
+    importPlanExcel,
 } from '../../api/adminSubjectRegistrationApi';
+import { searchUsersByTeaching } from '../../api/user';
 import ExportImportModal from '../../components/Teacher/ExportImportModal';
-
 
 const SubjectRegistrationManagement = () => {
     const navigate = useNavigate();
+
+    // --- STATES ---
     const [registrations, setRegistrations] = useState([]);
     const [filteredRegistrations, setFilteredRegistrations] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -21,12 +26,16 @@ const SubjectRegistrationManagement = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [loading, setLoading] = useState(false);
-    const [importResult, setImportResult] = useState(null);
-    const [showExcelModal, setShowExcelModal] = useState(false);
-    const [excelTab, setExcelTab] = useState("export"); // export | import
-    const [exportStatus, setExportStatus] = useState("ALL");
-    const [teacherSearch, setTeacherSearch] = useState("");
-    const [selectedTeacher, setSelectedTeacher] = useState("");
+
+    // Plan modal states
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [planTeacherId, setPlanTeacherId] = useState("");
+    const [planTeacherName, setPlanTeacherName] = useState("");
+    const [planImportResult, setPlanImportResult] = useState(null);
+    const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
+    const [foundTeachers, setFoundTeachers] = useState([]);
+    const [planYear, setPlanYear] = useState(new Date().getFullYear());
+    const [exportAllTeachers, setExportAllTeachers] = useState(false);
 
     const [toast, setToast] = useState({
         show: false,
@@ -35,6 +44,7 @@ const SubjectRegistrationManagement = () => {
         type: 'info',
     });
 
+    // --- EFFECTS ---
     useEffect(() => {
         loadRegistrations();
     }, []);
@@ -43,34 +53,67 @@ const SubjectRegistrationManagement = () => {
         applyFilters();
     }, [registrations, searchTerm, statusFilter, subjectFilter]);
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'N/A';
+    useEffect(() => {
+        if (showPlanModal) {
+            fetchTeachers();
+        }
+    }, [showPlanModal]);
 
-        const [datePart] = dateStr.split(/[T ]/); // tách theo T hoặc khoảng trắng
-        const [year, month, day] = datePart.split('-'); // "2025-11-14" -> ["2025","11","14"]
-        if (!year || !month || !day) return dateStr;
-        return `${day}/${month}/${year}`; // dd/MM/yyyy
+    // --- HELPER FUNCTIONS ---
+
+    const fetchTeachers = async (keyword = "") => {
+        try {
+            const users = await searchUsersByTeaching(keyword);
+            setFoundTeachers(users);
+        } catch (error) {
+            console.error("Failed to fetch teachers:", error);
+        }
     };
 
-    // Lấy danh sách đăng ký từ backend
-    const loadRegistrations = async () => {
-        try {
-            setLoading(true);
-            const rows = await getAllRegistrationsForAdmin();
-            const normalized = (rows || []).map((reg) => ({
-                id: reg.id,
-                teacher_code: reg.teacherCode || 'N/A',
-                teacher_name: reg.teacherName || 'N/A',
-                subject_id: reg.subjectId || null,
-                subject_name: reg.subjectName || 'N/A',
-                subject_code: reg.subjectCode || 'N/A',
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        const [datePart] = dateStr.split(/[T ]/);
+        const [year, month, day] = datePart.split('-');
+        if (!year || !month || !day) return dateStr;
+        return `${day}/${month}/${year}`;
+    };
 
-                // 👉 thêm
+    const formatDeadline = (year, quarter) => {
+        if (!year || !quarter) return 'N/A';
+        const mapMonth = {
+            QUY1: '03',
+            QUY2: '06',
+            QUY3: '09',
+            QUY4: '12',
+        };
+        const month = mapMonth[quarter] || '';
+        if (!month) return `${quarter}-${year}`;
+        return `${month}-${year}`;
+    };
+
+    const showToast = (title, message, type) => {
+        setToast({ show: true, title, message, type });
+        setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
+    };
+
+    // --- DATA LOADING & ACTIONS ---
+
+    const loadRegistrations = async () => {
+        setLoading(true);
+        try {
+            const data = await getAllRegistrationsForAdmin();
+            const normalized = data.map((reg) => ({
+                id: reg.id,
+                teacher_code: reg.teacherCode,
+                teacher_name: reg.teacherName,
+                teacher_id: reg.teacherId,
+                subject_id: reg.subjectId,
+                subject_name: reg.subjectName,
+                subject_code: reg.subjectCode,
                 system_name: reg.systemName || 'N/A',
                 semester: reg.semester || null,
                 year: reg.year ?? null,
                 quarter: reg.quarter ?? null,
-
                 registration_date: formatDate(reg.registrationDate),
                 status: (reg.status || '').toLowerCase(),
                 notes: reg.notes || '',
@@ -88,44 +131,26 @@ const SubjectRegistrationManagement = () => {
             setLoading(false);
         }
     };
-    const formatDeadline = (year, quarter) => {
-        if (!year || !quarter) return 'N/A';
-        const mapMonth = {
-            QUY1: '03',
-            QUY2: '06',
-            QUY3: '09',
-            QUY4: '12',
-        };
-        const month = mapMonth[quarter] || '';
-        if (!month) return `${quarter}-${year}`;
-        return `${month}-${year}`;
-    };
 
     const applyFilters = () => {
         let filtered = [...registrations];
 
-        // Tìm kiếm
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             filtered = filtered.filter(
                 (reg) =>
-                    (reg.teacher_name &&
-                        reg.teacher_name.toLowerCase().includes(term)) ||
-                    (reg.teacher_code &&
-                        reg.teacher_code.toLowerCase().includes(term)) ||
-                    (reg.subject_name &&
-                        reg.subject_name.toLowerCase().includes(term))
+                    (reg.teacher_name && reg.teacher_name.toLowerCase().includes(term)) ||
+                    (reg.teacher_code && reg.teacher_code.toLowerCase().includes(term)) ||
+                    (reg.subject_name && reg.subject_name.toLowerCase().includes(term))
             );
         }
 
-        // Lọc theo trạng thái
         if (statusFilter) {
             filtered = filtered.filter(
                 (reg) => (reg.status || '').toLowerCase() === statusFilter
             );
         }
 
-        // (nếu sau này dùng subjectFilter thì thêm điều kiện ở đây)
         if (subjectFilter) {
             filtered = filtered.filter(
                 (reg) => reg.subject_id === parseInt(subjectFilter, 10)
@@ -136,22 +161,16 @@ const SubjectRegistrationManagement = () => {
         setCurrentPage(1);
     };
 
-    // Duyệt / từ chối đăng ký – gọi backend + cập nhật state
     const handleStatusChange = async (registrationId, newStatus) => {
         try {
             setLoading(true);
-
-            // newStatus: 'COMPLETED' hoặc 'NOT_COMPLETED' (ENUM gửi lên backend)
             await updateRegistrationStatus(registrationId, newStatus);
-
-            // Cập nhật lại state phía frontend (lưu lowercase cho đồng bộ)
-            const normalized = newStatus.toLowerCase(); // "completed" | "not_completed"
+            const normalized = newStatus.toLowerCase();
             setRegistrations((prev) =>
                 prev.map((reg) =>
                     reg.id === registrationId ? { ...reg, status: normalized } : reg
                 )
             );
-
             showToast('Thành công', 'Cập nhật trạng thái thành công', 'success');
         } catch (error) {
             console.error('Lỗi cập nhật trạng thái:', error);
@@ -161,26 +180,18 @@ const SubjectRegistrationManagement = () => {
         }
     };
 
-    const showToast = (title, message, type) => {
-        setToast({ show: true, title, message, type });
-        setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
-    };
-
     const getStatusBadge = (status) => {
         const key = (status || "").toLowerCase();
-
         const statusMap = {
             registered: { label: "Đang chờ duyệt", class: "info" },
             completed: { label: "Đã duyệt", class: "success" },
             not_completed: { label: "Từ chối", class: "secondary" },
-            carryover: { label: "Dời môn", class: "warning" }, // ⭐ THÊM
+            carryover: { label: "Dời môn", class: "warning" },
         };
-
         const info = statusMap[key] || {
             label: status || "Không rõ",
             class: "secondary",
         };
-
         return (
             <span className={`badge badge-status ${info.class}`}>
                 {info.label}
@@ -188,6 +199,7 @@ const SubjectRegistrationManagement = () => {
         );
     };
 
+    // --- PAGINATION CALCS ---
     const totalPages = Math.ceil(filteredRegistrations.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const pageRegistrations = filteredRegistrations.slice(
@@ -195,7 +207,9 @@ const SubjectRegistrationManagement = () => {
         startIndex + pageSize
     );
 
-    if (loading) {
+    // --- RENDER ---
+
+    if (loading && !showPlanModal) {
         return (
             <Loading
                 fullscreen={true}
@@ -209,128 +223,217 @@ const SubjectRegistrationManagement = () => {
             <div className="page-admin-subject-registration">
                 <div className="content-header">
                     <div className="content-title">
-
                         <button className="back-button" onClick={() => navigate(-1)}>
                             <i className="bi bi-arrow-left"></i>
                         </button>
                         <h1 className="page-title">Quản lý Đăng ký Môn học</h1>
                     </div>
 
-                    {/*export-import button*/}
                     <button
-                        onClick={() => setShowExcelModal(true)}
-                        className="btn btn-success btn-export-import"
+                        onClick={() => setShowPlanModal(true)}
+                        className="btn btn-info btn-export-import"
                         style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
                             border: 'none',
                             fontWeight: '500'
                         }}
                     >
-                        <i className="bi bi-file-earmark-spreadsheet"></i>
-                        <span className="d-none d-sm-inline ms-2">Xuất / Nhập Excel</span>
+                        <i className="bi bi-calendar-check"></i>
+                        <span className="d-none d-sm-inline ms-2">Kế hoạch chuyên môn</span>
                     </button>
 
-
-
-
-                    {/* ===================== MODAL XUẤT/NHẬP EXCEL ==================== */}
                     <ExportImportModal
-                        isOpen={showExcelModal}
-                        onClose={() => setShowExcelModal(false)}
-                        onExport={(status) => exportRegistrationsExcel(status, selectedTeacher)}
+                        isOpen={showPlanModal}
+                        onClose={() => setShowPlanModal(false)}
+                        title="Kế hoạch chuyên môn"
+                        icon="bi-calendar-check"
+                        headerStyle={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%)', color: 'white' }}
+                        exportTitle="Xuất kế hoạch chuyên môn"
+                        exportDescription={exportAllTeachers ? `Xuất kế hoạch của TẤT CẢ giáo viên trong năm ${planYear}.` : `Xuất kế hoạch của giáo viên đã chọn trong năm ${planYear}.`}
+                        importTitle="Nhập kế hoạch chuyên môn"
+                        importDescription="Upload file Excel để import kế hoạch cho giáo viên đã chọn."
+                        importTopChildren={
+                            <div className="mb-3">
+                                <label className="form-label fw-bold">Chọn giáo viên <span className="text-danger">*</span></label>
+
+                                {/* Search Input */}
+                                <div className="input-group mb-2">
+                                    <span className="input-group-text"><i className="bi bi-search"></i></span>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Tìm kiếm giáo viên (Tên hoặc Mã)..."
+                                        value={teacherSearchTerm}
+                                        onChange={(e) => {
+                                            setTeacherSearchTerm(e.target.value);
+                                            fetchTeachers(e.target.value);
+                                        }}
+                                    />
+                                </div>
+
+                                <select
+                                    className="form-select"
+                                    value={planTeacherId}
+                                    onChange={(e) => {
+                                        const selectedId = e.target.value;
+                                        const selected = foundTeachers.find(t => t.id === selectedId);
+                                        setPlanTeacherId(selectedId);
+                                        setPlanTeacherName(selected ? `${selected.teacherCode} - ${selected.username}` : '');
+                                    }}
+                                    size={5}
+                                >
+                                    <option value="" disabled>-- Chọn giáo viên --</option>
+                                    {foundTeachers.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.teacherCode} - {t.username}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="form-text text-muted">
+                                    {foundTeachers.length} giáo viên được tìm thấy.
+                                </div>
+                            </div>
+                        }
+                        onExport={async () => {
+                            if (!planTeacherId && !exportAllTeachers) {
+                                showToast('Thiếu thông tin', 'Vui lòng chọn giáo viên hoặc chọn xuất tất cả', 'warning');
+                                return;
+                            }
+                            try {
+                                const teacherIdToExport = exportAllTeachers ? null : planTeacherId;
+                                await exportPlanExcel(teacherIdToExport, planYear);
+                                showToast('Thành công', 'Đang tải file xuống...', 'success');
+                            } catch (err) {
+                                showToast('Lỗi', err.message, 'danger');
+                            }
+                        }}
                         onImport={async (file) => {
+                            if (!planTeacherId) {
+                                showToast('Thiếu thông tin', 'Vui lòng chọn giáo viên', 'warning');
+                                return;
+                            }
                             setLoading(true);
                             try {
-                                const result = await importRegistrationsExcel(file);
-                                setImportResult(result);
-                                showToast("Import hoàn tất", `Tổng: ${result.totalRows}, thành công: ${result.successCount}, lỗi: ${result.errorCount}`, "success");
+                                const result = await importPlanExcel(planTeacherId, file);
+                                setPlanImportResult(result);
+                                showToast('Import hoàn tất', `Tổng: ${result.totalRows}, thành công: ${result.successCount}, lỗi: ${result.errorCount}`, 'success');
                                 await loadRegistrations();
                             } catch (err) {
-                                showToast("Lỗi import", err.response?.data || err.message, "danger");
+                                showToast('Lỗi import', err.response?.data?.message || err.message, 'danger');
                             }
                             setLoading(false);
                         }}
-                        exporting={false} // Add loading state if needed
+                        exporting={loading}
                         importing={loading}
-                        title="Xuất / Nhập dữ liệu Excel"
-                        exportTitle="Xuất danh sách đăng ký ra Excel"
-                        exportDescription="Chọn trạng thái để xuất dữ liệu."
-                        filterOptions={[
-                            { label: "Tất cả", value: "ALL" },
-                            { label: "Chờ duyệt", value: "REGISTERED" },
-                            { label: "Đã duyệt", value: "COMPLETED" },
-                            { label: "Từ chối", value: "NOT_COMPLETED" },
-                            { label: "Dời môn", value: "CARRYOVER" }
-                        ]}
                         importChildren={
-                            importResult && importResult.errorCount > 0 && (
-                                <div className="alert alert-warning mb-0">
-                                    <strong>Kết quả import:</strong>
-                                    <div className="small">Tổng dòng: {importResult.totalRows}</div>
-                                    <div className="small">Thành công: {importResult.successCount}</div>
-                                    <div className="small">Bỏ qua (trùng): {importResult.skippedCount}</div>
-                                    <div className="small">Lỗi: {importResult.errorCount}</div>
-                                    {importResult.errors && importResult.errors.length > 0 && (
-                                        <ul className="mt-2 mb-0 ps-3 small" style={{ maxHeight: 150, overflowY: "auto" }}>
-                                            {importResult.errors.map((err, idx) => (
-                                                <li key={idx}>
-                                                    Dòng {err.rowIndex}: {err.message}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            )
+                            <>
+                                {exportAllTeachers && (
+                                    <div className="alert alert-warning small mb-3">
+                                        <i className="bi bi-exclamation-triangle me-1"></i>
+                                        Chức năng Import chưa hỗ trợ import hàng loạt cho tất cả giáo viên cùng lúc. Vui lòng chọn từng giáo viên để import.
+                                    </div>
+                                )}
+                                {planImportResult && planImportResult.errorCount > 0 && (
+                                    <div className="alert alert-warning mt-3 mb-0">
+                                        <strong>Kết quả import:</strong>
+                                        <div className="small">Tổng dòng: {planImportResult.totalRows}</div>
+                                        <div className="small">Thành công: {planImportResult.successCount}</div>
+                                        <div className="small">Lỗi: {planImportResult.errorCount}</div>
+                                        {planImportResult.errors && planImportResult.errors.length > 0 && (
+                                            <ul className="mt-2 mb-0 ps-3 small" style={{ maxHeight: 150, overflowY: 'auto' }}>
+                                                {planImportResult.errors.map((err, idx) => (
+                                                    <li key={idx}>{err}</li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                            </>
                         }
                     >
-                        {/* Custom content for Export tab: Teacher Search */}
-                        <div className="form-group position-relative">
-                            <label className="form-label fw-bold">Tìm kiếm giáo viên</label>
+                        {/* Export Tab Content (Children) */}
+                        <div className="mb-3">
+                            <label className="form-label fw-bold">Năm kế hoạch</label>
                             <input
-                                type="text"
+                                type="number"
                                 className="form-control"
-                                placeholder="Nhập tên hoặc mã GV..."
-                                value={teacherSearch}
-                                onChange={(e) => setTeacherSearch(e.target.value)}
+                                value={planYear}
+                                onChange={(e) => setPlanYear(parseInt(e.target.value))}
                             />
-
-                            {teacherSearch && (
-                                <div className="position-absolute bg-white border rounded shadow-sm w-100 mt-1" style={{ zIndex: 10, maxHeight: '200px', overflowY: 'auto' }}>
-                                    {registrations
-                                        .filter(r =>
-                                            (r.teacher_name + r.teacher_code).toLowerCase()
-                                                .includes(teacherSearch.toLowerCase())
-                                        )
-                                        .map((r, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="p-2 border-bottom cursor-pointer hover-bg-light"
-                                                style={{ cursor: 'pointer' }}
-                                                onClick={() => {
-                                                    setSelectedTeacher(r.teacher_name);
-                                                    setTeacherSearch("");
-                                                }}
-                                            >
-                                                {r.teacher_code} - {r.teacher_name}
-                                            </div>
-                                        ))}
-                                </div>
-                            )}
                         </div>
 
-                        {selectedTeacher && (
-                            <div className="p-2 bg-light rounded border mb-3">
-                                <strong>Đã chọn:</strong> {selectedTeacher}
-                                <button className="btn btn-sm btn-link text-danger ms-2" onClick={() => setSelectedTeacher("")}>
-                                    <i className="bi bi-x"></i>
-                                </button>
+                        <div className="mb-3">
+                            <div className="form-check">
+                                <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    id="exportAllTeachers"
+                                    checked={exportAllTeachers}
+                                    onChange={(e) => {
+                                        setExportAllTeachers(e.target.checked);
+                                        if (e.target.checked) {
+                                            setPlanTeacherId("");
+                                            setPlanTeacherName("");
+                                        }
+                                    }}
+                                />
+                                <label className="form-check-label fw-bold" htmlFor="exportAllTeachers">
+                                    Xuất kế hoạch cho TẤT CẢ giáo viên
+                                </label>
+                            </div>
+                            <div className="form-text text-muted">
+                                Nếu chọn, sẽ xuất ra 1 file Excel với mỗi giáo viên là 1 sheet.
+                            </div>
+                        </div>
+
+                        {!exportAllTeachers && (
+                            <div className="mb-3">
+                                <label className="form-label fw-bold">Chọn giáo viên <span className="text-danger">*</span></label>
+                                {/* Search Input */}
+                                <div className="input-group mb-2">
+                                    <span className="input-group-text"><i className="bi bi-search"></i></span>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Tìm kiếm giáo viên (Tên hoặc Mã)..."
+                                        value={teacherSearchTerm}
+                                        onChange={(e) => {
+                                            setTeacherSearchTerm(e.target.value);
+                                            fetchTeachers(e.target.value);
+                                        }}
+                                    />
+                                </div>
+                                <select
+                                    className="form-select"
+                                    value={planTeacherId}
+                                    onChange={(e) => {
+                                        const selectedId = e.target.value;
+                                        const selected = foundTeachers.find(t => t.id === selectedId);
+                                        setPlanTeacherId(selectedId);
+                                        setPlanTeacherName(selected ? `${selected.teacherCode} - ${selected.username}` : '');
+                                    }}
+                                    size={5}
+                                >
+                                    <option value="" disabled>-- Chọn giáo viên --</option>
+                                    {foundTeachers.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.teacherCode} - {t.username}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="form-text text-muted">
+                                    {foundTeachers.length} giáo viên được tìm thấy.
+                                </div>
+                            </div>
+                        )}
+
+                        {!exportAllTeachers && planTeacherName && (
+                            <div className="alert alert-info">
+                                <i className="bi bi-info-circle me-2"></i>
+                                Đã chọn: <strong>{planTeacherName}</strong>
                             </div>
                         )}
                     </ExportImportModal>
-
-
-
-
                 </div>
 
                 <div className="filter-table-wrapper">
@@ -427,7 +530,6 @@ const SubjectRegistrationManagement = () => {
                                                 <td>{getStatusBadge(reg.status)}</td>
                                                 <td className="text-center">
                                                     <div className="action-buttons">
-                                                        {/* Chỉ cho duyệt / từ chối khi đang ở trạng thái đã đăng ký */}
                                                         {(reg.status === 'registered' || reg.status === 'carryover') && (
                                                             <>
                                                                 <button
@@ -474,15 +576,10 @@ const SubjectRegistrationManagement = () => {
                         {totalPages > 1 && (
                             <nav aria-label="Page navigation" className="mt-4">
                                 <ul className="pagination justify-content-center">
-                                    <li
-                                        className={`page-item ${currentPage === 1 ? 'disabled' : ''
-                                            }`}
-                                    >
+                                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                                         <button
                                             className="page-link"
-                                            onClick={() =>
-                                                setCurrentPage((prev) => Math.max(1, prev - 1))
-                                            }
+                                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                             disabled={currentPage === 1}
                                         >
                                             <i className="bi bi-chevron-left"></i>
@@ -498,8 +595,7 @@ const SubjectRegistrationManagement = () => {
                                             return (
                                                 <li
                                                     key={page}
-                                                    className={`page-item ${currentPage === page ? 'active' : ''
-                                                        }`}
+                                                    className={`page-item ${currentPage === page ? 'active' : ''}`}
                                                 >
                                                     <button
                                                         className="page-link"
@@ -512,10 +608,7 @@ const SubjectRegistrationManagement = () => {
                                         }
                                         return null;
                                     })}
-                                    <li
-                                        className={`page-item ${currentPage === totalPages ? 'disabled' : ''
-                                            }`}
-                                    >
+                                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
                                         <button
                                             className="page-link"
                                             onClick={() =>

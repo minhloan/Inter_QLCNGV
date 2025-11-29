@@ -35,6 +35,7 @@ public class ReportController {
     private final UserRepository userRepository;
     private final TeacherReportGeneratorService teacherReportGeneratorService;
     private final ManagerReportGeneratorService managerReportGeneratorService;
+    private final com.example.teacherservice.service.reports.TemplateReportService templateReportService;
     private final JwtUtil jwtUtil;
 
     @GetMapping("/dashboard/stats")
@@ -115,6 +116,7 @@ public class ReportController {
 
             switch (format.toLowerCase()) {
                 case "pdf":
+                    // Keep using existing PDF generation
                     if (useManagerService) {
                         fileContent = managerReportGeneratorService.generatePdfReport(reportData);
                     } else {
@@ -124,20 +126,16 @@ public class ReportController {
                     contentType = "application/pdf";
                     break;
                 case "excel":
-                    if (useManagerService) {
-                        fileContent = managerReportGeneratorService.generateExcelReport(reportData);
-                    } else {
-                        fileContent = teacherReportGeneratorService.generateExcelReport(reportData, report.getTeacher());
-                    }
+                    // NEW: Use TemplateReportService for Excel
+                    String reportType = report.getReportType();
+                    fileContent = templateReportService.generateExcelFromTemplate(reportType, reportData);
                     fileName = generateFileName(report, ".xlsx");
                     contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
                     break;
                 case "word":
-                    if (useManagerService) {
-                        fileContent = managerReportGeneratorService.generateWordReport(reportData);
-                    } else {
-                        fileContent = teacherReportGeneratorService.generateWordReport(reportData, report.getTeacher());
-                    }
+                    // NEW: Use TemplateReportService for Word  
+                    reportType = report.getReportType();
+                    fileContent = templateReportService.generateWordFromTemplate(reportType, reportData);
                     fileName = generateFileName(report, ".docx");
                     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
                     break;

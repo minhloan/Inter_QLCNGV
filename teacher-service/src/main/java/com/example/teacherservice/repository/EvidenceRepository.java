@@ -13,11 +13,8 @@ import java.util.Date;
 import java.util.List;
 
 public interface EvidenceRepository extends JpaRepository<Evidence, String> {
-    List<Evidence> findByTeacher(User teacher);
-    List<Evidence> findBySubject(Subject subject);
     List<Evidence> findByStatus(EvidenceStatus status);
 
-    List<Evidence> findByTeacherIdAndSubjectId(String teacherId, String subjectId);
     List<Evidence> findBySubmittedDateBetween(LocalDate startDate, LocalDate endDate);
     @Query("SELECT e FROM Evidence e WHERE e.teacher.id = :teacherId AND e.status = :status")
     List<Evidence> findByTeacherIdAndStatus(@Param("teacherId") String teacherId,

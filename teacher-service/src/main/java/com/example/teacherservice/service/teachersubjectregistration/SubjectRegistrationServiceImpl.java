@@ -171,8 +171,6 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
         return toDto(saved);
     }
 
-    // =================== KẾ HOẠCH NĂM - EXPORT EXCEL ===================
-    // =================== KẾ HOẠCH NĂM - EXPORT EXCEL ===================
     // =================== KẾ HOẠCH NĂM - EXPORT EXCEL (THEO TEMPLATE) ===================
     @Override
     public void exportPlanExcel(HttpServletResponse response, String teacherId, Integer yearRequest) {
@@ -336,6 +334,8 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 // ----- Ghi dữ liệu -----
                 int rowIndex = dataStartRow;
                 int stt = 1;
+                
+                int teacherNameStartRow = rowIndex; // Track start for merge
 
                 for (SubjectRegistration reg : regs) {
 
@@ -347,9 +347,13 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                     c0.setCellValue(stt++);
                     c0.setCellStyle(borderCenter);
 
-                    // 1: HỌ TÊN
+                    // 1: HỌ TÊN (chỉ ghi ở dòng đầu tiên, các dòng sau để trống để merge)
                     Cell c1 = getOrCreate(row, 1);
-                    c1.setCellValue(teacher.getUsername());
+                    if (rowIndex == teacherNameStartRow) {
+                        c1.setCellValue(teacher.getUsername());
+                    } else {
+                        c1.setCellValue(""); // Để trống cho merge
+                    }
                     c1.setCellStyle(borderLeft);
 
                     // 2: MÔN CHUẨN BỊ
@@ -375,10 +379,11 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                     );
                     c4.setCellStyle(borderCenter);
 
-                    // HÌNH THỨC CHUẨN BỊ (để trống, nhưng đúng cột)
+                    // HÌNH THỨC CHUẨN BỊ (reasonForCarryOver)
                     if (methodCol != -1) {
                         Cell cm = getOrCreate(row, methodCol);
-                        cm.setCellValue("");
+                        String carryOverReason = reg.getReasonForCarryOver();
+                        cm.setCellValue(carryOverReason != null ? carryOverReason : "");
                         cm.setCellStyle(borderLeft);
                     }
 
@@ -392,12 +397,21 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                     cNote.setCellValue("");
                     cNote.setCellStyle(borderLeft);
 
-                    // MÃ MÔN THI (đúng cột, không lộn nữa)
+                    // MÃ MÔN THI - Lấy từ skill.skillName (đã có format 1291-SQL Server 2019)
                     Cell cCode = getOrCreate(row, codeCol);
-                    cCode.setCellValue(reg.getSubject().getSkillCode());
+                    String skillName = reg.getSubject().getSkill() != null && reg.getSubject().getSkill().getSkillName() != null
+                        ? reg.getSubject().getSkill().getSkillName()
+                        : reg.getSubject().getSkillCode(); // Fallback to just code
+                    cCode.setCellValue(skillName);
                     cCode.setCellStyle(borderCenter);
 
                     rowIndex++;
+                }
+                
+                // Merge cells cho cột HỌ TÊN (STT và HỌ TÊN)
+                if (regs.size() > 1) {
+                    sheet.addMergedRegion(new CellRangeAddress(teacherNameStartRow, rowIndex - 1, 0, 0)); // STT
+                    sheet.addMergedRegion(new CellRangeAddress(teacherNameStartRow, rowIndex - 1, 1, 1)); // HỌ TÊN
                 }
 
                 // ----- Cập nhật NĂM trên tiêu đề + footer Ngày / / NĂM -----
@@ -458,8 +472,6 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
     }
 
 
-
-
     // Support
     private void setCell(Row row, int col, Object value, CellStyle style) {
         Cell c = row.getCell(col);
@@ -496,9 +508,6 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
             int start = header.getRowNum() + 1;
 
-            // chuẩn hóa username trong DB
-            String teacherNameDbNorm = normalize(teacher.getUsername());
-
             for (int i = start; i <= sheet.getLastRowNum(); i++) {
 
                 Row row = sheet.getRow(i);
@@ -508,32 +517,48 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
                 try {
                     // =========================
-                    // 1. KIỂM TRA ĐÚNG GIÁO VIÊN
+                    // 1. LẤY MÔN CHUẨN BỊ VÀ MÃ MÔN (SKIP CHECK HỌ TÊN vì teacher đã đăng nhập rồi)
                     // =========================
-                    String teacherNameExcel = getString(row, col.get("teacherName"));
-                    if (teacherNameExcel == null || teacherNameExcel.isBlank()) {
-                        addRowError(result, i + 1, "Thiếu HỌ TÊN");
-                        continue;
-                    }
-
-                    String teacherNameExcelNorm = normalize(teacherNameExcel);
-                    if (!teacherNameExcelNorm.equals(teacherNameDbNorm)) {
-                        addRowError(result, i + 1,
-                                "Họ tên trong file không khớp giáo viên đăng nhập: " + teacherNameExcel);
-                        continue;
-                    }
-
-                    // =========================
-                    // 2. LẤY MÃ MÔN
-                    // =========================
-                    String subjectCode = getString(row, col.get("subjectCode"));
-                    if (subjectCode == null || subjectCode.isBlank()) {
+                    
+                    // Lấy tên môn từ cột "MÔN CHUẨN BỊ"
+                    String subjectNameFromExcel = getString(row, col.get("subjectName"));
+                    
+                    // Lấy mã môn thi
+                    String subjectCodeRaw = getString(row, col.get("subjectCode"));
+                    if (subjectCodeRaw == null || subjectCodeRaw.isBlank()) {
                         addRowError(result, i + 1, "Thiếu MÃ MÔN THI");
                         continue;
                     }
 
-                    Subject subject = SubjectRepository.findBySkill_SkillCode(subjectCode)
-                            .orElseThrow(() -> new RuntimeException("Không tìm thấy môn: " + subjectCode));
+                    // Parse: "1291-SQL Server 2019" -> "1291"
+                    String subjectCode = subjectCodeRaw.contains("-") 
+                        ? subjectCodeRaw.split("-")[0].trim() 
+                        : subjectCodeRaw.trim();
+
+                    // Tìm tất cả subjects có cùng skill_code
+                    List<Subject> matchingSubjects = SubjectRepository.findAllBySkill_SkillCode(subjectCode);
+                    
+                    if (matchingSubjects.isEmpty()) {
+                        addRowError(result, i + 1, "Không tìm thấy môn với mã: " + subjectCode);
+                        continue;
+                    }
+                    
+                    Subject subject;
+                    if (matchingSubjects.size() == 1) {
+                        // Chỉ có 1 môn → lấy luôn
+                        subject = matchingSubjects.get(0);
+                    } else {
+                        // Có nhiều môn cùng skill_code → tìm theo tên
+                        if (subjectNameFromExcel != null && !subjectNameFromExcel.isBlank()) {
+                            String normalizedExcelName = normalize(subjectNameFromExcel);
+                            subject = matchingSubjects.stream()
+                                .filter(s -> normalize(s.getSubjectName()).equals(normalizedExcelName))
+                                .findFirst()
+                                .orElse(matchingSubjects.get(0)); // Fallback: lấy môn đầu tiên
+                        } else {
+                            subject = matchingSubjects.get(0);
+                        }
+                    }
 
                     // =========================
                     // 3. LẤY DEADLINE → NĂM + QUÝ
@@ -671,6 +696,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
             String raw = normalize(cell.toString());
 
             if (raw.contains("ho ten")) col.put("teacherName", c);
+            if (raw.contains("mon chuan bi")) col.put("subjectName", c);
             if (raw.contains("ma mon thi")) col.put("subjectCode", c);
             if (raw.contains("hinh thuc")) col.put("method", c);
             if (raw.contains("ghi chu")) col.put("note", c);

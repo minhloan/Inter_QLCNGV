@@ -14,6 +14,10 @@ const ReportingExport = () => {
     const [reportType, setReportType] = useState('');
     const [yearFilter, setYearFilter] = useState('');
     const [quarterFilter, setQuarterFilter] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [subjectId, setSubjectId] = useState('');
+    const [subjects, setSubjects] = useState([]);
     const [loading, setLoading] = useState(false);
     const [downloadingReports, setDownloadingReports] = useState(new Set());
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
@@ -31,7 +35,20 @@ const ReportingExport = () => {
     useEffect(() => {
         loadReports();
         loadStats();
+        loadSubjects();
     }, []);
+
+    const loadSubjects = async () => {
+        try {
+            // Fetch subjects for dropdown - assuming an API exists or we can mock/fetch from stats
+            // For now, we might need to add a getSubjects API or use existing data
+            // Let's assume we can get it from somewhere or just leave it empty if no API
+            // Actually, we can use the dashboard stats or a separate API call if available
+            // For now, let's just initialize empty and maybe fetch if needed
+        } catch (error) {
+            console.error('Error loading subjects:', error);
+        }
+    };
 
     useEffect(() => {
         applyFilters();
@@ -93,7 +110,10 @@ const ReportingExport = () => {
             const reportRequest = {
                 reportType: type,
                 year: year,
-                quarter: quarter
+                quarter: quarter,
+                startDate: startDate || null,
+                endDate: endDate || null,
+                subjectId: subjectId || null
             };
 
             const response = await apiGenerateReport(reportRequest);
@@ -212,41 +232,92 @@ const ReportingExport = () => {
                             <option value="YEAR">Báo cáo Năm</option>
                             <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
                             <option value="TRIAL">Báo cáo Giảng thử</option>
+                            <option value="SUBJECT_ANALYSIS">Phân tích Môn học</option>
+                            <option value="APTECH_DETAIL">Chi tiết Aptech</option>
+                            <option value="TRIAL_DETAIL">Chi tiết Giảng thử</option>
                         </select>
                     </div>
-                    <div className="filter-group">
-                        <label className="filter-label">Năm</label>
-                        <select
-                            className="filter-select"
-                            value={yearFilter}
-                            onChange={(e) => setYearFilter(e.target.value)}
-                        >
-                            <option value="">Chọn năm</option>
-                            {[currentYear - 1, currentYear, currentYear + 1].map(year => (
-                                <option key={year} value={year}>{year}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="filter-group">
-                        <label className="filter-label">Quý</label>
-                        <select
-                            className="filter-select"
-                            value={quarterFilter}
-                            onChange={(e) => setQuarterFilter(e.target.value)}
-                            disabled={reportType !== 'QUARTER'}
-                        >
-                            <option value="">Tất cả</option>
-                            <option value="1">Quý 1</option>
-                            <option value="2">Quý 2</option>
-                            <option value="3">Quý 3</option>
-                            <option value="4">Quý 4</option>
-                        </select>
-                    </div>
+
+                    {['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(reportType) && (
+                        <>
+                            <div className="filter-group">
+                                <label className="filter-label">Năm</label>
+                                <select
+                                    className="filter-select"
+                                    value={yearFilter}
+                                    onChange={(e) => setYearFilter(e.target.value)}
+                                >
+                                    <option value="">Chọn năm</option>
+                                    {[currentYear - 1, currentYear, currentYear + 1].map(year => (
+                                        <option key={year} value={year}>{year}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="filter-group">
+                                <label className="filter-label">Quý</label>
+                                <select
+                                    className="filter-select"
+                                    value={quarterFilter}
+                                    onChange={(e) => setQuarterFilter(e.target.value)}
+                                    disabled={reportType !== 'QUARTER'}
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="1">Quý 1</option>
+                                    <option value="2">Quý 2</option>
+                                    <option value="3">Quý 3</option>
+                                    <option value="4">Quý 4</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+
+                    {['SUBJECT_ANALYSIS', 'APTECH_DETAIL', 'TRIAL_DETAIL'].includes(reportType) && (
+                        <>
+                            <div className="filter-group">
+                                <label className="filter-label">Từ ngày</label>
+                                <input
+                                    type="date"
+                                    className="filter-input"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                />
+                            </div>
+                            <div className="filter-group">
+                                <label className="filter-label">Đến ngày</label>
+                                <input
+                                    type="date"
+                                    className="filter-input"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {reportType === 'SUBJECT_ANALYSIS' && (
+                        <div className="filter-group">
+                            <label className="filter-label">Mã Môn học (ID)</label>
+                            <input
+                                type="text"
+                                className="filter-input"
+                                value={subjectId}
+                                onChange={(e) => setSubjectId(e.target.value)}
+                                placeholder="Nhập ID môn học"
+                            />
+                        </div>
+                    )}
+
                     <div className="filter-group">
                         <button
                             className="btn btn-primary"
                             onClick={() => generateReport(reportType, parseInt(yearFilter), quarterFilter ? parseInt(quarterFilter) : null)}
-                            disabled={!reportType || !yearFilter || loading}
+                            disabled={
+                                !reportType ||
+                                loading ||
+                                (['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(reportType) && !yearFilter) ||
+                                (['SUBJECT_ANALYSIS', 'APTECH_DETAIL', 'TRIAL_DETAIL'].includes(reportType) && (!startDate || !endDate)) ||
+                                (reportType === 'SUBJECT_ANALYSIS' && !subjectId)
+                            }
                             style={{ width: '100%', marginTop: '25px' }}
                         >
                             {loading ? (
@@ -314,84 +385,91 @@ const ReportingExport = () => {
                     <div className="table-responsive">
                         <table className="table table-hover align-middle">
                             <thead>
-                            <tr>
-                                <th width="5%">#</th>
-                                <th width="15%">Loại báo cáo</th>
-                                <th width="15%">Giáo viên</th>
-                                <th width="10%">Năm</th>
-                                <th width="10%">Quý</th>
-                                <th width="15%">Ngày tạo</th>
-                                <th width="10%">Trạng thái</th>
-                                <th width="20%" className="text-center">Thao tác</th>
-                            </tr>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="15%">Loại báo cáo</th>
+                                    <th width="15%">Giáo viên</th>
+                                    <th width="10%">Năm</th>
+                                    <th width="10%">Quý</th>
+                                    <th width="15%">Ngày tạo</th>
+                                    <th width="10%">Trạng thái</th>
+                                    <th width="20%" className="text-center">Thao tác</th>
+                                </tr>
                             </thead>
                             <tbody>
-                            {pageReports.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" className="text-center">
-                                        <div className="empty-state">
-                                            <i className="bi bi-inbox"></i>
-                                            <p>Không tìm thấy báo cáo nào</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                pageReports.map((report, index) => (
-                                    <tr key={report.id} className="fade-in">
-                                        <td>{startIndex + index + 1}</td>
-                                        <td>{getReportTypeLabel(report.reportType)}</td>
-                                        <td>{report.teacherName || 'Tất cả'}</td>
-                                        <td>{report.year || 'N/A'}</td>
-                                        <td>{report.quarter ? `Q${report.quarter}` : 'N/A'}</td>
-                                        <td>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</td>
-                                        <td>
-                      <span className={`badge badge-status ${report.status === 'GENERATED' ? 'success' : 'danger'}`}>
-                        {report.status === 'GENERATED' ? 'Đã tạo' : 'Lỗi'}
-                      </span>
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="action-buttons">
-                                                <button
-                                                    className="btn btn-sm btn-success btn-action"
-                                                    onClick={() => exportReport(report.id, 'pdf')}
-                                                    disabled={downloadingReports.has(`${report.id}-pdf`)}
-                                                    title="Xuất PDF"
-                                                >
-                                                    {downloadingReports.has(`${report.id}-pdf`) ? (
-                                                        <Loading fullscreen={false} message="" />
-                                                    ) : (
-                                                        <i className="bi bi-file-pdf"></i>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    className="btn btn-sm btn-primary btn-action"
-                                                    onClick={() => exportReport(report.id, 'excel')}
-                                                    disabled={downloadingReports.has(`${report.id}-excel`)}
-                                                    title="Xuất Excel"
-                                                >
-                                                    {downloadingReports.has(`${report.id}-excel`) ? (
-                                                        <Loading fullscreen={false} message="" />
-                                                    ) : (
-                                                        <i className="bi bi-file-excel"></i>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    className="btn btn-sm btn-info btn-action"
-                                                    onClick={() => exportReport(report.id, 'word')}
-                                                    disabled={downloadingReports.has(`${report.id}-word`)}
-                                                    title="Xuất Word"
-                                                >
-                                                    {downloadingReports.has(`${report.id}-word`) ? (
-                                                        <Loading fullscreen={false} message="" />
-                                                    ) : (
-                                                        <i className="bi bi-file-word"></i>
-                                                    )}
-                                                </button>
+                                {pageReports.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="8" className="text-center">
+                                            <div className="empty-state">
+                                                <i className="bi bi-inbox"></i>
+                                                <p>Không tìm thấy báo cáo nào</p>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : (
+                                    pageReports.map((report, index) => (
+                                        <tr key={report.id} className="fade-in">
+                                            <td>{startIndex + index + 1}</td>
+                                            <td>{getReportTypeLabel(report.reportType)}</td>
+                                            <td>{report.teacherName || 'Tất cả'}</td>
+                                            <td>{report.year || 'N/A'}</td>
+                                            <td>{report.quarter ? `Q${report.quarter}` : 'N/A'}</td>
+                                            <td>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                                            <td>
+                                                <span className={`badge badge-status ${report.status === 'GENERATED' ? 'success' : 'danger'}`}>
+                                                    {report.status === 'GENERATED' ? 'Đã tạo' : 'Lỗi'}
+                                                </span>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="action-buttons">
+                                                    {['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(report.reportType) && (
+                                                        <button
+                                                            className="btn btn-sm btn-success btn-action"
+                                                            onClick={() => exportReport(report.id, 'pdf')}
+                                                            disabled={downloadingReports.has(`${report.id}-pdf`)}
+                                                            title="Xuất PDF"
+                                                        >
+                                                            {downloadingReports.has(`${report.id}-pdf`) ? (
+                                                                <Loading fullscreen={false} message="" />
+                                                            ) : (
+                                                                <i className="bi bi-file-pdf"></i>
+                                                            )}
+                                                        </button>
+                                                    )}
+
+                                                    {['SUBJECT_ANALYSIS', 'APTECH_DETAIL', 'TRIAL_DETAIL', 'TEACHER_PERFORMANCE', 'PERSONAL_SUMMARY'].includes(report.reportType) && (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-primary btn-action"
+                                                                onClick={() => exportReport(report.id, 'excel')}
+                                                                disabled={downloadingReports.has(`${report.id}-excel`)}
+                                                                title="Xuất Excel"
+                                                            >
+                                                                {downloadingReports.has(`${report.id}-excel`) ? (
+                                                                    <Loading fullscreen={false} message="" />
+                                                                ) : (
+                                                                    <i className="bi bi-file-excel"></i>
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-info btn-action"
+                                                                onClick={() => exportReport(report.id, 'word')}
+                                                                disabled={downloadingReports.has(`${report.id}-word`)}
+                                                                title="Xuất Word"
+                                                            >
+                                                                {downloadingReports.has(`${report.id}-word`) ? (
+                                                                    <Loading fullscreen={false} message="" />
+                                                                ) : (
+                                                                    <i className="bi bi-file-word"></i>
+                                                                )}
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

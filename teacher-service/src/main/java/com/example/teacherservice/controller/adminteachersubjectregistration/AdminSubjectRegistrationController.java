@@ -3,7 +3,9 @@ package com.example.teacherservice.controller.adminteachersubjectregistration;
 import com.example.teacherservice.dto.adminteachersubjectregistration.AdminSubjectRegistrationDto;
 import com.example.teacherservice.dto.adminteachersubjectregistration.ImportResultDto;
 import com.example.teacherservice.enums.RegistrationStatus;
+import com.example.teacherservice.jwt.JwtUtil;
 import com.example.teacherservice.service.adminteachersubjectregistration.AdminSubjectRegistrationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,7 @@ import java.util.List;
 public class AdminSubjectRegistrationController {
 
     private final AdminSubjectRegistrationService adminService;
+    private final JwtUtil jwtUtil;
 
     // ==============================================
     // GET ALL REGISTRATIONS
@@ -69,7 +72,6 @@ public class AdminSubjectRegistrationController {
 
 
 
-
     // IMPORT FILE EXCEL
 
     @PostMapping(value = "/import", consumes = "multipart/form-data")
@@ -78,5 +80,29 @@ public class AdminSubjectRegistrationController {
     ) {
         return ResponseEntity.ok(adminService.importExcel(file));
     }
+    
+    // =================== PLAN EXPORT/IMPORT ===================
+    
+    @GetMapping("/plan/export")
+    public void exportPlan(
+            HttpServletResponse response,
+            @RequestParam(required = false) String teacherId,
+            @RequestParam(required = false) Integer year,
+            HttpServletRequest request
+    ) {
+        String adminId = jwtUtil.ExtractUserId(request);
+        adminService.exportPlanExcel(response, adminId, teacherId, year);
+    }
+    
+    @PostMapping("/plan/import")
+    public ResponseEntity<?> importPlan(
+            @RequestParam String teacherId,
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request
+    ) {
+        String adminId = jwtUtil.ExtractUserId(request);
+        return ResponseEntity.ok(adminService.importPlanExcel(adminId, teacherId, file));
+    }
 
 }
+

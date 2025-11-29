@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class AdminSubjectRegistrationDto {
     private String id;
+    private String teacherId;  // ID của User (teacher)
     private String teacherCode;
     private String teacherName;
     private String subjectId;

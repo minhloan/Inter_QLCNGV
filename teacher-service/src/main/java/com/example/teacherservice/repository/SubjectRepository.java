@@ -40,6 +40,8 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     // Refactored methods using Skill relationship
     Optional<Subject> findBySkill_SkillCode(String skillCode);
+    
+    List<Subject> findAllBySkill_SkillCode(String skillCode);
 
     Optional<Subject> findBySkill_SkillCodeIgnoreCase(String skillCode);
 
@@ -49,7 +51,6 @@ public interface SubjectRepository extends JpaRepository<Subject, String> {
 
     Optional<Subject> findBySubjectNameIgnoreCaseAndSystem(String subjectName, SubjectSystem system);
 
-    Optional<Subject> findBySubjectNameIgnoreCase(String subjectName);
 
     Optional<Subject> findBySkill_SkillCodeIgnoreCaseAndSystem(String skillCode, SubjectSystem system);
 

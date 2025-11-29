@@ -22,7 +22,6 @@ public interface AptechExamRepository extends JpaRepository<AptechExam, String> 
             ExamResult result
     );
 
-
     List<AptechExam> findByTeacherIdAndSubjectId(String teacherId, String subjectId);
 
     @Query("SELECT ae FROM AptechExam ae WHERE ae.teacher.id = :teacherId AND YEAR(ae.examDate) = :year")

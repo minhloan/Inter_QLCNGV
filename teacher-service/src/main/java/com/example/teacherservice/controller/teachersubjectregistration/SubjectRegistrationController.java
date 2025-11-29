@@ -94,10 +94,4 @@ public class SubjectRegistrationController {
         ImportPlanResultDto result = subjectRegistrationService.importTeacherPlanExcel(teacherId, year, file);
         return ResponseEntity.ok(result);
     }
-
-
-    @GetMapping("/ping")
-    public String ping() {
-        return "ok";
-    }
 }

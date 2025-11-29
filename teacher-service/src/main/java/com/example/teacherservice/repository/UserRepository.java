@@ -29,5 +29,15 @@ public interface UserRepository extends JpaRepository<User, String> {
     List<User> findAll(Active active);
     
     List<User> findAllByActiveAndIdNot(Active active, String excludedUserId);
+    
+    Optional<User> findByTeacherCode(String teacherCode);
+    
+    // Tìm theo username hoặc teacher code (case-insensitive)
+    @Query("""
+    SELECT u FROM users u 
+    WHERE LOWER(u.username) = LOWER(:searchTerm)
+       OR LOWER(u.teacherCode) = LOWER(:searchTerm)
+    """)
+    Optional<User> findByUsernameOrTeacherCode(@Param("searchTerm") String searchTerm);
 }
 

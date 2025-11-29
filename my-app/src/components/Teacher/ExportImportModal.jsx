@@ -19,8 +19,11 @@ const ExportImportModal = ({
     { label: "Đang hoạt động", value: "ACTIVE" },
     { label: "Ngừng hoạt động", value: "INACTIVE" }
   ],
+  icon = "bi-file-earmark-spreadsheet",
+  headerStyle = {},
   children,
-  importChildren
+  importChildren,
+  importTopChildren
 }) => {
   const [activeTab, setActiveTab] = useState('export');
   const [selectedFilter, setSelectedFilter] = useState(filterOptions[0]?.value || "");
@@ -30,9 +33,9 @@ const ExportImportModal = ({
   return ReactDOM.createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-lg" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+        <div className="modal-header" style={headerStyle}>
           <h5 className="modal-title">
-            <i className="bi bi-file-earmark-spreadsheet me-2"></i>
+            <i className={`bi ${icon} me-2`}></i>
             {title}
           </h5>
           <button className="modal-close" onClick={onClose}>×</button>
@@ -102,6 +105,9 @@ const ExportImportModal = ({
                   <p className="mb-0 small">{importDescription}</p>
                 </div>
               </div>
+
+              {/* Render custom top children for import tab if provided */}
+              {importTopChildren}
 
               <label className="upload-box">
                 <i className="bi bi-cloud-arrow-up"></i>

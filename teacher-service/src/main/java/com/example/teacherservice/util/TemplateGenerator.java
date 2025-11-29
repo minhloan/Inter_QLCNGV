@@ -18,13 +18,9 @@ public class TemplateGenerator {
         
         // Generate BM06.39 template
         generator.generateBM0639Template("src/main/resources/templates/BM06.39-template.docx");
-        System.out.println("✓ Đã tạo BM06.39-template.docx");
-        
+
         // Generate BM06.41 template
         generator.generateBM0641Template("src/main/resources/templates/BM06.41-template.doc");
-        System.out.println("✓ Đã tạo BM06.41-template.doc");
-        
-        System.out.println("\n✓ Hoàn thành! Mở file trong Word để chỉnh sửa format nếu cần.");
     }
 
     /**

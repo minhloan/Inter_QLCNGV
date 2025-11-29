@@ -10,6 +10,7 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
     const [loading, setLoading] = useState(false);
     const [teachers, setTeachers] = useState([]);
     const [loadingTeachers, setLoadingTeachers] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         loadTeachers();
@@ -44,12 +45,17 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
         }));
     };
 
-    // Lọc bỏ các giáo viên đã được thêm vào danh sách attendees
+    // Lọc bỏ các giáo viên đã được thêm vào danh sách attendees và tìm kiếm
     const getAvailableTeachers = () => {
         const addedTeacherIds = attendees
             .filter(attendee => attendee.attendeeUserId)
             .map(attendee => attendee.attendeeUserId);
-        return teachers.filter(teacher => !addedTeacherIds.includes(teacher.id));
+        return teachers
+            .filter(teacher => !addedTeacherIds.includes(teacher.id))
+            .filter(teacher =>
+                teacher.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (teacher.email && teacher.email.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
     };
 
     const handleAddAttendee = async (e) => {
@@ -129,10 +135,39 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                 <div className="modal-body" style={{ maxHeight: 'calc(90vh - 140px)', overflowY: 'auto', overflowX: 'hidden', padding: '20px' }}>
                     {/* Add New Attendee Form */}
                     <div className="add-attendee-section" style={{ marginBottom: '24px' }}>
-                        <h4 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>Thêm người tham dự</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <h4 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Thêm người tham dự</h4>
+
+                            {/* Search Bar */}
+                            <div style={{ flex: 1, maxWidth: '400px', marginLeft: '20px' }}>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Tìm kiếm giáo viên..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
                         <form onSubmit={handleAddAttendee}>
                             <div className="row g-3">
                                 <div className="col-md-5">
+                                    <label className="form-label">Vai trò</label>
+                                    <select
+                                        className="form-select"
+                                        name="attendeeRole"
+                                        value={newAttendee.attendeeRole}
+                                        onChange={handleInputChange}
+                                        required
+                                    >
+                                        <option value="">Chọn vai trò</option>
+                                        <option value="CHU_TOA">Chủ tọa</option>
+                                        <option value="THU_KY">Thư ký</option>
+                                        <option value="THANH_VIEN">Thành viên</option>
+                                    </select>
+                                </div>
+                                <div className="col-md-4">
                                     <label className="form-label">Giáo viên</label>
                                     {loadingTeachers ? (
                                         <div className="form-control">
@@ -160,21 +195,6 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                                             Tất cả giáo viên đã được thêm vào danh sách
                                         </small>
                                     )}
-                                </div>
-                                <div className="col-md-4">
-                                    <label className="form-label">Vai trò</label>
-                                    <select
-                                        className="form-select"
-                                        name="attendeeRole"
-                                        value={newAttendee.attendeeRole}
-                                        onChange={handleInputChange}
-                                        required
-                                    >
-                                        <option value="">Chọn vai trò</option>
-                                        <option value="CHU_TOA">Chủ tọa</option>
-                                        <option value="THU_KY">Thư ký</option>
-                                        <option value="THANH_VIEN">Thành viên</option>
-                                    </select>
                                 </div>
                                 <div className="col-md-3 d-flex align-items-end">
                                     <button
@@ -215,49 +235,49 @@ const TrialAttendeeModal = ({ trialId, attendees, onClose, onSuccess, onToast })
                                     }}
                                 >
                                     <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f8f9fa', zIndex: 10 }}>
-                                    <tr>
-                                        <th style={{ width: 'auto' }}>Tên</th>
-                                        <th style={{ width: 'auto' }}>Vai trò</th>
-                                        <th style={{ width: '80px', minWidth: '60px', textAlign: 'center' }}>Thao tác</th>
-                                    </tr>
+                                        <tr>
+                                            <th style={{ width: 'auto' }}>Tên</th>
+                                            <th style={{ width: 'auto' }}>Vai trò</th>
+                                            <th style={{ width: '80px', minWidth: '60px', textAlign: 'center' }}>Thao tác</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                    {attendees.map(attendee => (
-                                        <tr key={attendee.id}>
-                                            <td style={{
-                                                wordBreak: 'break-word',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                maxWidth: 0
-                                            }}>
-                                                {attendee.attendeeName}
-                                            </td>
-                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                        {attendees.map(attendee => (
+                                            <tr key={attendee.id}>
+                                                <td style={{
+                                                    wordBreak: 'break-word',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    maxWidth: 0
+                                                }}>
+                                                    {attendee.attendeeName}
+                                                </td>
+                                                <td style={{ whiteSpace: 'nowrap' }}>
                                                     <span className="badge badge-status secondary">
                                                         {getRoleLabel(attendee.attendeeRole)}
                                                     </span>
-                                            </td>
-                                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '80px', minWidth: '60px' }}>
-                                                <button
-                                                    className="btn btn-sm btn-outline-danger"
-                                                    onClick={() => handleRemoveAttendee(attendee.id)}
-                                                    disabled={loading}
-                                                    style={{
-                                                        minWidth: '36px',
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        padding: '0',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                    title="Xóa"
-                                                >
-                                                    <i className="bi bi-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '80px', minWidth: '60px' }}>
+                                                    <button
+                                                        className="btn btn-sm btn-outline-danger"
+                                                        onClick={() => handleRemoveAttendee(attendee.id)}
+                                                        disabled={loading}
+                                                        style={{
+                                                            minWidth: '36px',
+                                                            width: '36px',
+                                                            height: '36px',
+                                                            padding: '0',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                        title="Xóa"
+                                                    >
+                                                        <i className="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
