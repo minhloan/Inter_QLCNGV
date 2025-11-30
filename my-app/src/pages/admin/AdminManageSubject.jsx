@@ -261,6 +261,9 @@ const AdminManageSubject = () => {
                                     <button className="dropdown-item" onClick={handleExportAllSkill}>
                                         <i className="bi bi-cloud-download me-2"></i> Xuất All Skill
                                     </button>
+                                    <button className="dropdown-item" onClick={() => navigate('/manage-skills')}>
+                                        <i className="bi bi-list-ul me-2"></i> Quản lý Skill
+                                    </button>
                                     <button
                                         className="dropdown-item"
                                         onClick={() => fileInputRef.current?.click()}

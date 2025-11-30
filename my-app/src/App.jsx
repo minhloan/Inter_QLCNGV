@@ -23,6 +23,8 @@ import AdminManageSubjectSystem from "./pages/admin/AdminManageSubjectSystem.jsx
 import AdminManageSubjectSystemAdd from "./pages/admin/AdminManageSubjectSystemAdd.jsx";
 import AdminManageSubjectSystemEdit from "./pages/admin/AdminManageSubjectSystemEdit.jsx";
 import AdminManageSubjectAssignment from "./pages/admin/AdminManageSubjectAssignment.jsx";
+import AdminManageSkill from "./pages/admin/AdminManageSkill.jsx";
+import AdminManageSkillEdit from "./pages/admin/AdminManageSkillEdit.jsx";
 
 
 // Teacher pages
@@ -37,6 +39,7 @@ import TeacherTeachingAssignmentDetail from "./pages/teacher/TeacherTeachingAssi
 import Notifications from './pages/Notifications';
 
 import './assets/styles/Common.css';
+import './assets/styles/NewSkillBadge.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import AdminManageSubjectAdd from "./pages/admin/AdminManageSubjectAdd.jsx";
 import TrialTeachingDetail from "./pages/admin/TrialTeachingDetail.jsx";
@@ -128,31 +131,47 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-        <Route
-            path="/teacher-trial-teaching-detail/:id"
-            element={
-                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
-                    <TeacherTrialTeachingDetail />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/manage-subject-detail/:id"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminManageSubjectDetail />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/teacher-trial-teaching-detail/:id"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <TeacherTrialTeachingDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manage-subject-detail/:id"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSubjectDetail />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-            path="/manage-subject-edit/:id"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminManageSubjectEdit />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/manage-subject-edit/:id"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSubjectEdit />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manage-skills"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSkill />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manage-skills-edit/:id"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSkillEdit />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/teacher-dashboard"
         element={
@@ -161,7 +180,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      
+
       {/* Admin Routes */}
       <Route
         path="/subject-registration-management"
@@ -171,38 +190,46 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-        <Route
-            path="/aptech-exam-management"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AptechExamManagement />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/aptech-exam/sessions"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminAptechSessionList />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/aptech-exam/add"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminAptechSesssionExamAdd />
-                </ProtectedRoute>
-            }
-        />
-        {/*<Route*/}
-        {/*    path="/teacher/aptech-exam-detail/:id"*/}
-        {/*    element={*/}
-        {/*        <ProtectedRoute requiredRole="Manage-Leader">*/}
-        {/*            <AptechExamDetail />*/}
-        {/*        </ProtectedRoute>*/}
-        {/*    }*/}
-        {/*/>*/}
+      <Route
+        path="/aptech-exam-management"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AptechExamManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manage-skills"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSkill />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/aptech-exam/sessions"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminAptechSessionList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/aptech-exam/add"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminAptechSesssionExamAdd />
+          </ProtectedRoute>
+        }
+      />
+      {/*<Route*/}
+      {/*    path="/teacher/aptech-exam-detail/:id"*/}
+      {/*    element={*/}
+      {/*        <ProtectedRoute requiredRole="Manage-Leader">*/}
+      {/*            <AptechExamDetail />*/}
+      {/*        </ProtectedRoute>*/}
+      {/*    }*/}
+      {/*/>*/}
       <Route
         path="/trial-teaching-management"
         element={
@@ -228,75 +255,75 @@ function AppRoutes() {
         }
       />
       <Route
-            path="/teaching-assignment-management-add"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <TeachingAssignmentAdd />
-                </ProtectedRoute>
-            }
+        path="/teaching-assignment-management-add"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <TeachingAssignmentAdd />
+          </ProtectedRoute>
+        }
       />
 
-        <Route
-            path="/teaching-assignment-detail/:id"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <TeachingAssignmentDetail />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/teaching-assignment-detail/:id"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <TeachingAssignmentDetail />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-            path="/manage-subject-systems"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminManageSubjectSystem />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/manage-subject-systems"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSubjectSystem />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-            path="/manage-subject-system-add"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminManageSubjectSystemAdd />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/manage-subject-system-add"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSubjectSystemAdd />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-            path="/manage-subject-system-edit/:id"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminManageSubjectSystemEdit />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/manage-subject-system-edit/:id"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSubjectSystemEdit />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-            path="/manage-subject-system-assign/:systemId"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <AdminManageSubjectAssignment />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/manage-subject-system-assign/:systemId"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminManageSubjectAssignment />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-            path="/trial-teaching-detail/:id"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <TrialTeachingDetail />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/trial-teaching-add"
-            element={
-                <ProtectedRoute requiredRole="Manage-Leader">
-                    <TrialTeachingAdd />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/trial-teaching-detail/:id"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <TrialTeachingDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trial-teaching-add"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <TrialTeachingAdd />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/reporting-export"
         element={
@@ -313,7 +340,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      
+
       {/* Teacher Routes - Manage-Leader cũng có thể truy cập vì có thể làm giáo viên */}
       <Route
         path="/edit-profile"
@@ -323,14 +350,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-        <Route
-            path="/teacher/aptech-exam-detail/:id"
-            element={
-                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
-                    <AptechExamDetail />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/teacher/aptech-exam-detail/:id"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <AptechExamDetail />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/teacher-subject-registration"
         element={
@@ -339,34 +366,34 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-        <Route
-            path="/subject-registration-detail/:id"
-            element={<SubjectRegistrationDetail />}
-        />
-        <Route
-            path="/teacher-aptech-exam"
-            element={
-                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
-                    <TeacherAptechExam />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/teacher/aptech-exam-add"
-            element={
-                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
-                    <AptechExamAdd />
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/teacher/aptech-exam-take"
-            element={
-                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
-                    <AptechExamTake />
-                </ProtectedRoute>
-            }
-        />
+      <Route
+        path="/subject-registration-detail/:id"
+        element={<SubjectRegistrationDetail />}
+      />
+      <Route
+        path="/teacher-aptech-exam"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <TeacherAptechExam />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/aptech-exam-add"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <AptechExamAdd />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/aptech-exam-take"
+        element={
+          <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+            <AptechExamTake />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/teacher-trial-teaching"
         element={

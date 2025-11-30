@@ -1,0 +1,114 @@
+
+/* ===================== NEW SKILL BADGE STYLES ===================== */
+
+/* Badge NEW cho skill mới */
+.subject-badge-new {
+    display: inline-block;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: pulseGlow 2s ease-in-out infinite;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    vertical-align: middle;
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
+        transform: scale(1.05);
+    }
+}
+
+/* Màu động dựa theo thời gian tạo - sử dụng data attribute hoặc class modifiers */
+.subject-badge-new.badge-fresh {
+    /* 0-3 tháng - Xanh lá */
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.subject-badge-new.badge-recent {
+    /* 3-6 tháng - Vàng */
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.subject-badge-new.badge-moderate {
+    /* 6-12 tháng - Cam */
+    background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+    box-shadow: 0 2px 8px rgba(251, 146, 60, 0.3);
+}
+
+.subject-badge-new.badge-old {
+    /* >12 tháng - Đỏ */
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Highlight row cho subject mới trong table view */
+.subject-row-new {
+    position: relative;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
+    animation: highlightFade 3s ease-in-out;
+}
+
+@keyframes highlightFade {
+    0% {
+        background: rgba(16, 185, 129, 0.15);
+    }
+    100% {
+        background: rgba(16, 185, 129, 0.05);
+    }
+}
+
+/* Badge cho detail page */
+.detail-badge-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.detail-badge-new::before {
+    content: '🆕';
+    font-size: 14px;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.85;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .subject-badge-new {
+        font-size: 9px;
+        padding: 2px 6px;
+        margin-left: 6px;
+    }
+    
+    .detail-badge-new {
+        font-size: 11px;
+        padding: 5px 12px;
+    }
+}

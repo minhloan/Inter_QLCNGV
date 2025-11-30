@@ -106,16 +106,36 @@ public class SubjectServiceImpl implements SubjectService {
         // Update Skill if code/description provided
         if (request.getSubjectCode() != null && !request.getSubjectCode().isBlank()) {
             String code = request.getSubjectCode().trim();
-            Skill skill = skillRepository.findBySkillCode(code)
-                    .orElseGet(() -> {
-                        Skill newSkill = Skill.builder()
-                                .skillCode(code)
-                                .skillName(request.getDescription())
-                                .isActive(true)
-                                .build();
-                        return skillRepository.save(newSkill);
-                    });
-            toUpdate.setSkill(skill);
+            
+            // Check if skill already exists
+            Skill existingSkill = skillRepository.findBySkillCode(code).orElse(null);
+            
+            if (existingSkill != null) {
+                // Skill exists - just link it
+                toUpdate.setSkill(existingSkill);
+            } else {
+                // Creating NEW skill - validate description is required
+                if (!StringUtils.hasText(request.getDescription())) {
+                    throw new IllegalArgumentException(
+                        "Mô tả (Description) là bắt buộc khi thêm Skill Code mới chưa có trong hệ thống"
+                    );
+                }
+                
+                // Create and save new skill
+                Skill newSkill = Skill.builder()
+                        .skillCode(code)
+                        .skillName(request.getDescription().trim())
+                        .isActive(true)
+                        .isNew(true)  // Mark as new skill
+                        .build();
+                Skill savedSkill = skillRepository.save(newSkill);
+                
+                // Link the new skill
+                toUpdate.setSkill(savedSkill);
+                
+                // Mark this subject as having a new skill
+                toUpdate.setIsNewSubject(true);
+            }
         }
 
         // HOURS OPTIONAL

@@ -42,6 +42,7 @@ const AdminManageSubjectEdit = () => {
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [imageRemoved, setImageRemoved] = useState(false);
+    const [originalSubjectCode, setOriginalSubjectCode] = useState('');
 
     const showToast = useCallback((title, message, type) => {
         setToast({ show: true, title, message, type });
@@ -103,6 +104,9 @@ const AdminManageSubjectEdit = () => {
                     imageFileId: fileId,
                 });
 
+                // Track original skill code to detect changes
+                setOriginalSubjectCode(data.subjectCode || '');
+
                 if (fileId) {
                     try {
                         const blobUrl = await getFile(fileId);
@@ -157,6 +161,17 @@ const AdminManageSubjectEdit = () => {
 
         if (formData.hours && Number(formData.hours) <= 0) {
             return showToast("Lỗi", "Số giờ phải là số dương", "danger");
+        }
+
+        // 🆕 Validate: Nếu thay đổi Skill Code, bắt buộc phải nhập description
+        if (formData.subjectCode.trim() !== originalSubjectCode.trim()) {
+            if (!formData.description || !formData.description.trim()) {
+                return showToast(
+                    "Lỗi",
+                    "Mô tả (Description) là bắt buộc khi thêm Skill Code mới",
+                    "danger"
+                );
+            }
         }
 
         try {

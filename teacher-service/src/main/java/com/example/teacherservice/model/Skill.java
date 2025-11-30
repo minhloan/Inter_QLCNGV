@@ -28,4 +28,8 @@ public class Skill extends BaseEntity {
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+    
+    @Builder.Default
+    @Column(name = "is_new", nullable = false)
+    private Boolean isNew = false;
 }

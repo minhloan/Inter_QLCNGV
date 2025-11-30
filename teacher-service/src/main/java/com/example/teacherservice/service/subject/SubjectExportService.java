@@ -27,9 +27,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SubjectExportService {
-
     private final SubjectSystemRepository systemRepo;
-    private final SubjectRepository subjectRepo;
     private final SubjectSystemAssignmentRepository assignmentRepo;
     private final SkillRepository skillRepo;
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MM/yyyy");
@@ -133,28 +131,88 @@ public class SubjectExportService {
 
             int rowIndex = 0;
             rowIndex = writeMergedRow(sheet, rowIndex,
-                    "DANH SÁCH ALL SKILL APTECH", styles.title);
+                    "All Skills in Aptech Portal", styles.title);
             rowIndex++;
 
             Row header = sheet.createRow(rowIndex++);
-            createCell(header, 0, "STT", styles.tableHeader);
-            createCell(header, 1, "Skill No", styles.tableHeader);
-            createCell(header, 2, "Skill Name", styles.tableHeader);
-            createCell(header, 3, "Ghi chú", styles.tableHeader);
+            createCell(header, 0, "Skill No", styles.tableHeader);
+            createCell(header, 1, "Skill Name", styles.tableHeader);
+            createCell(header, 2, "", styles.tableHeader); // Note column
 
             List<Skill> skills = skillRepo.findAllByOrderBySkillCodeAsc();
+            
+            // Sort by numeric value of skill code
+            skills.sort((s1, s2) -> {
+                String code1 = s1.getSkillCode();
+                String code2 = s2.getSkillCode();
+                
+                if (code1 == null && code2 == null) return 0;
+                if (code1 == null) return 1;
+                if (code2 == null) return -1;
+                
+                try {
+                    Integer num1 = Integer.parseInt(code1);
+                    Integer num2 = Integer.parseInt(code2);
+                    return num1.compareTo(num2);
+                } catch (NumberFormatException e) {
+                    return code1.compareTo(code2);
+                }
+            });
 
-            int order = 1;
+            DateTimeFormatter monthYearFormatter = DateTimeFormatter.ofPattern("MM/yyyy");
+
             for (Skill skill : skills) {
                 Row row = sheet.createRow(rowIndex++);
-                createCell(row, 0, String.valueOf(order++), styles.dataCenter);
-                createCell(row, 1,
-                        nullSafe(skill.getSkillCode()), styles.dataCenter);
-                createCell(row, 2, nullSafe(skill.getSkillName()), styles.dataLeftWrap);
+                
+                // Determine style based on isNew and Date
+                CellStyle leftStyle = styles.dataLeft;
+                CellStyle centerStyle = styles.dataCenter;
+                
+                String note = "";
+                if (Boolean.TRUE.equals(skill.getIsNew())) {
+                    String dateStr = "";
+                    if (skill.getUpdateTimestamp() != null) {
+                        dateStr = skill.getUpdateTimestamp().format(monthYearFormatter);
+                    } else if (skill.getCreationTimestamp() != null) {
+                        dateStr = skill.getCreationTimestamp().format(monthYearFormatter);
+                    }
+                    note = "New " + dateStr;
 
-                Cell noteCell = row.createCell(3);
-                noteCell.setCellValue("");
-                noteCell.setCellStyle(styles.dataLeft);
+                    // Apply colors based on year/date to match Image 1 style
+                    if (dateStr.endsWith("2024")) {
+                        if (dateStr.startsWith("06") || dateStr.startsWith("05") || dateStr.startsWith("04")) {
+                            leftStyle = styles.styleOrangeLeft;
+                            centerStyle = styles.styleOrangeCenter;
+                        } else {
+                            leftStyle = styles.styleYellowLeft;
+                            centerStyle = styles.styleYellowCenter;
+                        }
+                    } else if (dateStr.endsWith("2025")) {
+                        if (dateStr.startsWith("03") || dateStr.startsWith("01") || dateStr.startsWith("02")) {
+                            leftStyle = styles.styleGreenLeft;
+                            centerStyle = styles.styleGreenCenter;
+                        } else {
+                            leftStyle = styles.styleBlueLeft;
+                            centerStyle = styles.styleBlueCenter;
+                        }
+                    } else if (dateStr.endsWith("2026")) {
+                        leftStyle = styles.stylePinkLeft;
+                        centerStyle = styles.stylePinkCenter;
+                    } else {
+                        // Default for other new items
+                        leftStyle = styles.styleGreenLeft;
+                        centerStyle = styles.styleGreenCenter;
+                    }
+                }
+
+                // Skill No
+                createCell(row, 0, nullSafe(skill.getSkillCode()), centerStyle);
+                
+                // Skill Name
+                createCell(row, 1, nullSafe(skill.getSkillName()), leftStyle);
+                
+                // Note (New MM/yyyy)
+                createCell(row, 2, note, leftStyle);
             }
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -311,16 +369,14 @@ public class SubjectExportService {
         sheet.setColumnWidth(0, 256 * 6);
         sheet.setColumnWidth(1, 256 * 45);
         sheet.setColumnWidth(2, 256 * 20);
-        sheet.setColumnWidth(3, 256 * 45);
     }
 
     private void configureAllSkillColumns(Sheet sheet) {
-        sheet.setColumnWidth(0, 256 * 6);   // STT
-        sheet.setColumnWidth(1, 256 * 15);  // Mã Skill
-        sheet.setColumnWidth(2, 256 * 50);  // Skill Name
-        sheet.setColumnWidth(3, 256 * 18);  // Ghi chú
+        sheet.setColumnWidth(0, 256 * 12);  // Skill No
+        sheet.setColumnWidth(1, 256 * 85);  // Skill Name
+        sheet.setColumnWidth(2, 256 * 20);  // Note (New MM/yyyy)
     }
-
+    
     private int writeTitleBlock(Sheet sheet, int rowIndex, SubjectSystem system, ExportStyles styles) {
         rowIndex = writeMergedRow(sheet, rowIndex, TITLE_LINE_1, styles.title);
         rowIndex = writeMergedRow(sheet, rowIndex, TITLE_LINE_2, styles.subtitle);
@@ -405,7 +461,7 @@ public class SubjectExportService {
     private int writeMergedRow(Sheet sheet, int rowIndex, String text, CellStyle style) {
         Row row = sheet.createRow(rowIndex++);
         createCell(row, 0, text, style);
-        sheet.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, 3));
+        sheet.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, 2));
         return rowIndex;
     }
 
@@ -427,11 +483,6 @@ public class SubjectExportService {
         return subject != null ? subject.getSemester() : null;
     }
 
-    private String formatMonth(LocalDateTime dateTime) {
-        LocalDateTime current = dateTime != null ? dateTime : LocalDateTime.now();
-        return current.format(MONTH_FORMATTER);
-    }
-
     private static class ExportStyles {
         private final CellStyle title;
         private final CellStyle subtitle;
@@ -444,10 +495,23 @@ public class SubjectExportService {
         private final CellStyle emptyRow;
         private final CellStyle customHeader;
         private final CellStyle newBadge;
+        
+        // Dynamic Color Styles
+        private final CellStyle styleOrangeLeft;
+        private final CellStyle styleOrangeCenter;
+        private final CellStyle styleYellowLeft;
+        private final CellStyle styleYellowCenter;
+        private final CellStyle styleGreenLeft;
+        private final CellStyle styleGreenCenter;
+        private final CellStyle styleBlueLeft;
+        private final CellStyle styleBlueCenter;
+        private final CellStyle stylePinkLeft;
+        private final CellStyle stylePinkCenter;
+
         private final Map<Semester, CellStyle> semesterHeaderStyles = new EnumMap<>(Semester.class);
 
         private ExportStyles(Workbook workbook) {
-            this.title = createTitleStyle(workbook, (short) 14, true);
+            this.title = createTitleStyle(workbook, (short) 20, true);
             this.subtitle = createTitleStyle(workbook, (short) 12, true);
             this.status = createStatusStyle(workbook);
             this.meta = createMetaStyle(workbook);
@@ -458,6 +522,22 @@ public class SubjectExportService {
             this.emptyRow = createEmptyRowStyle(workbook);
             this.customHeader = createBlockHeaderStyle(workbook, IndexedColors.GREY_50_PERCENT.getIndex());
             this.newBadge = createNewBadgeStyle(workbook);
+            
+            // Initialize Dynamic Styles
+            this.styleOrangeLeft = createColoredStyle(workbook, HorizontalAlignment.LEFT, IndexedColors.LIGHT_ORANGE.getIndex());
+            this.styleOrangeCenter = createColoredStyle(workbook, HorizontalAlignment.CENTER, IndexedColors.LIGHT_ORANGE.getIndex());
+            
+            this.styleYellowLeft = createColoredStyle(workbook, HorizontalAlignment.LEFT, IndexedColors.LEMON_CHIFFON.getIndex());
+            this.styleYellowCenter = createColoredStyle(workbook, HorizontalAlignment.CENTER, IndexedColors.LEMON_CHIFFON.getIndex());
+            
+            this.styleGreenLeft = createColoredStyle(workbook, HorizontalAlignment.LEFT, IndexedColors.LIGHT_GREEN.getIndex());
+            this.styleGreenCenter = createColoredStyle(workbook, HorizontalAlignment.CENTER, IndexedColors.LIGHT_GREEN.getIndex());
+            
+            this.styleBlueLeft = createColoredStyle(workbook, HorizontalAlignment.LEFT, IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+            this.styleBlueCenter = createColoredStyle(workbook, HorizontalAlignment.CENTER, IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+            
+            this.stylePinkLeft = createColoredStyle(workbook, HorizontalAlignment.LEFT, IndexedColors.ROSE.getIndex());
+            this.stylePinkCenter = createColoredStyle(workbook, HorizontalAlignment.CENTER, IndexedColors.ROSE.getIndex());
 
             semesterHeaderStyles.put(Semester.SEMESTER_1,
                     createBlockHeaderStyle(workbook, IndexedColors.LIGHT_GREEN.getIndex()));
@@ -467,6 +547,13 @@ public class SubjectExportService {
                     createBlockHeaderStyle(workbook, IndexedColors.LIGHT_ORANGE.getIndex()));
             semesterHeaderStyles.put(Semester.SEMESTER_4,
                     createBlockHeaderStyle(workbook, IndexedColors.GREY_25_PERCENT.getIndex()));
+        }
+        
+        private CellStyle createColoredStyle(Workbook wb, HorizontalAlignment align, short colorIndex) {
+            CellStyle style = createDataStyle(wb, align, false);
+            style.setFillForegroundColor(colorIndex);
+            style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            return style;
         }
 
         private CellStyle semesterHeader(Semester semester) {
