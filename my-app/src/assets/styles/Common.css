@@ -1371,6 +1371,84 @@ body {
     font-size: 12px;
 }
 
+/* Sidebar Header with Toggle Button */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    /* Use a slimmer bottom gap and draw the divider on the header so
+       the toggle sits horizontally aligned with the date text */
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header .sidebar-date {
+    /* Override the larger spacing applied to .sidebar-date elsewhere
+       so it doesn't push the toggle vertically out of alignment */
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.sidebar-toggle-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-light);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--text-dark);
+    transition: all 0.3s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: var(--orange-primary);
+    color: white;
+    border-color: var(--orange-primary);
+}
+
+/* Collapsed Sidebar State */
+.left-sidebar.collapsed {
+    width: 80px;
+    padding: 15px 10px;
+}
+.left-sidebar.collapsed .sidebar-toggle-btn {
+    /* Keep toggle compact when collapsed */
+    width: 36px;
+    /* Shift slightly to the right when collapsed */
+    margin-left: 8px;
+}
+.left-sidebar.collapsed .sidebar-header {
+    /* Keep header items on one row so the toggle aligns horizontally with the date */
+    flex-direction: row;
+    margin-bottom: 15px;
+}
+
+.left-sidebar.collapsed .sidebar-nav-link {
+    justify-content: center;
+    padding: 12px 8px;
+}
+
+.left-sidebar.collapsed .sidebar-nav-link span {
+    display: none;
+}
+
+.left-sidebar.collapsed .sidebar-nav-link i {
+    width: auto;
+}
+
+.left-sidebar.collapsed .sidebar-toggle-btn {
+    /* Keep toggle compact when collapsed */
+    width: 36px;
+}
+
 /* Main Content Area */
 .main-content {
     flex: 1;
@@ -3076,6 +3154,10 @@ body {
     }
 
     .left-sidebar {
+        display: none;
+    }
+
+    .left-sidebar.collapsed {
         display: none;
     }
 

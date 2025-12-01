@@ -20,6 +20,8 @@ const AptechExamAdd = () => {
     const fullWidthFieldStyle = { gridColumn: '1 / -1' };
     const [sessions, setSessions] = useState([]);
     const [subjects, setSubjects] = useState([]);
+    const [filteredSubjects, setFilteredSubjects] = useState([]);
+    const [subjectSearch, setSubjectSearch] = useState('');
     const [previousExams, setPreviousExams] = useState([]);
     const [selectedSession, setSelectedSession] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -31,6 +33,16 @@ const AptechExamAdd = () => {
     useEffect(() => {
         loadData();
     }, []);
+
+    useEffect(() => {
+        if (subjectSearch.trim() === '') {
+            setFilteredSubjects(subjects);
+        } else {
+            setFilteredSubjects(subjects.filter(s =>
+                s.subjectName.toLowerCase().includes(subjectSearch.toLowerCase())
+            ));
+        }
+    }, [subjectSearch, subjects]);
 
     useEffect(() => {
         if (selectedSubject) {
@@ -48,6 +60,7 @@ const AptechExamAdd = () => {
             ]);
             setSessions(sessionsData);
             setSubjects(subjectsData);
+            setFilteredSubjects(subjectsData);
             setPreviousExams(examsData);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu', 'danger');
@@ -128,6 +141,23 @@ const AptechExamAdd = () => {
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     };
 
+    // Hàm kiểm tra phiên thi có trong quá khứ hay không
+    const isSessionInPast = (session) => {
+        if (!session.examDate || !session.examTime) return false;
+        let date = session.examDate;
+        if (date.includes('/')) {
+            const [d, m, y] = date.split('/');
+            date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        const time = session.examTime || '00:00';
+        const sessionDateTime = new Date(`${date}T${time}`);
+        const now = new Date();
+        return sessionDateTime.getTime() < now.getTime();
+    };
+
+    // Lọc phiên thi trong quá khứ
+    const upcomingSessions = sessions.filter(session => !isSessionInPast(session));
+
     const selectedSessionData = sessions.find(s => s.id === selectedSession);
 
     if (loading) {
@@ -167,11 +197,15 @@ const AptechExamAdd = () => {
                                         required
                                     >
                                         <option value="">Chọn phiên thi</option>
-                                        {sessions.map(session => (
-                                            <option key={session.id} value={session.id}>
-                                                {session.examDate} - {session.room}
-                                            </option>
-                                        ))}
+                                        {upcomingSessions.length > 0 ? (
+                                            upcomingSessions.map(session => (
+                                                <option key={session.id} value={session.id}>
+                                                    {session.examDate} - {session.room}
+                                                </option>
+                                            ))
+                                        ) : (
+                                            <option value="" disabled>Không có phiên thi nào khả dụng</option>
+                                        )}
                                     </select>
                                 </div>
 
@@ -233,6 +267,13 @@ const AptechExamAdd = () => {
 
                                 <div className="form-group">
                                     <label className="form-label">Môn thi *</label>
+                                    <input
+                                        type="text"
+                                        className="form-control mb-2"
+                                        placeholder="Tìm kiếm môn học..."
+                                        value={subjectSearch}
+                                        onChange={e => setSubjectSearch(e.target.value)}
+                                    />
                                     <select
                                         className="form-select"
                                         value={selectedSubject}
@@ -240,7 +281,7 @@ const AptechExamAdd = () => {
                                         required
                                     >
                                         <option value="">Chọn môn thi</option>
-                                        {subjects.map(subject => (
+                                        {filteredSubjects.map(subject => (
                                             <option key={subject.id} value={subject.id}>
                                                 {subject.subjectName}
                                             </option>

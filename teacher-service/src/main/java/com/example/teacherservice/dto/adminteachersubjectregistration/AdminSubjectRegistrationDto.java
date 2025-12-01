@@ -14,6 +14,9 @@ public class AdminSubjectRegistrationDto {
     private String subjectCode;
     private String systemName;
     private String semester;
+    private String reasonForCarryOver;
+    private String reasonForCarryOver2;
+    private String teacherNotes;
     private Integer year;
     private Quarter quarter;
     private String registrationDate;

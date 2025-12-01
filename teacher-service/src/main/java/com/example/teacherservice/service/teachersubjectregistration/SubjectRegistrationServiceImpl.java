@@ -5,6 +5,7 @@ import com.example.teacherservice.dto.teachersubjectregistration.ImportPlanResul
 import com.example.teacherservice.dto.teachersubjectregistration.SubjectRegistrationsDto;
 import com.example.teacherservice.enums.Quarter;
 import com.example.teacherservice.enums.RegistrationStatus;
+import com.example.teacherservice.enums.Semester;
 import com.example.teacherservice.model.Subject;
 import com.example.teacherservice.model.SubjectRegistration;
 import com.example.teacherservice.model.User;
@@ -25,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -85,16 +87,20 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 .subjectCode(e.getSubject().getSkillCode())
                 .subjectName(e.getSubject().getSubjectName())
                 .systemName(
-                        e.getSubject().getSystem() != null ?
-                                e.getSubject().getSystem().getSystemName() : "N/A"
+                        e.getSubject().getSystem() != null
+                                ? e.getSubject().getSystem().getSystemName()
+                                : "N/A"
                 )
                 .semester(
-                        e.getSubject().getSemester() != null ?
-                                e.getSubject().getSemester().name() : "N/A"
+                        e.getSubject().getSemester() != null
+                                ? formatSemester(e.getSubject().getSemester())
+                                : "N/A"
                 )
                 .year(e.getYear())
-                .quarter(e.getQuarter() != null ? e.getQuarter() : null)
-                .reasonForCarryOver(e.getReasonForCarryOver())
+                .quarter(e.getQuarter())
+                .reasonForCarryOver(e.getReasonForCarryOver())     // Hình thức chuẩn bị
+                .reasonForCarryOver2(e.getReasonForCarryOver2())   // Lý do dời môn
+                .teacherNotes(e.getTeacherNotes())                 // Ghi chú giáo viên
                 .status(e.getStatus())
                 .registrationDate(
                         e.getCreationTimestamp() != null
@@ -103,6 +109,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 )
                 .build();
     }
+
 
     @Override
     public SubjectRegistrationsDto createRegistration(SubjectRegistrationsDto dto) {
@@ -117,7 +124,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
         }
 
         if (dto.getSubjectId() == null || dto.getYear() == null || dto.getQuarter() == null) {
-            throw new IllegalArgumentException("Thiếu thông tin cần thiết để đăng ký môn học");
+            throw new IllegalArgumentException("Thiếu thông tin để đăng ký môn học");
         }
 
         SubjectRegistration registration = SubjectRegistration.builder()
@@ -125,13 +132,23 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 .subject(subject)
                 .year(dto.getYear())
                 .quarter(dto.getQuarter())
+
+                // Hình thức chuẩn bị
                 .reasonForCarryOver(dto.getReasonForCarryOver())
+
+                // Lý do dời môn (tạm để null khi tạo mới)
+                .reasonForCarryOver2(dto.getReasonForCarryOver2())
+
+                // Ghi chú của giáo viên
+                .teacherNotes(dto.getTeacherNotes())
+
                 .status(dto.getStatus() != null ? dto.getStatus() : RegistrationStatus.REGISTERED)
                 .build();
 
         SubjectRegistration saved = subjectRegistrationRepository.save(registration);
         return toDto(saved);
     }
+
 
     @Override
     public SubjectRegistrationsDto carryOver(
@@ -172,98 +189,20 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
     }
 
     // =================== KẾ HOẠCH NĂM - EXPORT EXCEL (THEO TEMPLATE) ===================
+    // =================== KẾ HOẠCH NĂM - EXPORT EXCEL (THEO TEMPLATE) ===================
     @Override
     public void exportPlanExcel(HttpServletResponse response, String teacherId, Integer yearRequest) {
 
-        ClassPathResource resource = new ClassPathResource("templates/ke_hoach_chuyen_mon_template.xlsx");
-        
-        // Validate file exists
-        if (!resource.exists()) {
-            throw new RuntimeException("Template file not found: templates/ke_hoach_chuyen_mon_template.xlsx. " +
-                    "Please ensure the file exists in src/main/resources/templates/");
-        }
-
-        // Validate file is readable
-        if (!resource.isReadable()) {
-            throw new RuntimeException("Template file is not readable: templates/ke_hoach_chuyen_mon_template.xlsx");
-        }
-
-        InputStream templateStream = null;
-        Workbook wb = null;
         try {
-            templateStream = resource.getInputStream();
-
-            if (templateStream == null) {
-                throw new RuntimeException("Cannot open input stream for template file");
+            // Load template
+            ClassPathResource resource = new ClassPathResource("templates/ke_hoach_chuyen_mon_template.xlsx");
+            if (!resource.exists()) {
+                throw new RuntimeException("Không tìm thấy template Excel!");
             }
 
-            // Đọc file vào memory trước để tránh lỗi ZIP
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            byte[] bufferArray = new byte[8192];
-            int nRead;
-            long totalBytes = 0;
-            while ((nRead = templateStream.read(bufferArray, 0, bufferArray.length)) != -1) {
-                buffer.write(bufferArray, 0, nRead);
-                totalBytes += nRead;
-            }
-            buffer.flush();
-            byte[] fileBytes = buffer.toByteArray();
-            
-            if (fileBytes.length == 0) {
-                throw new RuntimeException("Template file is empty. File size: " + totalBytes + " bytes");
-            }
+            Workbook wb = WorkbookFactory.create(resource.getInputStream());
 
-            // Kiểm tra magic number của file Excel (XLSX bắt đầu với PK - ZIP signature)
-            if (fileBytes.length < 4 || (fileBytes[0] != 0x50 || fileBytes[1] != 0x4B)) {
-                throw new RuntimeException("Template file is not a valid Excel file. " +
-                        "Expected ZIP signature (PK) but found different bytes. File might be corrupted.");
-            }
-
-            // Load workbook từ byte array - dùng WorkbookFactory để xử lý tốt hơn
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes)) {
-                wb = WorkbookFactory.create(bais);
-            } catch (java.util.zip.ZipException zipEx) {
-                throw new RuntimeException("Template Excel file is corrupted (ZIP error). " +
-                        "Please replace the template file with a valid Excel (.xlsx) file. " +
-                        "File size: " + fileBytes.length + " bytes. Error: " + zipEx.getMessage(), zipEx);
-            } catch (Exception e) {
-                // Kiểm tra nếu là DataFormatException (nested trong ZipException)
-                Throwable cause = e.getCause();
-                if (cause instanceof java.util.zip.DataFormatException || 
-                    cause instanceof java.util.zip.ZipException ||
-                    e.getMessage() != null && e.getMessage().contains("invalid stored block lengths")) {
-                    throw new RuntimeException("Template Excel file is corrupted (ZIP/DataFormat error). " +
-                            "Please replace the template file 'ke_hoach_chuyen_mon_template.xlsx' with a valid Excel (.xlsx) file. " +
-                            "File size: " + fileBytes.length + " bytes. Error: " + e.getMessage(), e);
-                }
-                throw new RuntimeException("Invalid Excel template file. Please check if the file is a valid Excel (.xlsx) file. " +
-                        "The file might be corrupted. File size: " + fileBytes.length + " bytes. Error: " + e.getMessage(), e);
-            }
-
-            User teacher = userRepository.findById(teacherId)
-                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
-
-            // Lấy tất cả đăng ký của GV (nhiều năm)
-            List<SubjectRegistration> allRegs =
-                    subjectRegistrationRepository.findByTeacher_Id(teacherId);
-
-            if (allRegs.isEmpty()) {
-                throw new RuntimeException("Giáo viên chưa đăng ký môn nào!");
-            }
-
-            // Group theo năm, sort tăng dần
-            Map<Integer, List<SubjectRegistration>> regsByYear = new TreeMap<>();
-            allRegs.stream()
-                    .filter(r -> r.getYear() != null)
-                    .forEach(r -> regsByYear
-                            .computeIfAbsent(r.getYear(), k -> new ArrayList<>())
-                            .add(r));
-
-            if (regsByYear.isEmpty()) {
-                throw new RuntimeException("Không có dữ liệu năm nào để export");
-            }
-
-            // ====== STYLE GIỐNG BÊN ADMIN ======
+            // STYLE
             CellStyle borderCenter = wb.createCellStyle();
             borderCenter.setBorderBottom(BorderStyle.THIN);
             borderCenter.setBorderTop(BorderStyle.THIN);
@@ -276,14 +215,36 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
             borderLeft.cloneStyleFrom(borderCenter);
             borderLeft.setAlignment(HorizontalAlignment.LEFT);
 
-            // ====== CHUẨN BỊ ĐỦ SỐ SHEET (clone từ sheet 0) ======
-            int needSheets = regsByYear.size();
-            while (wb.getNumberOfSheets() < needSheets) {
+            // LẤY THÔNG TIN GIÁO VIÊN
+            User teacher = userRepository.findById(teacherId)
+                    .orElseThrow(() -> new RuntimeException("Teacher not found"));
+
+            // Lấy toàn bộ đăng ký của giáo viên
+            List<SubjectRegistration> allRegs = subjectRegistrationRepository.findByTeacher_Id(teacherId);
+
+            if (allRegs.isEmpty()) {
+                throw new RuntimeException("Giáo viên chưa đăng ký môn nào!");
+            }
+
+            // Group theo năm
+            Map<Integer, List<SubjectRegistration>> regsByYear = new TreeMap<>();
+            allRegs.stream()
+                    .filter(r -> r.getYear() != null)
+                    .forEach(r -> regsByYear
+                            .computeIfAbsent(r.getYear(), k -> new ArrayList<>())
+                            .add(r));
+
+            if (regsByYear.isEmpty()) {
+                throw new RuntimeException("Không có dữ liệu năm nào để export");
+            }
+
+            // Tạo đủ sheet (clone sheet đầu)
+            while (wb.getNumberOfSheets() < regsByYear.size()) {
                 wb.cloneSheet(0);
             }
 
-            // ====== ĐỔ DỮ LIỆU TỪNG NĂM VÀO MỖI SHEET ======
             int sheetIndex = 0;
+
             for (Map.Entry<Integer, List<SubjectRegistration>> entry : regsByYear.entrySet()) {
 
                 Integer year = entry.getKey();
@@ -293,75 +254,61 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 wb.setSheetName(sheetIndex, "Năm " + year);
                 sheetIndex++;
 
-                // ----- tìm dòng header (dòng có HỌ TÊN) -----
-                Row headerRow = sheet.getRow(7);   // đúng template của bạn: header nằm ở dòng 8 (index 7)
-                if (headerRow == null) {
-                    throw new RuntimeException("Template không có dòng header (row 8)!");
-                }
+                Row headerRow = sheet.getRow(7);
+                if (headerRow == null) throw new RuntimeException("Template thiếu dòng header!");
 
-                // Xác định cột HÌNH THỨC, GHI CHÚ, MÃ MÔN THI theo text header
-                int methodCol = -1;
-                int noteCol = -1;
-                int codeCol = -1;
+                // Xác định vị trí các cột
+                int colMethod = -1;
+                int colNote = -1;
+                int colCode = -1;
 
                 for (int c = 0; c < headerRow.getLastCellNum(); c++) {
-                    Cell h = headerRow.getCell(c);
-                    if (h == null) continue;
+                    String raw = normalize(headerRow.getCell(c).toString());
 
-                    String raw = normalize(h.toString());
-
-                    if (raw.contains("hinh thuc chuan bi") || raw.contains("hinh thuc")) {
-                        methodCol = c;
-                    } else if (raw.contains("ghi chu")) {
-                        noteCol = c;
-                    } else if (raw.contains("ma mon thi")) {
-                        codeCol = c;
-                    }
+                    if (raw.contains("hinh thuc")) colMethod = c;
+                    if (raw.contains("ghi chu")) colNote = c;
+                    if (raw.contains("ma mon thi")) colCode = c;
                 }
 
-                if (codeCol == -1) {
-                    throw new RuntimeException("Không tìm thấy cột MÃ MÔN THI trong template!");
-                }
-                if (noteCol == -1) {
-                    throw new RuntimeException("Không tìm thấy cột GHI CHÚ trong template!");
-                }
+                if (colNote == -1 || colCode == -1)
+                    throw new RuntimeException("Template thiếu cột GHI CHÚ hoặc MÃ MÔN THI!");
 
-                int dataStartRow = headerRow.getRowNum() + 1;
+                int dataStart = headerRow.getRowNum() + 1;
 
-                // Xoá merge cũ ở vùng dữ liệu (nếu có)
-                clearDataMergedRegions(sheet, dataStartRow);
+                // Xóa merge cũ
+                clearDataMergedRegions(sheet, dataStart);
 
-                // ----- Ghi dữ liệu -----
-                int rowIndex = dataStartRow;
+                int rowIndex = dataStart;
                 int stt = 1;
-                
-                int teacherNameStartRow = rowIndex; // Track start for merge
+
+                int mergeStartRow = rowIndex;
 
                 for (SubjectRegistration reg : regs) {
 
                     Row row = sheet.getRow(rowIndex);
                     if (row == null) row = sheet.createRow(rowIndex);
 
-                    // 0: STT
+                    // STT
                     Cell c0 = getOrCreate(row, 0);
-                    c0.setCellValue(stt++);
+                    if (rowIndex == mergeStartRow) c0.setCellValue(stt);
+                    else c0.setCellValue("");
                     c0.setCellStyle(borderCenter);
+                    applyWrap(c0);
 
-                    // 1: HỌ TÊN (chỉ ghi ở dòng đầu tiên, các dòng sau để trống để merge)
+                    // HỌ TÊN
                     Cell c1 = getOrCreate(row, 1);
-                    if (rowIndex == teacherNameStartRow) {
-                        c1.setCellValue(teacher.getUsername());
-                    } else {
-                        c1.setCellValue(""); // Để trống cho merge
-                    }
+                    if (rowIndex == mergeStartRow) c1.setCellValue(teacher.getUsername().toUpperCase());
+                    else c1.setCellValue("");
                     c1.setCellStyle(borderLeft);
+                    applyWrap(c1);
 
-                    // 2: MÔN CHUẨN BỊ
+                    // MÔN
                     Cell c2 = getOrCreate(row, 2);
                     c2.setCellValue(reg.getSubject().getSubjectName());
                     c2.setCellStyle(borderLeft);
+                    applyWrap(c2);
 
-                    // 3: CHƯƠNG TRÌNH
+                    // SYSTEM CODE
                     Cell c3 = getOrCreate(row, 3);
                     c3.setCellValue(
                             reg.getSubject().getSystem() != null
@@ -369,118 +316,143 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                                     : ""
                     );
                     c3.setCellStyle(borderCenter);
+                    applyWrap(c3);
 
-                    // 4: HỌC KỲ
+                    // SEMESTER
                     Cell c4 = getOrCreate(row, 4);
                     c4.setCellValue(
                             reg.getSubject().getSemester() != null
-                                    ? reg.getSubject().getSemester().name()
+                                    ? formatSemester(reg.getSubject().getSemester())
                                     : ""
                     );
                     c4.setCellStyle(borderCenter);
+                    applyWrap(c4);
 
-                    // HÌNH THỨC CHUẨN BỊ (reasonForCarryOver)
-                    if (methodCol != -1) {
-                        Cell cm = getOrCreate(row, methodCol);
-                        String carryOverReason = reg.getReasonForCarryOver();
-                        cm.setCellValue(carryOverReason != null ? carryOverReason : "");
-                        cm.setCellStyle(borderLeft);
-                    }
+                    // HÌNH THỨC CHUẨN BỊ
+                    Cell cm = getOrCreate(row, colMethod);
+                    cm.setCellValue(
+                            reg.getReasonForCarryOver() != null
+                                    ? reg.getReasonForCarryOver()
+                                    : ""
+                    );
+                    cm.setCellStyle(borderLeft);
+                    applyWrap(cm);
 
-                    // HẠN HOÀN THÀNH (03/06/09/12 - năm)
+                    // DEADLINE
                     Cell cDeadline = getOrCreate(row, 6);
                     cDeadline.setCellValue(formatDeadline(reg));
                     cDeadline.setCellStyle(borderCenter);
+                    applyWrap(cDeadline);
 
-                    // GHI CHÚ (để trống)
-                    Cell cNote = getOrCreate(row, noteCol);
-                    cNote.setCellValue("");
+                    // GHI CHÚ
+                    Cell cNote = getOrCreate(row, colNote);
+                    cNote.setCellValue(
+                            reg.getTeacherNotes() != null
+                                    ? reg.getTeacherNotes()
+                                    : ""
+                    );
                     cNote.setCellStyle(borderLeft);
+                    applyWrap(cNote);
 
-                    // MÃ MÔN THI - Lấy từ skill.skillName (đã có format 1291-SQL Server 2019)
-                    Cell cCode = getOrCreate(row, codeCol);
-                    String skillName = reg.getSubject().getSkill() != null && reg.getSubject().getSkill().getSkillName() != null
-                        ? reg.getSubject().getSkill().getSkillName()
-                        : reg.getSubject().getSkillCode(); // Fallback to just code
-                    cCode.setCellValue(skillName);
+                    // MÃ MÔN THI
+                    Cell cCode = getOrCreate(row, colCode);
+                    cCode.setCellValue(
+                            reg.getSubject().getSkill() != null &&
+                                    reg.getSubject().getSkill().getSkillName() != null
+                                    ? reg.getSubject().getSkill().getSkillName()
+                                    : reg.getSubject().getSkillCode()
+                    );
                     cCode.setCellStyle(borderCenter);
+                    applyWrap(cCode);
+
+                    autoFitRow(row);
 
                     rowIndex++;
                 }
-                
-                // Merge cells cho cột HỌ TÊN (STT và HỌ TÊN)
+
+                // Merge STT + HỌ TÊN
                 if (regs.size() > 1) {
-                    sheet.addMergedRegion(new CellRangeAddress(teacherNameStartRow, rowIndex - 1, 0, 0)); // STT
-                    sheet.addMergedRegion(new CellRangeAddress(teacherNameStartRow, rowIndex - 1, 1, 1)); // HỌ TÊN
+                    sheet.addMergedRegion(new CellRangeAddress(mergeStartRow, rowIndex - 1, 0, 0));
+                    sheet.addMergedRegion(new CellRangeAddress(mergeStartRow, rowIndex - 1, 1, 1));
                 }
 
-                // ----- Cập nhật NĂM trên tiêu đề + footer Ngày / / NĂM -----
-                String footerLabel = "Ngày    /    / " + year;
-
-                for (Row r : sheet) {
-                    if (r == null) continue;
-
-                    for (Cell cell : r) {
-                        if (cell == null || cell.getCellType() != CellType.STRING) continue;
-
-                        String text = cell.getStringCellValue();
-
-                        // Dòng tiêu đề kiểu "NĂM: 2025"
-                        if (text.contains("NĂM")) {
-                            if (text.contains(":")) {
-                                cell.setCellValue("NĂM: " + year);
-                            }
-                        }
-
-                        // Footer "Ngày / / 2025"
-                        if (text.trim().startsWith("Ngày")) {
-                            cell.setCellValue(footerLabel);
-                        }
-                    }
-                }
+                // FOOTER
+                fillFooter(sheet, teacher);
             }
 
-            // ====== Ghi workbook ra response ======
-            response.setContentType(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            response.setHeader(
-                    "Content-Disposition",
-                    "attachment; filename=ke_hoach_giao_vien.xlsx");
-
+            // GHI FILE RA
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=ke_hoach_gv.xlsx");
             wb.write(response.getOutputStream());
-            response.getOutputStream().flush();
+            wb.close();
 
         } catch (Exception e) {
             throw new RuntimeException("Export lỗi: " + e.getMessage(), e);
-        } finally {
-            // Cleanup resources
-            if (wb != null) {
-                try {
-                    wb.close();
-                } catch (IOException e) {
-                    // Ignore
-                }
-            }
-            if (templateStream != null) {
-                try {
-                    templateStream.close();
-                } catch (IOException e) {
-                    // Ignore
+        }
+    }
+
+    private String formatSemester(Semester sem) {
+        return switch (sem) {
+            case SEMESTER_1 -> "Kỳ 1";
+            case SEMESTER_2 -> "Kỳ 2";
+            case SEMESTER_3 -> "Kỳ 3";
+            case SEMESTER_4 -> "Kỳ 4";
+        };
+    }
+
+
+    private void applyWrap(Cell cell) {
+        Workbook wb = cell.getSheet().getWorkbook();
+        CellStyle style = wb.createCellStyle();
+        style.cloneStyleFrom(cell.getCellStyle());
+        style.setWrapText(true);
+        cell.setCellStyle(style);
+    }
+
+    private void autoFitRow(Row row) {
+        if (row != null) {
+            row.setHeight((short) -1);
+        }
+    }
+
+    private void fillFooter(Sheet sheet, User teacher) {
+        LocalDate today = LocalDate.now();
+        String footer = "Ngày " +
+                String.format("%02d", today.getDayOfMonth()) + "/" +
+                String.format("%02d", today.getMonthValue()) + "/" +
+                today.getYear();
+        for (Row r : sheet) {
+            if (r == null) continue;
+            for (Cell cell : r) {
+                if (cell != null && cell.getCellType() == CellType.STRING) {
+                    String text = cell.getStringCellValue().trim();
+
+                    if (text.startsWith("Ngày")) {
+                        cell.setCellValue(footer);
+                    }
+
+                    if (normalize(text).equals("nguoi lap")) {
+                        int nameRow = r.getRowNum() + 4;
+                        Row nameR = sheet.getRow(nameRow);
+                        if (nameR == null) nameR = sheet.createRow(nameRow);
+
+                        Cell nameC = nameR.getCell(cell.getColumnIndex());
+                        if (nameC == null) nameC = nameR.createCell(cell.getColumnIndex());
+
+                        Workbook wb = sheet.getWorkbook();
+                        CellStyle style = wb.createCellStyle();
+                        Font f = wb.createFont();
+                        f.setBold(true);
+                        style.setFont(f);
+                        style.setAlignment(HorizontalAlignment.CENTER);
+
+                        nameC.setCellValue(teacher.getUsername().toUpperCase());
+                        nameC.setCellStyle(style);
+                    }
                 }
             }
         }
     }
-
-
-    // Support
-    private void setCell(Row row, int col, Object value, CellStyle style) {
-        Cell c = row.getCell(col);
-        if (c == null) c = row.createCell(col);
-        if (value instanceof String) c.setCellValue((String) value);
-        else if (value instanceof Integer) c.setCellValue((Integer) value);
-        c.setCellStyle(style);
-    }
-
 
 
     // =================== KẾ HOẠCH NĂM - IMPORT EXCEL ===================
@@ -503,7 +475,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                 throw new RuntimeException("Không tìm thấy dòng header");
             }
 
-            // Map cột: ho ten, ma mon thi, han hoan thanh, hinh thuc, ghi chu
+            // Map cột
             Map<String, Integer> col = detectTrainingPlanColumns(header);
 
             int start = header.getRowNum() + 1;
@@ -517,51 +489,36 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
                 try {
                     // =========================
-                    // 1. LẤY MÔN CHUẨN BỊ VÀ MÃ MÔN (SKIP CHECK HỌ TÊN vì teacher đã đăng nhập rồi)
+                    // 1) LẤY MÔN
                     // =========================
-                    
-                    // Lấy tên môn từ cột "MÔN CHUẨN BỊ"
-                    String subjectNameFromExcel = getString(row, col.get("subjectName"));
-                    
-                    // Lấy mã môn thi
+                    String subjectName = getString(row, col.get("subjectName"));
                     String subjectCodeRaw = getString(row, col.get("subjectCode"));
+
                     if (subjectCodeRaw == null || subjectCodeRaw.isBlank()) {
                         addRowError(result, i + 1, "Thiếu MÃ MÔN THI");
                         continue;
                     }
 
-                    // Parse: "1291-SQL Server 2019" -> "1291"
-                    String subjectCode = subjectCodeRaw.contains("-") 
-                        ? subjectCodeRaw.split("-")[0].trim() 
-                        : subjectCodeRaw.trim();
+                    String subjectCode = subjectCodeRaw.contains("-")
+                            ? subjectCodeRaw.split("-")[0].trim()
+                            : subjectCodeRaw.trim();
 
-                    // Tìm tất cả subjects có cùng skill_code
-                    List<Subject> matchingSubjects = SubjectRepository.findAllBySkill_SkillCode(subjectCode);
-                    
-                    if (matchingSubjects.isEmpty()) {
+                    List<Subject> found = SubjectRepository.findAllBySkill_SkillCode(subjectCode);
+
+                    if (found.isEmpty()) {
                         addRowError(result, i + 1, "Không tìm thấy môn với mã: " + subjectCode);
                         continue;
                     }
-                    
-                    Subject subject;
-                    if (matchingSubjects.size() == 1) {
-                        // Chỉ có 1 môn → lấy luôn
-                        subject = matchingSubjects.get(0);
-                    } else {
-                        // Có nhiều môn cùng skill_code → tìm theo tên
-                        if (subjectNameFromExcel != null && !subjectNameFromExcel.isBlank()) {
-                            String normalizedExcelName = normalize(subjectNameFromExcel);
-                            subject = matchingSubjects.stream()
-                                .filter(s -> normalize(s.getSubjectName()).equals(normalizedExcelName))
-                                .findFirst()
-                                .orElse(matchingSubjects.get(0)); // Fallback: lấy môn đầu tiên
-                        } else {
-                            subject = matchingSubjects.get(0);
-                        }
-                    }
+
+                    Subject subject = found.size() == 1
+                            ? found.get(0)
+                            : found.stream()
+                            .filter(s -> normalize(s.getSubjectName()).equals(normalize(subjectName)))
+                            .findFirst()
+                            .orElse(found.get(0));
 
                     // =========================
-                    // 3. LẤY DEADLINE → NĂM + QUÝ
+                    // 2) LẤY DEADLINE → NĂM + QUÝ
                     // =========================
                     String deadline = getString(row, col.get("deadline"));
                     String normalized = normalizeDeadline(deadline);
@@ -573,20 +530,14 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
                     String[] parts = normalized.split("-");
                     Integer y = Integer.parseInt(parts[1]);
-                    String month = parts[0];
-
-                    Quarter quarter = convertMonthToQuarter(month);
+                    Quarter quarter = convertMonthToQuarter(parts[0]);
 
                     // =========================
-                    // 4. CHECK TRÙNG (teacherId + subjectId + year + quarter)
+                    // 3) CHECK TRÙNG
                     // =========================
-                    boolean exists =
-                            subjectRegistrationRepository.existsByTeacher_IdAndSubject_IdAndYearAndQuarter(
-                                    teacherId,
-                                    subject.getId(),
-                                    y,
-                                    quarter
-                            );
+                    boolean exists = subjectRegistrationRepository
+                            .existsByTeacher_IdAndSubject_IdAndYearAndQuarter(
+                                    teacherId, subject.getId(), y, quarter);
 
                     if (exists) {
                         addRowError(result, i + 1,
@@ -595,25 +546,26 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
                     }
 
                     // =========================
-                    // 5. TẠO ĐĂNG KÝ MỚI (CHỈ THÊM, KHÔNG GHI ĐÈ)
+                    // 4) LẤY HÌNH THỨC + GHI CHÚ
+                    // =========================
+                    String method = getString(row, col.get("method"));   // HÌNH THỨC CHUẨN BỊ
+                    String note = getString(row, col.get("note"));       // GHI CHÚ GIÁO VIÊN
+
+                    // =========================
+                    // 5) TẠO BẢN GHI MỚI
                     // =========================
                     SubjectRegistration reg = new SubjectRegistration();
                     reg.setTeacher(teacher);
                     reg.setSubject(subject);
                     reg.setYear(y);
                     reg.setQuarter(quarter);
-
-                    // Ghép HÌNH THỨC + GHI CHÚ vào reasonForCarryOver
-                    String method = getString(row, col.get("method"));
-                    String note = getString(row, col.get("note"));
-
-                    StringBuilder sb = new StringBuilder();
-                    if (method != null && !method.isBlank()) sb.append("- ").append(method).append("\n");
-                    if (note != null && !note.isBlank()) sb.append("- ").append(note).append("\n");
-                    sb.append("Deadline: ").append(deadline);
-
-                    reg.setReasonForCarryOver(sb.toString());
                     reg.setStatus(RegistrationStatus.REGISTERED);
+
+                    // Ghi đúng field yêu cầu
+                    reg.setReasonForCarryOver(method);      // ⭐ Hình thức chuẩn bị
+                    reg.setTeacherNotes(note);              // ⭐ Ghi chú giáo viên
+
+                    // Không động tới reason_for_carry_over2
 
                     subjectRegistrationRepository.save(reg);
                     result.setSuccessCount(result.getSuccessCount() + 1);
@@ -630,6 +582,7 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
         result.setErrorCount(result.getErrors().size());
         return result;
     }
+
 
 
 

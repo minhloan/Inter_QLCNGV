@@ -118,8 +118,8 @@ export const NotificationProvider = ({ children }) => {
 
     // Kết nối WebSocket
     const handleNotification = (notificationPayload) => {
-      // console.log('[NotificationContext] Received new notification via WebSocket:', notificationPayload);
-      
+
+
       // Chuyển đổi payload từ backend sang format frontend
       const newNotification = {
         id: notificationPayload.id,
@@ -144,18 +144,15 @@ export const NotificationProvider = ({ children }) => {
     };
 
     const handleError = (error) => {
-      console.error('[NotificationContext] WebSocket error:', error);
       setError('Lỗi kết nối thông báo thời gian thực. Đang thử kết nối lại...');
     };
 
     const handleConnect = () => {
-      console.log('[NotificationContext] WebSocket connected');
       setError(null);
     };
 
     // Kết nối WebSocket (async)
     connectWebSocket(handleNotification, handleError, handleConnect).catch(err => {
-      console.error('[NotificationContext] Failed to connect WebSocket:', err);
       setError('Lỗi kết nối thông báo thời gian thực.');
     });
 

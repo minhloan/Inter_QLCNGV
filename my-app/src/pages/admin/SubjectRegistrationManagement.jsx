@@ -132,6 +132,18 @@ const SubjectRegistrationManagement = () => {
         }
     };
 
+    const formatSemester = (sem) => {
+        if (!sem) return "";
+        const map = {
+            "SEMESTER_1": "Kỳ 1",
+            "SEMESTER_2": "Kỳ 2",
+            "SEMESTER_3": "Kỳ 3",
+            "SEMESTER_4": "Kỳ 4",
+        };
+        return map[sem] || sem;
+    };
+
+
     const applyFilters = () => {
         let filtered = [...registrations];
 
@@ -254,14 +266,16 @@ const SubjectRegistrationManagement = () => {
                         importDescription="Upload file Excel để import kế hoạch cho giáo viên đã chọn."
                         importTopChildren={
                             <div className="mb-3">
-                                <label className="form-label fw-bold">Chọn giáo viên <span className="text-danger">*</span></label>
+                                <label className="form-label fw-bold">
+                                    Chọn giáo viên <span className="text-danger">*</span>
+                                </label>
 
                                 {/* Search Input */}
-                                <div className="input-group mb-2">
-                                    <span className="input-group-text"><i className="bi bi-search"></i></span>
+                                <div className="custom-search-box">
+                                    <i className="bi bi-search search-icon"></i>
                                     <input
                                         type="text"
-                                        className="form-control"
+                                        className="form-control search-input"
                                         placeholder="Tìm kiếm giáo viên (Tên hoặc Mã)..."
                                         value={teacherSearchTerm}
                                         onChange={(e) => {
@@ -271,28 +285,41 @@ const SubjectRegistrationManagement = () => {
                                     />
                                 </div>
 
-                                <select
-                                    className="form-select"
-                                    value={planTeacherId}
-                                    onChange={(e) => {
-                                        const selectedId = e.target.value;
-                                        const selected = foundTeachers.find(t => t.id === selectedId);
-                                        setPlanTeacherId(selectedId);
-                                        setPlanTeacherName(selected ? `${selected.teacherCode} - ${selected.username}` : '');
-                                    }}
-                                    size={5}
-                                >
-                                    <option value="" disabled>-- Chọn giáo viên --</option>
-                                    {foundTeachers.map((t) => (
-                                        <option key={t.id} value={t.id}>
-                                            {t.teacherCode} - {t.username}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="form-text text-muted">
-                                    {foundTeachers.length} giáo viên được tìm thấy.
-                                </div>
+                                {/* ONLY SHOW LIST WHEN TYPING */}
+                                {teacherSearchTerm.trim().length > 0 && (
+                                    <div className="teacher-list">
+                                        {foundTeachers.length === 0 ? (
+                                            <div className="empty-teacher">Không tìm thấy giáo viên</div>
+                                        ) : (
+                                            foundTeachers.map((t) => (
+                                                <div
+                                                    key={t.id}
+                                                    className={`teacher-item ${planTeacherId === t.id ? "active" : ""}`}
+                                                    onClick={() => {
+                                                        setPlanTeacherId(t.id);
+                                                        setPlanTeacherName(`${t.teacherCode} - ${t.username}`);
+                                                        setTeacherSearchTerm("");  // ẩn list sau khi chọn
+                                                        setFoundTeachers([]);      // clear list
+                                                    }}
+                                                >
+                                                    <span className="teacher-code">{t.teacherCode}</span>
+                                                    <span className="teacher-name">{t.username}</span>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Show selected teacher */}
+                                {planTeacherName && teacherSearchTerm === "" && (
+                                    <div className="alert alert-info mt-2 py-2">
+                                        <i className="bi bi-person-check me-2"></i>
+                                        Đã chọn: <strong>{planTeacherName}</strong>
+                                    </div>
+                                )}
                             </div>
+
+
                         }
                         onExport={async () => {
                             if (!planTeacherId && !exportAllTeachers) {
@@ -316,7 +343,7 @@ const SubjectRegistrationManagement = () => {
                             try {
                                 const result = await importPlanExcel(planTeacherId, file);
                                 setPlanImportResult(result);
-                                showToast('Import hoàn tất', `Tổng: ${result.totalRows}, thành công: ${result.successCount}, lỗi: ${result.errorCount}`, 'success');
+                                showToast('Import hoàn tất', `Thành công: ${result.successCount}, lỗi: ${result.errorCount}`, 'success');
                                 await loadRegistrations();
                             } catch (err) {
                                 showToast('Lỗi import', err.response?.data?.message || err.message, 'danger');
@@ -330,17 +357,20 @@ const SubjectRegistrationManagement = () => {
                                 {exportAllTeachers && (
                                     <div className="alert alert-warning small mb-3">
                                         <i className="bi bi-exclamation-triangle me-1"></i>
-                                        Chức năng Import chưa hỗ trợ import hàng loạt cho tất cả giáo viên cùng lúc. Vui lòng chọn từng giáo viên để import.
+                                        Chức năng Import chưa hỗ trợ import hàng loạt. Vui lòng chọn từng giáo viên để import.
                                     </div>
                                 )}
+
                                 {planImportResult && planImportResult.errorCount > 0 && (
                                     <div className="alert alert-warning mt-3 mb-0">
                                         <strong>Kết quả import:</strong>
-                                        <div className="small">Tổng dòng: {planImportResult.totalRows}</div>
                                         <div className="small">Thành công: {planImportResult.successCount}</div>
                                         <div className="small">Lỗi: {planImportResult.errorCount}</div>
                                         {planImportResult.errors && planImportResult.errors.length > 0 && (
-                                            <ul className="mt-2 mb-0 ps-3 small" style={{ maxHeight: 150, overflowY: 'auto' }}>
+                                            <ul
+                                                className="mt-2 mb-0 ps-3 small"
+                                                style={{ maxHeight: 150, overflowY: 'auto' }}
+                                            >
                                                 {planImportResult.errors.map((err, idx) => (
                                                     <li key={idx}>{err}</li>
                                                 ))}
@@ -350,6 +380,7 @@ const SubjectRegistrationManagement = () => {
                                 )}
                             </>
                         }
+
                     >
                         {/* Export Tab Content (Children) */}
                         <div className="mb-3">
@@ -388,7 +419,10 @@ const SubjectRegistrationManagement = () => {
 
                         {!exportAllTeachers && (
                             <div className="mb-3">
-                                <label className="form-label fw-bold">Chọn giáo viên <span className="text-danger">*</span></label>
+                                <label className="form-label fw-bold">
+                                    Chọn giáo viên <span className="text-danger">*</span>
+                                </label>
+
                                 {/* Search Input */}
                                 <div className="input-group mb-2">
                                     <span className="input-group-text"><i className="bi bi-search"></i></span>
@@ -398,41 +432,56 @@ const SubjectRegistrationManagement = () => {
                                         placeholder="Tìm kiếm giáo viên (Tên hoặc Mã)..."
                                         value={teacherSearchTerm}
                                         onChange={(e) => {
-                                            setTeacherSearchTerm(e.target.value);
-                                            fetchTeachers(e.target.value);
+                                            const keyword = e.target.value;
+                                            setTeacherSearchTerm(keyword);
+                                            fetchTeachers(keyword);
                                         }}
                                     />
                                 </div>
+
+                                {/* SELECT — chỉ hiện danh sách khi có từ khóa tìm kiếm */}
                                 <select
                                     className="form-select"
                                     value={planTeacherId}
                                     onChange={(e) => {
                                         const selectedId = e.target.value;
-                                        const selected = foundTeachers.find(t => t.id === selectedId);
+                                        const selected = foundTeachers.find((t) => t.id === selectedId);
                                         setPlanTeacherId(selectedId);
-                                        setPlanTeacherName(selected ? `${selected.teacherCode} - ${selected.username}` : '');
+                                        setPlanTeacherName(selected ? `${selected.teacherCode} - ${selected.username}` : "");
                                     }}
-                                    size={5}
                                 >
-                                    <option value="" disabled>-- Chọn giáo viên --</option>
-                                    {foundTeachers.map((t) => (
-                                        <option key={t.id} value={t.id}>
-                                            {t.teacherCode} - {t.username}
-                                        </option>
-                                    ))}
+                                    {/* Khi CHƯA gõ từ khóa → hiển thị placeholder */}
+                                    {teacherSearchTerm.trim() === "" && (
+                                        <option value="">-- Chọn giáo viên --</option>
+                                    )}
+
+                                    {/* Khi ĐÃ GÕ → chỉ hiển thị kết quả filter, KHÔNG hiển thị placeholder */}
+                                    {teacherSearchTerm.trim() !== "" &&
+                                        foundTeachers.map((t) => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.teacherCode} - {t.username}
+                                            </option>
+                                        ))
+                                    }
                                 </select>
+
+
                                 <div className="form-text text-muted">
-                                    {foundTeachers.length} giáo viên được tìm thấy.
+                                    {teacherSearchTerm.trim().length > 0
+                                        ? `${foundTeachers.length} giáo viên được tìm thấy.`
+                                        : "Nhập từ khóa để tìm giáo viên."}
                                 </div>
                             </div>
                         )}
 
                         {!exportAllTeachers && planTeacherName && (
-                            <div className="alert alert-info">
-                                <i className="bi bi-info-circle me-2"></i>
+                            <div className="alert alert-info mt-2 py-2">
+                                <i className="bi bi-person-check me-2"></i>
                                 Đã chọn: <strong>{planTeacherName}</strong>
                             </div>
                         )}
+
+
                     </ExportImportModal>
                 </div>
 
@@ -488,87 +537,88 @@ const SubjectRegistrationManagement = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                    <tr>
-                                        <th width="5%">#</th>
-                                        <th width="10%">Mã GV</th>
-                                        <th width="15%">Tên Giáo viên</th>
-                                        <th width="18%">Tên Môn học</th>
-                                        <th width="12%">Chương trình</th>
-                                        <th width="8%">Kỳ học</th>
-                                        <th width="10%">Hạn hoàn thành</th>
-                                        <th width="10%">Ngày đăng ký</th>
-                                        <th width="10%">Trạng thái</th>
-                                        <th width="12%" className="text-center">Thao tác</th>
-                                    </tr>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="10%">Mã GV</th>
+                                    <th width="15%">Tên Giáo viên</th>
+                                    <th width="18%">Tên Môn học</th>
+                                    <th width="12%">Chương trình</th>
+                                    <th width="8%">Kỳ học</th>
+                                    <th width="10%">Hạn hoàn thành</th>
+                                    <th width="10%">Ngày đăng ký</th>
+                                    <th width="10%">Trạng thái</th>
+                                    <th width="12%" className="text-center">Thao tác</th>
+                                </tr>
                                 </thead>
                                 <tbody>
-                                    {pageRegistrations.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="10" className="text-center">
-                                                <div className="empty-state">
-                                                    <i className="bi bi-inbox"></i>
-                                                    <p>Không tìm thấy đăng ký nào</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        pageRegistrations.map((reg, index) => (
-                                            <tr key={reg.id} className="fade-in">
-                                                <td>{startIndex + index + 1}</td>
-                                                <td>
+                                {pageRegistrations.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="10" className="text-center">
+                                            <div className="empty-state">
+                                                <i className="bi bi-inbox"></i>
+                                                <p>Không tìm thấy đăng ký nào</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    pageRegistrations.map((reg, index) => (
+                                        <tr key={reg.id} className="fade-in">
+                                            <td>{startIndex + index + 1}</td>
+                                            <td>
                                                     <span className="teacher-code">
                                                         {reg.teacher_code}
                                                     </span>
-                                                </td>
-                                                <td>{reg.teacher_name}</td>
-                                                <td>{reg.subject_name}</td>
-                                                <td>{reg.system_name}</td>
-                                                <td>{reg.semester}</td>
+                                            </td>
+                                            <td>{reg.teacher_name}</td>
+                                            <td>{reg.subject_name}</td>
+                                            <td>{reg.system_name}</td>
+                                            <td>{formatSemester(reg.semester)}</td>
 
-                                                <td>{formatDeadline(reg.year, reg.quarter)}</td>
-                                                <td>{reg.registration_date}</td>
-                                                <td>{getStatusBadge(reg.status)}</td>
-                                                <td className="text-center">
-                                                    <div className="action-buttons">
-                                                        {(reg.status === 'registered' || reg.status === 'carryover') && (
-                                                            <>
-                                                                <button
-                                                                    className="btn btn-sm btn-success btn-action"
-                                                                    onClick={() =>
-                                                                        handleStatusChange(reg.id, 'COMPLETED')
-                                                                    }
-                                                                    title="Duyệt"
-                                                                >
-                                                                    <i className="bi bi-check-circle"></i>
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-sm btn-danger btn-action"
-                                                                    onClick={() =>
-                                                                        handleStatusChange(reg.id, 'NOT_COMPLETED')
-                                                                    }
-                                                                    title="Từ chối"
-                                                                >
-                                                                    <i className="bi bi-x-circle"></i>
-                                                                </button>
-                                                            </>
-                                                        )}
 
-                                                        <button
-                                                            className="btn btn-sm btn-info btn-action"
-                                                            onClick={() =>
-                                                                navigate(
-                                                                    `/subject-registration-detail/${reg.id}`
-                                                                )
-                                                            }
-                                                            title="Chi tiết"
-                                                        >
-                                                            <i className="bi bi-eye"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                            <td>{formatDeadline(reg.year, reg.quarter)}</td>
+                                            <td>{reg.registration_date}</td>
+                                            <td>{getStatusBadge(reg.status)}</td>
+                                            <td className="text-center">
+                                                <div className="action-buttons">
+                                                    {(reg.status === 'registered' || reg.status === 'carryover') && (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-success btn-action"
+                                                                onClick={() =>
+                                                                    handleStatusChange(reg.id, 'COMPLETED')
+                                                                }
+                                                                title="Duyệt"
+                                                            >
+                                                                <i className="bi bi-check-circle"></i>
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-danger btn-action"
+                                                                onClick={() =>
+                                                                    handleStatusChange(reg.id, 'NOT_COMPLETED')
+                                                                }
+                                                                title="Từ chối"
+                                                            >
+                                                                <i className="bi bi-x-circle"></i>
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    <button
+                                                        className="btn btn-sm btn-info btn-action"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/subject-registration-detail/${reg.id}`
+                                                            )
+                                                        }
+                                                        title="Chi tiết"
+                                                    >
+                                                        <i className="bi bi-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                                 </tbody>
                             </table>
                         </div>

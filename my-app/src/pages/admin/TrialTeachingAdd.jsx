@@ -7,7 +7,7 @@ import { createTrial } from '../../api/trial';
 import { getAllUsers, searchUsersByTeaching } from '../../api/user';
 import { getAllSubjectsByTrial } from '../../api/subject';
 import { getUserInfo } from '../../api/auth';
-import { getAllAptechExams } from '../../api/aptechExam';
+
 
 const TrialTeachingAdd = () => {
     const navigate = useNavigate();
@@ -18,8 +18,7 @@ const TrialTeachingAdd = () => {
         teachingDate: '',
         teachingTime: '',
         location: '',
-        note: '',
-        aptechExamId: ''
+        note: ''
     });
     const [teachers, setTeachers] = useState([]);
     const [filteredTeachers, setFilteredTeachers] = useState([]);
@@ -29,6 +28,7 @@ const TrialTeachingAdd = () => {
     const [subjectSearch, setSubjectSearch] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
     useEffect(() => {
@@ -92,57 +92,34 @@ const TrialTeachingAdd = () => {
     };
 
     const validate = () => {
-        if (!formData.teacherId) return 'teacherId';
-        if (!formData.subjectId) return 'subjectId';
-        if (!formData.teachingDate) return 'teachingDate';
-        const selectedDate = new Date(formData.teachingDate);
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        if (selectedDate < today) return 'teachingDate';
-        return null;
-    };
-
-    const validateTeacherExam = async (teacherId, subjectId) => {
-        try {
-            // Get all Aptech exams
-            const allExams = await getAllAptechExams();
-
-            // Filter exams by teacherId and subjectId
-            const teacherSubjectExams = allExams.filter(
-                exam => exam.teacherId === teacherId && exam.subjectId === subjectId
-            );
-
-            // Check if at least one exam has result === 'PASS'
-            const hasPassed = teacherSubjectExams.some(exam => exam.result === 'PASS');
-
-            return hasPassed;
-        } catch (error) {
-            console.error('Error validating teacher exam:', error);
-            // If we can't validate, allow the creation (fail open)
-            return true;
+        const newErrors = {};
+        if (!formData.teacherId) newErrors.teacherId = 'Vui lòng chọn giảng viên';
+        if (!formData.subjectId) newErrors.subjectId = 'Vui lòng chọn môn học';
+        if (!formData.teachingDate) {
+            newErrors.teachingDate = 'Vui lòng chọn ngày giảng';
+        } else {
+            const selectedDate = new Date(formData.teachingDate);
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            if (selectedDate < today) {
+                newErrors.teachingDate = 'Ngày giảng không được là ngày quá khứ';
+            }
         }
+        if (!formData.location) newErrors.location = 'Vui lòng nhập địa điểm';
+        return newErrors;
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const firstError = validate();
-        if (firstError) {
-            const errorEl = document.querySelector(`[name="${firstError}"]`);
-            if (errorEl) { errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); errorEl.focus(); }
+        const newErrors = validate();
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) {
             showToast('Lỗi', 'Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
             return;
         }
 
         try {
             setLoading(true);
-
-            // Validate that teacher has passed Aptech exam for this subject
-            const hasPassedExam = await validateTeacherExam(formData.teacherId, formData.subjectId);
-            if (!hasPassedExam) {
-                showToast('Lỗi', 'Giảng viên chưa thi đạt môn học này. Vui lòng kiểm tra lại.', 'danger');
-                setLoading(false);
-                return;
-            }
-
             await createTrial(formData);
             showToast('Thành công', 'Tạo buổi giảng thử thành công', 'success');
             setTimeout(() => navigate('/trial-teaching-management'), 1500);
@@ -187,7 +164,7 @@ const TrialTeachingAdd = () => {
                                         onChange={e => setTeacherSearch(e.target.value)}
                                     />
                                     <select
-                                        className="form-select"
+                                        className={`form-select ${errors.teacherId ? 'is-invalid' : ''}`}
                                         name="teacherId"
                                         value={formData.teacherId}
                                         onChange={handleChange}
@@ -198,6 +175,7 @@ const TrialTeachingAdd = () => {
                                             <option key={t.id} value={t.id}>{t.username} ({t.teacherCode})</option>
                                         ))}
                                     </select>
+                                    {errors.teacherId && <div className="invalid-feedback d-block">{errors.teacherId}</div>}
                                 </div>
                             </div>
 
@@ -212,7 +190,7 @@ const TrialTeachingAdd = () => {
                                         onChange={e => setSubjectSearch(e.target.value)}
                                     />
                                     <select
-                                        className="form-select"
+                                        className={`form-select ${errors.subjectId ? 'is-invalid' : ''}`}
                                         name="subjectId"
                                         value={formData.subjectId}
                                         onChange={handleChange}
@@ -222,6 +200,7 @@ const TrialTeachingAdd = () => {
                                             <option key={s.id} value={s.id}>{s.subjectName}</option>
                                         ))}
                                     </select>
+                                    {errors.subjectId && <div className="invalid-feedback d-block">{errors.subjectId}</div>}
                                 </div>
                             </div>
                         </div>
@@ -230,7 +209,15 @@ const TrialTeachingAdd = () => {
                             <div className="col-md-4">
                                 <div className="form-group mb-0">
                                     <label className="form-label">Ngày giảng <span className="text-danger">*</span></label>
-                                    <input type="date" className="form-control" name="teachingDate" value={formData.teachingDate} onChange={handleChange} />
+                                    <input
+                                        type="date"
+                                        className={`form-control ${errors.teachingDate ? 'is-invalid' : ''}`}
+                                        name="teachingDate"
+                                        value={formData.teachingDate}
+                                        onChange={handleChange}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                    {errors.teachingDate && <div className="invalid-feedback d-block">{errors.teachingDate}</div>}
                                 </div>
                             </div>
                             <div className="col-md-4">
@@ -241,8 +228,16 @@ const TrialTeachingAdd = () => {
                             </div>
                             <div className="col-md-4">
                                 <div className="form-group mb-0">
-                                    <label className="form-label">Địa điểm</label>
-                                    <input type="text" className="form-control" name="location" value={formData.location} onChange={handleChange} />
+                                    <label className="form-label">Địa điểm <span className="text-danger">*</span></label>
+                                    <input
+                                        type="text"
+                                        className={`form-control ${errors.location ? 'is-invalid' : ''}`}
+                                        name="location"
+                                        value={formData.location}
+                                        onChange={handleChange}
+                                        placeholder="Nhập địa điểm giảng dạy"
+                                    />
+                                    {errors.location && <div className="invalid-feedback d-block">{errors.location}</div>}
                                 </div>
                             </div>
                         </div>
@@ -250,11 +245,6 @@ const TrialTeachingAdd = () => {
                         <div className="form-group mb-3">
                             <label className="form-label">Ghi chú</label>
                             <textarea className="form-control" name="note" value={formData.note} onChange={handleChange} rows="3" />
-                        </div>
-
-                        <div className="form-group mb-4">
-                            <label className="form-label">Liên kết kỳ thi Aptech (tùy chọn)</label>
-                            <input type="text" className="form-control" name="aptechExamId" value={formData.aptechExamId} onChange={handleChange} />
                         </div>
 
                         <div className="form-actions">

@@ -49,6 +49,7 @@ const SubjectRegistrationDetail = () => {
             setLoading(true);
             const res = await getRegistrationDetailForAdmin(id);
 
+            // Mapping đúng field backend trả về
             const normalized = {
                 id: res.id,
                 teacherCode: res.teacherCode || "N/A",
@@ -59,7 +60,12 @@ const SubjectRegistrationDetail = () => {
                 year: res.year || "N/A",
                 registrationDate: formatDate(res.registrationDate),
                 status: (res.status || "").toLowerCase(),
-                notes: res.notes || "Không có ghi chú.",
+
+                // 🟩 MAP CHÍNH XÁC FIELD:
+                reasonForCarryOver: res.reasonForCarryOver || "Không có",       // Hình thức chuẩn bị
+                reasonForCarryOver2: res.reasonForCarryOver2 || "Không có",     // Lý do dời
+                teacherNotes: res.teacherNotes || "Không có",                   // Ghi chú giáo viên
+                notes: res.notes || "Không có ghi chú.",                        // Ghi chú tổng
             };
 
             setData(normalized);
@@ -118,67 +124,85 @@ const SubjectRegistrationDetail = () => {
 
                 <div className="card">
                     <div className="card-body">
+
+                        {/* THÔNG TIN GIÁO VIÊN */}
                         <div className="row mb-4">
-                            <div className="col-md-6 mb-4 mb-md-0 detail-section">
+                            <div className="col-md-6 detail-section">
                                 <h5>Thông tin giáo viên</h5>
-                                <div className="table-responsive">
-                                    <table className="table table-borderless detail-table mb-0">
-                                        <tbody>
-                                        <tr>
-                                            <td>Mã giáo viên:</td>
-                                            <td className="text-break">{data.teacherCode}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Tên giáo viên:</td>
-                                            <td className="text-break">{data.teacherName}</td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <table className="table table-borderless detail-table mb-0">
+                                    <tbody>
+                                    <tr>
+                                        <td>Mã giáo viên:</td>
+                                        <td>{data.teacherCode}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tên giáo viên:</td>
+                                        <td>{data.teacherName}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
+                            {/* THÔNG TIN MÔN */}
                             <div className="col-md-6 detail-section">
                                 <h5>Thông tin môn học</h5>
-                                <div className="table-responsive">
-                                    <table className="table table-borderless detail-table mb-0">
-                                        <tbody>
-                                        <tr>
-                                            <td>Tên môn:</td>
-                                            <td className="text-break">{data.subjectName}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Mã môn:</td>
-                                            <td className="text-break">{data.subjectCode}</td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <table className="table table-borderless detail-table mb-0">
+                                    <tbody>
+                                    <tr>
+                                        <td>Tên môn:</td>
+                                        <td>{data.subjectName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Mã môn:</td>
+                                        <td>{data.subjectCode}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
+                        {/* META */}
                         <div className="detail-meta-row mb-4">
                             <div className="detail-meta-item">
                                 <strong>Quý</strong>
-                                <p className="text-break">{data.quarter}</p>
+                                <p>{data.quarter}</p>
+                            </div>
+                            <div className="detail-meta-item">
+                                <strong>Năm</strong>
+                                <p>{data.year}</p>
                             </div>
                             <div className="detail-meta-item">
                                 <strong>Ngày đăng ký</strong>
-                                <p className="text-break">{data.registrationDate}</p>
+                                <p>{data.registrationDate}</p>
                             </div>
                             <div className="detail-meta-item">
                                 <strong>Trạng thái</strong>
-                                <div className="mt-1">
-                                    <span className={`badge badge-${statusInfo.class}`}>
-                                        {statusInfo.label}
-                                    </span>
-                                </div>
+                                <span className={`badge badge-${statusInfo.class}`}>
+                                    {statusInfo.label}
+                                </span>
                             </div>
                         </div>
 
+                        {/* LÝ DO DỜI */}
                         <div className="detail-section">
-                            <h5>Lý Do / Dời Môn</h5>
-                            <p className="mb-0 text-break">{data.notes}</p>
+                            <h5>Lý Do Dời Môn</h5>
+                            <p className="text-break">{data.reasonForCarryOver2}</p>
                         </div>
+
+                        {/* GHI CHÚ GIÁO VIÊN */}
+                        <div className="detail-section">
+                            <h5>Ghi Chú Giáo Viên</h5>
+                            <p className="text-break">{data.teacherNotes}</p>
+                        </div>
+
+                        {/* HÌNH THỨC CHUẨN BỊ */}
+                        <div className="detail-section">
+                            <h5>Hình Thức Chuẩn Bị</h5>
+                            <p className="text-break">{data.reasonForCarryOver}</p>
+                        </div>
+
+
+
                     </div>
                 </div>
 
@@ -194,7 +218,5 @@ const SubjectRegistrationDetail = () => {
         </MainLayout>
     );
 };
-
-
 
 export default SubjectRegistrationDetail;

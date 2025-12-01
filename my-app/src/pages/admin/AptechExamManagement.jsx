@@ -399,43 +399,53 @@ const AptechExamManagement = () => {
 
                                                 <td className="text-center">
 
-                                                    {/* Approve / Reject badges: only visible when đã upload file và chờ duyệt */}
-                                                    {exam.certificateFileId && exam.aptechStatus === 'PENDING' ? (
-                                                        <>
+                                                    {exam.aptechStatus === 'APPROVED' ? (
+                                                        <span className="badge badge-status success">Đã duyệt</span>
+                                                    ) : exam.aptechStatus === 'REJECTED' ? (
+                                                        <span className="badge badge-status danger">Từ chối</span>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
                                                             <button
-                                                                className="btn btn-sm btn-success me-1"
-                                                                title="Duyệt chứng chỉ"
+                                                                className="btn btn-sm btn-success"
+                                                                style={{ padding: '4px 6px', minWidth: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                                                title="Phê duyệt"
                                                                 onClick={async () => {
+                                                                    // optimistic update
+                                                                    const prev = exams;
+                                                                    setExams(prevEx => prevEx.map(e => e.id === exam.id ? { ...e, aptechStatus: 'APPROVED' } : e));
                                                                     try {
                                                                         await adminUpdateExamStatus(exam.id, 'APPROVED');
-                                                                        showToast('Thành công', 'Đã phê duyệt chứng chỉ', 'success');
-                                                                        // update local state
-                                                                        setExams(prev => prev.map(e => e.id === exam.id ? { ...e, aptechStatus: 'APPROVED' } : e));
+                                                                        showToast('Thành công', 'Đã phê duyệt', 'success');
                                                                     } catch (err) {
+                                                                        // revert
+                                                                        setExams(prev);
                                                                         showToast('Lỗi', 'Không thể phê duyệt', 'danger');
                                                                     }
                                                                 }}
                                                             >
-                                                                <i className="bi bi-check-lg"></i>
+                                                                <i className="bi bi-check-lg" style={{ fontSize: 12 }} />
                                                             </button>
 
                                                             <button
                                                                 className="btn btn-sm btn-danger"
-                                                                title="Từ chối chứng chỉ"
+                                                                style={{ padding: '4px 6px', minWidth: 34, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                                                title="Từ chối"
                                                                 onClick={async () => {
+                                                                    const prev = exams;
+                                                                    setExams(prevEx => prevEx.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED' } : e));
                                                                     try {
                                                                         await adminUpdateExamStatus(exam.id, 'REJECTED');
-                                                                        showToast('Thành công', 'Đã từ chối chứng chỉ', 'success');
-                                                                        setExams(prev => prev.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED' } : e));
+                                                                        showToast('Thành công', 'Đã từ chối', 'success');
                                                                     } catch (err) {
+                                                                        setExams(prev);
                                                                         showToast('Lỗi', 'Không thể từ chối', 'danger');
                                                                     }
                                                                 }}
                                                             >
-                                                                <i className="bi bi-x-lg"></i>
+                                                                <i className="bi bi-x-lg" style={{ fontSize: 12 }} />
                                                             </button>
-                                                        </>
-                                                    ) : null}
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))

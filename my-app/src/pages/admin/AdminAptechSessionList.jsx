@@ -112,6 +112,22 @@ const AdminAptechSessionList = () => {
 
     const totalCount = meta.totalElements ?? 0;
     const totalPages = meta.totalPages ?? 0;
+    // Hàm kiểm tra phiên thi có trong quá khứ hay không
+    const isSessionInPast = (session) => {
+        if (!session.examDate || !session.examTime) return false;
+        let date = session.examDate;
+        if (date.includes('/')) {
+            const [d, m, y] = date.split('/');
+            date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        const time = session.examTime || '00:00';
+        const sessionDateTime = new Date(`${date}T${time}`);
+        const now = new Date();
+        return sessionDateTime.getTime() < now.getTime();
+    };
+
+    // Lọc phiên thi trong quá khứ
+    const activeSessions = sessions.filter(session => !isSessionInPast(session));
     const pageNumbers = useMemo(() => {
         if (!totalPages) return [];
         return Array.from({ length: totalPages }, (_, index) => index);
@@ -162,7 +178,7 @@ const AdminAptechSessionList = () => {
                         </button>
                     </div>
                 </div>
-                <p className="page-subtitle subject-count">Tổng số đợt thi: {totalCount}</p>
+                <p className="page-subtitle subject-count">Đợt thi khả dụng: {activeSessions.length} / Tổng số: {totalCount}</p>
 
                 {loading && !initializing && (
                     <Loading fullscreen={true} message="Đang tải danh sách đợt thi Aptech..." />
@@ -236,14 +252,14 @@ const AdminAptechSessionList = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sessions.length === 0 ? (
+                                    {activeSessions.length === 0 ? (
                                         <tr>
                                             <td colSpan="5" className="text-center text-muted py-4">
                                                 Không có đợt thi nào phù hợp
                                             </td>
                                         </tr>
                                     ) : (
-                                        sessions.map((session, index) => (
+                                        activeSessions.map((session, index) => (
                                             <tr key={session.id}>
                                                 <td>{page * pageSize + index + 1}</td>
                                                 <td>{formatDate(session.examDate)}</td>

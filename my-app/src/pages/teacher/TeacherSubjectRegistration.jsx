@@ -24,6 +24,9 @@ const STATUS_OPTIONS = [
 
 const TeacherSubjectRegistration = () => {
     const navigate = useNavigate();
+// NEW STATES
+    const [preparationMethod, setPreparationMethod] = useState("");
+    const [teacherNote, setTeacherNote] = useState("");
 
     const [registrations, setRegistrations] = useState([]);
     const [availableSubjects, setAvailableSubjects] = useState([]);
@@ -216,7 +219,10 @@ const TeacherSubjectRegistration = () => {
 
                     registration_date: formattedDate,
                     status: (item.status || "").toUpperCase(),
-                    reason_for_carry_over: item.reasonForCarryOver ?? "-",
+                    preparation_method: item.reasonForCarryOver ?? "-",  // Hình thức chuẩn bị
+                    teacher_note: item.teacherNotes ?? "-",             // Ghi chú giáo viên
+                    reason_for_carry_over2: item.reasonForCarryOver2 ?? "-", // Lý do dời môn
+
 
                     // ⭐ NEW — deadline như admin
                     deadline: getDeadline(item.year, item.quarter),
@@ -277,8 +283,11 @@ const TeacherSubjectRegistration = () => {
                 subjectId,
                 year: parseInt(year),
                 quarter: parseInt(quarter),
+                reasonForCarryOver: preparationMethod,   // NEW
+                teacherNotes: teacherNote,               // NEW
                 status: "REGISTERED",
             };
+
 
             await registerSubject(payload);
             showToast("Thành công", "Đăng ký môn học thành công!", "success");
@@ -324,6 +333,17 @@ const TeacherSubjectRegistration = () => {
     const missingQuarters = [1, 2, 3, 4].filter(
         (q) => !regsForValidationYear.some((reg) => reg.quarter == q)
     );
+    const formatSemester = (sem) => {
+        if (!sem) return "";
+        const map = {
+            "SEMESTER_1": "Kỳ 1",
+            "SEMESTER_2": "Kỳ 2",
+            "SEMESTER_3": "Kỳ 3",
+            "SEMESTER_4": "Kỳ 4",
+        };
+        return map[sem] || sem;
+    };
+
 
     if (loading) return <Loading fullscreen={true} message="Đang tải dữ liệu..." />;
 
@@ -349,14 +369,7 @@ const TeacherSubjectRegistration = () => {
                         </button>
                         <button
                             className="btn btn-primary"
-                            onClick={() => {
-                                // Reset khi mở modal
-                                setRegisterYear(currentYear);
-                                setRegisterQuarter("");
-                                setSelectedSubject("");
-                                setSubjectSearchTerm("");
-                                setShowRegisterModal(true);
-                            }}
+                            onClick={() => navigate("/teacher/subject-registration/new")}
                         >
                             <i className="bi bi-plus-circle"></i>
                             Đăng ký Môn mới
@@ -485,59 +498,65 @@ const TeacherSubjectRegistration = () => {
                         <div className="table-responsive">
                             <table className="table table-hover align-middle">
                                 <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Mã môn</th>
-                                        <th>Tên môn</th>
-                                        <th>Chương trình</th>
-                                        <th>Kỳ học</th>
-                                        <th>Hạn hoàn thành</th>
-                                        <th>Năm</th>
-                                        <th>Quý</th>
-                                        <th>Ngày đăng ký</th>
-                                        <th>Trạng thái</th>
-                                        <th>Ghi chú</th>
-                                        <th>Hành động</th>
-                                    </tr>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Mã môn</th>
+                                    <th>Tên môn</th>
+                                    <th>Chương trình</th>
+                                    <th>Kỳ học</th>
+                                    <th>Hạn hoàn thành</th>
+                                    <th>Năm</th>
+                                    <th>Quý</th>
+                                    <th>Ngày đăng ký</th>
+                                    <th>Hình thức chuẩn bị</th>
+                                    <th>Ghi chú</th>
+                                    <th>Lý do dời môn</th>
+                                    <th>Trạng thái</th>
+                                    <th>Hành động</th>
+                                </tr>
                                 </thead>
 
 
                                 <tbody>
-                                    {pageRegistrations.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="9" className="text-center">
-                                                <div className="empty-state">
-                                                    <i className="bi bi-inbox"></i>
-                                                    <p>Không có đăng ký nào</p>
-                                                </div>
+                                {pageRegistrations.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="9" className="text-center">
+                                            <div className="empty-state">
+                                                <i className="bi bi-inbox"></i>
+                                                <p>Không có đăng ký nào</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    pageRegistrations.map((reg, index) => (
+                                        <tr key={reg.id}>
+                                            <td>{startIndex + index + 1}</td>
+                                            <td>{reg.subject_code}</td>
+                                            <td>{reg.subject_name}</td>
+                                            <td>{reg.system_name}</td>
+                                            <td>{formatSemester(reg.semester)}</td>
+
+                                            <td>{reg.deadline}</td>
+                                            <td>{reg.year}</td>
+                                            <td>{reg.quarter ? `QUY${reg.quarter}` : "N/A"}</td>
+                                            <td>{reg.registration_date}</td>
+                                            <td>{reg.preparation_method}</td>
+                                            <td>{reg.teacher_note}</td>
+                                            <td>{reg.reason_for_carry_over2}</td>
+
+                                            <td>{getStatusBadge(reg.status)}</td>
+
+                                            <td>
+                                                <button
+                                                    className="btn btn-warning btn-sm"
+                                                    onClick={() => openCarryOverModal(reg)}
+                                                >
+                                                    <i className="bi bi-arrow-repeat"></i> Dời
+                                                </button>
                                             </td>
                                         </tr>
-                                    ) : (
-                                        pageRegistrations.map((reg, index) => (
-                                            <tr key={reg.id}>
-                                                <td>{startIndex + index + 1}</td>
-                                                <td>{reg.subject_code}</td>
-                                                <td>{reg.subject_name}</td>
-                                                <td>{reg.system_name}</td>
-                                                <td>{reg.semester}</td>
-                                                <td>{reg.deadline}</td>
-                                                <td>{reg.year}</td>
-                                                <td>{reg.quarter ? `QUY${reg.quarter}` : "N/A"}</td>
-                                                <td>{reg.registration_date}</td>
-                                                <td>{getStatusBadge(reg.status)}</td>
-                                                <td>{reg.reason_for_carry_over}</td>
-
-                                                <td>
-                                                    <button
-                                                        className="btn btn-warning btn-sm"
-                                                        onClick={() => openCarryOverModal(reg)}
-                                                    >
-                                                        <i className="bi bi-arrow-repeat"></i> Dời
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
+                                    ))
+                                )}
                                 </tbody>
                             </table>
                         </div>
@@ -587,6 +606,7 @@ const TeacherSubjectRegistration = () => {
                     </div>
                 </div>
 
+
                 {/* THỐNG KÊ */}
                 {totalSubjectsInYear < 4 && (
                     <div className="alert alert-warning mt-3">
@@ -602,124 +622,7 @@ const TeacherSubjectRegistration = () => {
                     </div>
                 )}
 
-                {/* ============== MODAL ĐĂNG KÝ MÔN ============== */}
-                {showRegisterModal && (
-                    <div
-                        style={{
-                            position: "fixed",
-                            inset: 0,
-                            background: "rgba(0,0,0,0.3)",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            zIndex: 1000,
-                        }}
-                    >
-                        <div
-                            style={{
-                                background: "#fff",
-                                padding: "24px",
-                                width: "520px",
-                                borderRadius: "12px",
-                            }}
-                        >
-                            <h3 style={{ marginBottom: "16px" }}>Đăng ký Môn học Mới</h3>
 
-                            {/* Môn học */}
-                            <div style={{ marginBottom: "20px" }}>
-                                <label>Môn học</label>
-
-                                <input
-                                    className="form-control"
-                                    style={{ marginTop: "6px", marginBottom: "10px" }}
-                                    placeholder="Tìm kiếm môn..."
-                                    value={subjectSearchTerm}
-                                    onChange={(e) => setSubjectSearchTerm(e.target.value)}
-                                />
-
-                                <select
-                                    className="form-control"
-                                    style={{ marginTop: "6px" }}
-                                    value={selectedSubject}
-                                    onChange={(e) => setSelectedSubject(e.target.value)}
-                                >
-                                    <option value="">-- Chọn môn --</option>
-
-                                    {availableSubjects
-                                        .filter((s) =>
-                                            `${s.subjectCode} ${s.subjectName}`
-                                                .toLowerCase()
-                                                .includes(subjectSearchTerm.toLowerCase())
-                                        )
-                                        .map((s) => (
-                                            <option key={s.id} value={s.id}>
-                                                {s.subjectCode} - {s.subjectName}
-                                            </option>
-                                        ))}
-                                </select>
-                            </div>
-
-                            {/* Năm */}
-                            <div style={{ marginBottom: "20px" }}>
-                                <label>Năm</label>
-                                <select
-                                    className="form-control"
-                                    style={{ marginTop: "6px" }}
-                                    value={registerYear}
-                                    onChange={(e) => setRegisterYear(e.target.value)}
-                                >
-                                    {[currentYear, currentYear + 1].map((y) => (
-                                        <option key={y} value={y}>
-                                            {y}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Quý */}
-                            <div style={{ marginBottom: "24px" }}>
-                                <label>Quý</label>
-                                <select
-                                    className="form-control"
-                                    style={{ marginTop: "6px" }}
-                                    value={registerQuarter}
-                                    onChange={(e) => setRegisterQuarter(e.target.value)}
-                                >
-                                    <option value="">-- Chọn quý --</option>
-                                    <option value="1">Quý 1</option>
-                                    <option value="2">Quý 2</option>
-                                    <option value="3">Quý 3</option>
-                                    <option value="4">Quý 4</option>
-                                </select>
-                            </div>
-
-                            {/* Buttons */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "flex-end",
-                                    gap: "12px",
-                                }}
-                            >
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => setShowRegisterModal(false)}
-                                >
-                                    Hủy
-                                </button>
-                                <button
-                                    className="btn btn-primary"
-                                    disabled={!selectedSubject || !registerQuarter}
-                                    onClick={() =>
-                                        handleRegister(selectedSubject, registerYear, registerQuarter)
-                                    }
-                                >
-                                    Đăng ký
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
 
                 {/* ============== MODAL DỜI MÔN ============== */}
@@ -756,10 +659,10 @@ const TeacherSubjectRegistration = () => {
                                     onChange={(e) => setCarryQuarter(e.target.value)}
                                 >
                                     <option value="">-- Chọn quý --</option>
-                                    <option value="1">Quý 1</option>
-                                    <option value="2">Quý 2</option>
-                                    <option value="3">Quý 3</option>
-                                    <option value="4">Quý 4</option>
+                                    <option value="0">Quý 1</option>
+                                    <option value="1">Quý 2</option>
+                                    <option value="2">Quý 3</option>
+                                    <option value="3">Quý 4</option>
                                 </select>
                             </div>
 

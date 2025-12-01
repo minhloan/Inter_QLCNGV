@@ -34,8 +34,18 @@ public class SubjectRegistration extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Quarter quarter;
 
+    // GIỮ NGUYÊN — Hình thức chuẩn bị
     @Column(name = "reason_for_carry_over", columnDefinition = "TEXT")
     private String reasonForCarryOver;
+
+    // TRƯỜNG MỚI — Lý do dời môn
+    @Column(name = "reason_for_carry_over2", columnDefinition = "TEXT")
+    private String reasonForCarryOver2;
+
+    // TRƯỜNG MỚI — Ghi chú của giáo viên
+    @Column(name = "teacher_notes", columnDefinition = "TEXT")
+    private String teacherNotes;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

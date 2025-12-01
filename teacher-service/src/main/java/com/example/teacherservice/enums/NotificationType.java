@@ -3,6 +3,7 @@ package com.example.teacherservice.enums;
 public enum NotificationType {
     // Thông báo từ Admin
     ADMIN_NOTIFICATION,
+    EXAM_NOTIFICATION,
     
     // Thông báo từ Manager
     MANAGER_NOTIFICATION,

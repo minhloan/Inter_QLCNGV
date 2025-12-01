@@ -59,6 +59,7 @@ import AptechExamManagement from "./pages/admin/AptechExamManagement.jsx";
 import AdminAptechSesssionExamAdd from "./pages/admin/AdminAptechSesssionExamAdd.jsx";
 import AdminAptechSessionList from "./pages/admin/AdminAptechSessionList.jsx";
 import AptechExamDetail from "./pages/teacher/AptechExamDetail.jsx";
+import TeacherRegisterNew from "./pages/teacher/TeacherRegisterNew.jsx";
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -358,6 +359,10 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+        <Route
+            path="/teacher/subject-registration/new"
+            element={<TeacherRegisterNew />}
+        />
       <Route
         path="/teacher-subject-registration"
         element={

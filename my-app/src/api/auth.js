@@ -34,7 +34,6 @@ const decodePayload = () => {
 
         return JSON.parse(jsonString);
     } catch (error) {
-        console.error("Error decoding token payload:", error);
         return null;
     }
 };
@@ -118,10 +117,6 @@ export const refreshAccessToken = async () => {
                     secure: window.location.protocol === 'https:'
                 });
             }
-
-            console.log('[Token Refresh] Successfully refreshed access token');
-            console.log('[Token Refresh] New Access Token:', accessToken);
-            console.log('[Token Refresh] New Refresh Token:', newRefreshToken);
             return accessToken;
         } catch (error) {
             // Nếu refresh thất bại, xóa cả 2 token
@@ -143,7 +138,6 @@ export const logout = async () => {
             withCredentials: true
         });
     } catch (error) {
-        console.error('[Logout] Error:', error);
     } finally {
         // Xóa cookies ở frontend
         Cookies.remove("accessToken");
@@ -172,7 +166,6 @@ export const getUserRole = () => {
                 .map(r => r.startsWith('ROLE_') ? r : `ROLE_${r.toUpperCase()}`)
         )];
     } catch (error) {
-        console.error("Error parsing roles:", error);
         return [];
     }
 };

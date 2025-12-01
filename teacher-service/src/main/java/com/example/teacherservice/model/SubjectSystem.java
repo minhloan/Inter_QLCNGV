@@ -15,7 +15,7 @@ import lombok.*;
 @Builder
 public class SubjectSystem extends BaseEntity {
 
-    @Column(name = "system_code", nullable = false, unique = true, length = 20)
+    @Column(name = "system_code", nullable = false, unique = true, length = 40)
     private String systemCode;
 
     @Column(name = "system_name", nullable = false, length = 100)

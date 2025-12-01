@@ -33,7 +33,7 @@ public class SubjectExportService {
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MM/yyyy");
 
     private static final String TITLE_LINE_1 = "KHUNG CHƯƠNG TRÌNH ĐÀO TẠO LẬP TRÌNH VIÊN QUỐC TẾ";
-    private static final String TITLE_LINE_2 = "CHƯƠNG TRÌNH ACCP TRIỂN KHAI TẠI CUSC";
+    private static final String TITLE_LINE_2 = "CHƯƠNG TRÌNH ĐANG TRIỂN KHAI TẠI CUSC";
     private static final String TITLE_LINE_3 = "(Hiện đang triển khai)";
 
     public void exportExcel(HttpServletResponse response) {
@@ -366,9 +366,10 @@ public class SubjectExportService {
     }
 
     private void configureColumns(Sheet sheet) {
-        sheet.setColumnWidth(0, 256 * 6);
-        sheet.setColumnWidth(1, 256 * 45);
-        sheet.setColumnWidth(2, 256 * 20);
+        sheet.setColumnWidth(0, 256 * 6);   // STT
+        sheet.setColumnWidth(1, 256 * 45);  // Tên môn học
+        sheet.setColumnWidth(2, 256 * 20);  // Skill No
+        sheet.setColumnWidth(3, 256 * 50);  // Ghi chú - expanded width
     }
 
     private void configureAllSkillColumns(Sheet sheet) {
@@ -461,7 +462,7 @@ public class SubjectExportService {
     private int writeMergedRow(Sheet sheet, int rowIndex, String text, CellStyle style) {
         Row row = sheet.createRow(rowIndex++);
         createCell(row, 0, text, style);
-        sheet.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, 2));
+        sheet.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, 3));
         return rowIndex;
     }
 

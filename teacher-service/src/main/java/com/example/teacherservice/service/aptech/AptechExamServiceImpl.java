@@ -213,6 +213,9 @@ public class AptechExamServiceImpl implements AptechExamService {
         }
         exam.setCertificateFile(certificateFile);
         examRepo.save(exam);
+        
+        // Gửi thông báo thành công
+        notifyTeacherAboutCertificateUpload(exam);
     }
 
     @Override
@@ -278,6 +281,71 @@ public class AptechExamServiceImpl implements AptechExamService {
                 .subjectMatch(subjectMatch)
                 .nameMatch(nameMatch)
                 .build();
+    }
+
+    private void notifyTeacherAboutStatusUpdate(AptechExam exam, com.example.teacherservice.enums.AptechStatus newStatus) {
+        if (exam == null || exam.getTeacher() == null || newStatus == null) {
+            return;
+        }
+
+        User teacher = exam.getTeacher();
+        String subjectName = exam.getSubject() != null ? exam.getSubject().getSubjectName() : "môn thi";
+        String examDate = exam.getExamDate() != null ? exam.getExamDate().format(DATE_FORMATTER) : "N/A";
+        
+        String title = "Cập nhật trạng thái kỳ thi Aptech";
+        String message = String.format(
+            """
+            Trạng thái kỳ thi Aptech của bạn đã được cập nhật.
+            
+            Môn thi: %s
+            Ngày thi: %s
+            Trạng thái mới: %s
+            """,
+            subjectName,
+            examDate,
+            newStatus.name()
+        );
+
+        notificationService.createAndSend(
+            teacher.getId(),
+            title,
+            message,
+            NotificationType.EXAM_NOTIFICATION,
+            "APTECH_EXAM",
+            exam.getId()
+        );
+    }
+
+    private void notifyTeacherAboutCertificateUpload(AptechExam exam) {
+        if (exam == null || exam.getTeacher() == null) {
+            return;
+        }
+
+        User teacher = exam.getTeacher();
+        String subjectName = exam.getSubject() != null ? exam.getSubject().getSubjectName() : "môn thi";
+        
+        String title = "Upload bằng Aptech thành công";
+        String message = String.format(
+            """
+            Bạn đã upload thành công bằng chính thức cho kỳ thi Aptech.
+            
+            Môn thi: %s
+            Điểm số: %d%%
+            
+            Chúc mừng bạn đã hoàn thành kỳ thi!
+            """,
+            subjectName,
+            exam.getScore() != null ? exam.getScore() : 0
+        );
+
+        notificationService.createAndSend(
+            teacher.getId(),
+            title,
+            message,
+            NotificationType.EXAM_NOTIFICATION,
+            "APTECH_EXAM",
+            exam.getId()
+        );
     }
 
     private boolean namesAreSimilar(String name1, String name2) {
@@ -395,9 +463,15 @@ public class AptechExamServiceImpl implements AptechExamService {
     public void updateStatus(String id, String status) {
         AptechExam exam = examRepository.findById(id).orElseThrow(() -> new RuntimeException("Exam not found"));
         try {
+            com.example.teacherservice.enums.AptechStatus oldStatus = exam.getAptechStatus();
             com.example.teacherservice.enums.AptechStatus s = com.example.teacherservice.enums.AptechStatus.valueOf(status);
             exam.setAptechStatus(s);
             examRepository.save(exam);
+            
+            // Gửi thông báo cho giảng viên khi trạng thái thay đổi
+            if (oldStatus != s) {
+                notifyTeacherAboutStatusUpdate(exam, s);
+            }
         } catch (IllegalArgumentException ex) {
             throw new RuntimeException("Invalid status");
         }

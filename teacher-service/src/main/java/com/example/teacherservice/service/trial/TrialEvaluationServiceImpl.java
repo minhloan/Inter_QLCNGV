@@ -17,6 +17,8 @@ import com.example.teacherservice.repository.TrialTeachingRepository;
 import com.example.teacherservice.repository.UserRepository;
 import com.example.teacherservice.request.trial.TrialEvaluationRequest;
 import com.example.teacherservice.service.file.FileService;
+import com.example.teacherservice.service.notification.NotificationService;
+import com.example.teacherservice.enums.NotificationType;
 import com.example.teacherservice.enums.Role;
 import com.example.teacherservice.enums.TrialConclusion;
 import com.example.teacherservice.enums.TrialStatus;
@@ -41,13 +43,14 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
     private final UserRepository userRepository;
     private final FileService fileService;
     private final TrialTeachingService trialTeachingService;
+    private final NotificationService notificationService;
 
     @Override
     public TrialEvaluationDto createEvaluation(String attendeeId, String trialId, Integer score, String comments, String conclusion, String imageFileId, String currentUserId) {
         // Validate attendee exists and belongs to the trial
         TrialAttendee attendee = attendeeRepository.findById(attendeeId)
                 .orElseThrow(() -> new NotFoundException("Attendee not found"));
-        
+
         if (!attendee.getTrial().getId().equals(trialId)) {
             throw new IllegalArgumentException("Attendee does not belong to the specified trial");
         }
@@ -55,11 +58,11 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
         // Check if current user is authorized to evaluate (must be the assigned attendee or Manage)
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        
+
         boolean isManage = currentUser.getPrimaryRole() == Role.MANAGE;
-        boolean isAssignedAttendee = attendee.getAttendeeUser() != null && 
-                                    attendee.getAttendeeUser().getId().equals(currentUserId);
-        
+        boolean isAssignedAttendee = attendee.getAttendeeUser() != null &&
+                attendee.getAttendeeUser().getId().equals(currentUserId);
+
         if (!isManage && !isAssignedAttendee) {
             throw new UnauthorizedException("You are not authorized to evaluate this trial. Only the assigned attendee or Manage can evaluate.");
         }
@@ -105,7 +108,7 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
         // Validate attendee exists and belongs to the trial
         TrialAttendee attendee = attendeeRepository.findById(request.getAttendeeId())
                 .orElseThrow(() -> new NotFoundException("Attendee not found"));
-        
+
         if (!attendee.getTrial().getId().equals(request.getTrialId())) {
             throw new IllegalArgumentException("Attendee does not belong to the specified trial");
         }
@@ -113,11 +116,11 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
         // Check if current user is authorized to evaluate
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        
+
         boolean isManage = currentUser.getPrimaryRole() == Role.MANAGE;
-        boolean isAssignedAttendee = attendee.getAttendeeUser() != null && 
-                                    attendee.getAttendeeUser().getId().equals(currentUserId);
-        
+        boolean isAssignedAttendee = attendee.getAttendeeUser() != null &&
+                attendee.getAttendeeUser().getId().equals(currentUserId);
+
         if (!isManage && !isAssignedAttendee) {
             throw new UnauthorizedException("You are not authorized to evaluate this trial. Only the assigned attendee or Manage can evaluate.");
         }
@@ -211,7 +214,7 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
         }
 
         TrialEvaluation saved = evaluationRepository.save(evaluation);
-        
+
         // Recalculate trial result after update
         trialTeachingService.recalculateTrialResult(evaluation.getTrial().getId());
 
@@ -260,7 +263,7 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
         // Delete old items and save new ones
         if (request.getCriteria() != null) {
             evaluationItemRepository.deleteByEvaluation_Id(evaluationId);
-            
+
             int orderIndex = 1;
             for (TrialEvaluationRequest.CriterionScore criterion : request.getCriteria()) {
                 if (criterion.getCode() != null && criterion.getScore() != null && criterion.getScore() >= 1 && criterion.getScore() <= 5) {
@@ -275,9 +278,12 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
                 }
             }
         }
-        
+
         // Recalculate trial result after update
         trialTeachingService.recalculateTrialResult(evaluation.getTrial().getId());
+
+        // Gửi thông báo cho giảng viên được đánh giá
+        notifyTeacherAboutEvaluation(saved);
 
         return toDto(saved);
     }
@@ -305,9 +311,52 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
                 .collect(Collectors.toList());
     }
 
+    private void notifyTeacherAboutEvaluation(TrialEvaluation evaluation) {
+        if (evaluation == null || evaluation.getTrial() == null || evaluation.getTrial().getTeacher() == null) {
+            return;
+        }
+
+        User teacher = evaluation.getTrial().getTeacher();
+        TrialTeaching trial = evaluation.getTrial();
+        
+        String subjectName = trial.getSubject() != null ? trial.getSubject().getSubjectName() : "môn học";
+        String attendeeName = evaluation.getAttendee() != null ? evaluation.getAttendee().getAttendeeName() : "hội đồng";
+        Integer score = evaluation.getScore();
+        TrialConclusion conclusion = evaluation.getConclusion();
+        
+        String title = "Cập nhật đánh giá giảng thử";
+        String message = String.format(
+            """
+            Đánh giá giảng thử của bạn đã được cập nhật.
+            
+            Môn học: %s
+            Người đánh giá: %s
+            Điểm số: %d/100
+            Kết luận: %s
+            %s
+            """,
+            subjectName,
+            attendeeName,
+            score != null ? score : 0,
+            conclusion != null ? (conclusion == TrialConclusion.PASS ? "ĐẠT" : "CHƯA ĐẠT") : "Chưa có",
+            evaluation.getComments() != null && !evaluation.getComments().isBlank() 
+                ? "Nhận xét: " + evaluation.getComments() 
+                : ""
+        );
+
+        notificationService.createAndSend(
+            teacher.getId(),
+            title,
+            message,
+            NotificationType.TRIAL_NOTIFICATION,
+            "TRIAL_EVALUATION",
+            evaluation.getId()
+        );
+    }
+
     private TrialEvaluationDto toDto(TrialEvaluation evaluation) {
         TrialAttendee attendee = evaluation.getAttendee();
-        
+
         // Load detailed items
         List<TrialEvaluationItemDto> items = evaluationItemRepository
                 .findByEvaluation_IdOrderByOrderIndexAsc(evaluation.getId())
@@ -322,7 +371,7 @@ public class TrialEvaluationServiceImpl implements TrialEvaluationService {
                         .comment(item.getComment())
                         .build())
                 .collect(Collectors.toList());
-        
+
         return TrialEvaluationDto.builder()
                 .id(evaluation.getId())
                 .trialId(evaluation.getTrial().getId())
