@@ -247,51 +247,11 @@ const TrialTeachingAdd = () => {
                             <textarea className="form-control" name="note" value={formData.note} onChange={handleChange} rows="3" />
                         </div>
 
-                        <div className="form-actions" style={{
-                            display: 'flex',
-                            gap: '15px',
-                            justifyContent: 'flex-end',
-                            marginTop: '30px',
-                            flexWrap: 'wrap'
-                        }}>
-                            <button type="button" className="btn btn-secondary" onClick={() => navigate('/trial-teaching-management')} style={{
-                                order: -1,
-                                flex: '0 1 auto',
-                                minWidth: '80px'
-                            }}>
+                        <div className="form-actions">
+                            <button type="button" className="btn btn-secondary" onClick={() => navigate('/trial-teaching-management')}>
                                 <i className="bi bi-x-circle"></i> Hủy
                             </button>
-                            <button type="submit" className="btn btn-primary" style={{
-                                flex: '0 1 auto'
-                            }}>
-                                <i className="bi bi-check-circle"></i> Tạo buổi giảng thử
-                            </button>
-                        </div>  order: window.innerWidth <= 768 ? -1 : 0,
-                                whiteSpace: 'nowrap'
-                            }}>
-                                <i className="bi bi-x-circle"></i> Hủy
-                            </button>
-                            <button type="submit" className="btn btn-primary" style={{
-                                width: window.innerWidth <= 768 ? 'calc(50% - 5px)' : 'auto',
-                                whiteSpace: 'nowrap'
-                            }}>
-                                <i className="bi bi-check-circle"></i> Tạo buổi giảng thử
-                            </button>
-                        </div>  flexDirection: 'row'
-                            }
-                        }}>
-                            <button type="button" className="btn btn-secondary" onClick={() => navigate('/trial-teaching-management')} style={{
-                                width: '100%',
-                                textAlign: 'center',
-                                order: 1
-                            }}>
-                                <i className="bi bi-x-circle"></i> Hủy
-                            </button>
-                            <button type="submit" className="btn btn-primary" style={{
-                                width: '100%',
-                                textAlign: 'center',
-                                order: 2
-                            }}>
+                            <button type="submit" className="btn btn-primary">
                                 <i className="bi bi-check-circle"></i> Tạo buổi giảng thử
                             </button>
                         </div>
