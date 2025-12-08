@@ -1,5 +1,6 @@
 package com.example.teacherservice.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,6 +18,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Skill extends BaseEntity {
 
     @Column(name = "skill_code", length = 50, nullable = false)

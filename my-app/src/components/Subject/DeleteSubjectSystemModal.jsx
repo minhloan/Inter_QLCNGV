@@ -17,7 +17,7 @@ const DeleteSubjectSystemModal = ({ system, onConfirm, onClose }) => {
 
           <p className="text-danger">
             <small>
-              ⚠ Thao tác này sẽ <strong>xóa toàn bộ môn học</strong> thuộc hệ đào tạo này!
+              Để xoá hệ đào tạo này, bạn cần xoá toàn bộ môn học đang liên kết với hệ trước
             </small>
           </p>
 

@@ -2,6 +2,7 @@ package com.example.teacherservice.model;
 
 import com.example.teacherservice.enums.Semester;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,6 +22,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Subject extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -215,7 +215,7 @@ const AdminManageSubject = () => {
             setDeleteSubjectItem(null);
             loadSubjects();
         } catch (err) {
-            showToast("Lỗi", "Không thể xóa môn học", "danger");
+            showToast("Lỗi", "Không thể xóa môn học, môn học có thể đang được sử dụng", "danger");
         } finally {
             setLoading(false);
         }
