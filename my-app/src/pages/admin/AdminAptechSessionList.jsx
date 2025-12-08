@@ -329,4 +329,3 @@ const AdminAptechSessionList = () => {
 };
 
 export default AdminAptechSessionList;
-

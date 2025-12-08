@@ -84,8 +84,13 @@ export const connectWebSocket = async (onNotification, onError, onConnect) => {
     },
     onStompError: (frame) => {
       console.error('[WebSocket] STOMP error:', frame);
+      // Gracefully handle STOMP errors without crashing the UI
       if (savedCallbacks?.onError) {
-        savedCallbacks.onError(frame);
+        try {
+          savedCallbacks.onError(frame);
+        } catch (err) {
+          console.error('[WebSocket] Error in onError callback:', err);
+        }
       }
     },
     onWebSocketClose: (event) => {

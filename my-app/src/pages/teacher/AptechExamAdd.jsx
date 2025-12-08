@@ -20,8 +20,6 @@ const AptechExamAdd = () => {
     const fullWidthFieldStyle = { gridColumn: '1 / -1' };
     const [sessions, setSessions] = useState([]);
     const [subjects, setSubjects] = useState([]);
-    const [filteredSubjects, setFilteredSubjects] = useState([]);
-    const [subjectSearch, setSubjectSearch] = useState('');
     const [previousExams, setPreviousExams] = useState([]);
     const [selectedSession, setSelectedSession] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -33,16 +31,6 @@ const AptechExamAdd = () => {
     useEffect(() => {
         loadData();
     }, []);
-
-    useEffect(() => {
-        if (subjectSearch.trim() === '') {
-            setFilteredSubjects(subjects);
-        } else {
-            setFilteredSubjects(subjects.filter(s =>
-                s.subjectName.toLowerCase().includes(subjectSearch.toLowerCase())
-            ));
-        }
-    }, [subjectSearch, subjects]);
 
     useEffect(() => {
         if (selectedSubject) {
@@ -60,7 +48,6 @@ const AptechExamAdd = () => {
             ]);
             setSessions(sessionsData);
             setSubjects(subjectsData);
-            setFilteredSubjects(subjectsData);
             setPreviousExams(examsData);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu', 'danger');
@@ -97,6 +84,17 @@ const AptechExamAdd = () => {
             return;
         }
 
+        // Kiểm tra đã đăng ký môn khác ở phiên thi này chưa
+        const sessionExams = previousExams.filter(exam => String(exam.sessionId) === String(selectedSession));
+        if (sessionExams.length > 0) {
+            const hasOtherSubject = sessionExams.some(exam => String(exam.subjectId) !== String(selectedSubject));
+            if (hasOtherSubject) {
+                console.log('Bạn đã đăng ký môn thi khác trước đó');
+                showToast('Lỗi', 'Bạn đã đăng ký môn thi khác trước đó', 'danger');
+                return;
+            }
+        }
+
         // Prevent registering when there's a previous ungraded registration (score === null)
         const subjectExams = previousExams.filter(exam => String(exam.subjectId) === String(selectedSubject));
         const hasPendingRegistration = subjectExams.some(exam => exam.score == null);
@@ -128,7 +126,9 @@ const AptechExamAdd = () => {
 
             await registerAptechExam(selectedSession, selectedSubject);
             showToast('Thành công', 'Đăng ký thi thành công', 'success');
-            setTimeout(() => navigate('/teacher-aptech-exam'), 2000);
+            console.log('Đã đăng ký thi thành công');
+            // Chuyển về trang TeacherAptechExam.jsx cho teacher
+            navigate('/teacher-aptech-exam');
         } catch (error) {
             showToast('Lỗi', 'Đăng ký thi thất bại', 'danger');
         } finally {
@@ -140,23 +140,6 @@ const AptechExamAdd = () => {
         setToast({ show: true, title, message, type });
         setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
     };
-
-    // Hàm kiểm tra phiên thi có trong quá khứ hay không
-    const isSessionInPast = (session) => {
-        if (!session.examDate || !session.examTime) return false;
-        let date = session.examDate;
-        if (date.includes('/')) {
-            const [d, m, y] = date.split('/');
-            date = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-        }
-        const time = session.examTime || '00:00';
-        const sessionDateTime = new Date(`${date}T${time}`);
-        const now = new Date();
-        return sessionDateTime.getTime() < now.getTime();
-    };
-
-    // Lọc phiên thi trong quá khứ
-    const upcomingSessions = sessions.filter(session => !isSessionInPast(session));
 
     const selectedSessionData = sessions.find(s => s.id === selectedSession);
 
@@ -197,15 +180,11 @@ const AptechExamAdd = () => {
                                         required
                                     >
                                         <option value="">Chọn phiên thi</option>
-                                        {upcomingSessions.length > 0 ? (
-                                            upcomingSessions.map(session => (
-                                                <option key={session.id} value={session.id}>
-                                                    {session.examDate} - {session.room}
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <option value="" disabled>Không có phiên thi nào khả dụng</option>
-                                        )}
+                                        {sessions.map(session => (
+                                            <option key={session.id} value={session.id}>
+                                                {session.examDate} - {session.room}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -267,13 +246,6 @@ const AptechExamAdd = () => {
 
                                 <div className="form-group">
                                     <label className="form-label">Môn thi *</label>
-                                    <input
-                                        type="text"
-                                        className="form-control mb-2"
-                                        placeholder="Tìm kiếm môn học..."
-                                        value={subjectSearch}
-                                        onChange={e => setSubjectSearch(e.target.value)}
-                                    />
                                     <select
                                         className="form-select"
                                         value={selectedSubject}
@@ -281,7 +253,7 @@ const AptechExamAdd = () => {
                                         required
                                     >
                                         <option value="">Chọn môn thi</option>
-                                        {filteredSubjects.map(subject => (
+                                        {subjects.map(subject => (
                                             <option key={subject.id} value={subject.id}>
                                                 {subject.subjectName}
                                             </option>

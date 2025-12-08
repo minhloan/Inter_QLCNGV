@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+npm-debug.log
+yarn-error.log
+dist/
+build/
+.DS_Store
+*.pem

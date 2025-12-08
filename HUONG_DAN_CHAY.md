@@ -28,6 +28,25 @@
 ---
 
 ## Bước 2: Chạy các Service theo thứ tự
+## Bước 2: Chạy Screenshot Service (Port 3001)
+
+**Bước này CẦN THIẾT để tính năng chụp màn hình aptrack.asia hoạt động.**
+
+- Mở Terminal/PowerShell tại thư mục `screenshot-service`
+- **Lần đầu chạy:** Cài đặt dependencies:
+  ```bash
+  npm install
+  ```
+- Chạy service:
+  ```bash
+  npm start
+  ```
+- Đợi đến khi thấy log: `Screenshot service running on port 3001`
+- Kiểm tra health: http://localhost:3001/api/health (sẽ trả về `{"status":"OK",...}`)
+
+---
+
+## Bước 3: Chạy các Service theo thứ tự
 
 **Quan trọng:** Phải chạy đúng thứ tự sau:
 
@@ -55,7 +74,6 @@
 - Đợi đến khi thấy log: `Started GatewayApplication`
 - Kiểm tra trên Eureka: http://localhost:8761 (sẽ thấy gateway đã đăng ký)
 
-### 5. Frontend - my-app (Port 5173)
 - Mở Terminal/PowerShell tại thư mục `my-app`
 - **Lần đầu chạy:** Cài đặt dependencies:
   ```bash
@@ -69,6 +87,10 @@
 - Mở browser: http://localhost:5173 để xem ứng dụng
 
 **Lưu ý:** 
+**Lưu ý quan trọng:** 
+- **Screenshot Service PHẢI chạy trước Frontend** (xem Bước 2)
+- Nếu screenshot service không chạy, tính năng "Chụp màn hình" sẽ báo lỗi
+- Frontend sẽ tự động reload khi có thay đổi code
 - Frontend sẽ tự động reload khi có thay đổi code
 - Để dừng frontend: Nhấn `Ctrl + C` trong terminal
 
@@ -78,6 +100,7 @@
 
 - **Eureka Dashboard:** http://localhost:8761
 - **Gateway:** http://localhost:8080
+- **Screenshot Service:** http://localhost:3001/api/health
 - **Teacher Service:** http://localhost:8000
 - **Config Server:** http://localhost:8888
 - **Frontend (my-app):** http://localhost:5173
@@ -87,7 +110,8 @@
 ## Dừng Services
 
 1. **Dừng Frontend:** Nhấn `Ctrl + C` trong terminal đang chạy `npm run dev`
-2. **Dừng các service:** Nhấn `Stop` trong IntelliJ cho từng service
+2. **Dừng Screenshot Service:** Nhấn `Ctrl + C` trong terminal đang chạy `npm start`
+3. **Dừng các service:** Nhấn `Stop` trong IntelliJ cho từng service
 3. **Dừng Redis:**
    ```bash
    docker-compose down

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -469,13 +470,15 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <AppRoutes />
-        </NotificationProvider>
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <NotificationProvider>
+            <AppRoutes />
+          </NotificationProvider>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

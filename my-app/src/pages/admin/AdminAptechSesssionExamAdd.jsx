@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
@@ -14,12 +14,19 @@ const initialForm = {
 
 const AdminAptechSesssionExamAdd = () => {
     const navigate = useNavigate();
+    const isMountedRef = useRef(true);
     const [form, setForm] = useState(initialForm);
     const [sessions, setSessions] = useState([]);
     const [initializing, setInitializing] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
     const formSectionWidth = '1200px';
+
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         fetchSessions(true);
@@ -103,17 +110,27 @@ const AdminAptechSesssionExamAdd = () => {
                 note: form.note?.trim() || ''
             });
             showToast('Thành công', 'Đã tạo đợt thi Aptech mới', 'success');
-            setForm(initialForm);
-            await fetchSessions(false);
-            setTimeout(() => navigate('/admin/aptech-exam/sessions'), 1200);
+            console.log('Đã tạo đợt thi Aptech mới');
+
+            // Only update state if component is still mounted
+            if (isMountedRef.current) {
+                setForm(initialForm);
+                setSubmitting(false);
+            }
+
+            // Navigate immediately (don't wait for re-renders or state updates)
+            navigate('/admin/aptech-exam/sessions');
+            return;
         } catch (error) {
             const serverMessage = error?.response?.data;
             const message = typeof serverMessage === 'string' && serverMessage.trim()
                 ? serverMessage
                 : 'Không thể tạo đợt thi Aptech';
             showToast('Lỗi', message, 'danger');
-        } finally {
-            setSubmitting(false);
+            // Only update state if component is still mounted
+            if (isMountedRef.current) {
+                setSubmitting(false);
+            }
         }
     };
 

@@ -1,43 +1,76 @@
 import MainLayout from '../../components/Layout/MainLayout';
-import { useRef } from 'react';
-import html2canvas from 'html2canvas';
-import { saveAs } from 'file-saver';
+import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const AptechExamTake = () => {
-    const cardRef = useRef(null);
+    const navigate = useNavigate();
+    const iframeRef = useRef(null);
+    const [isCapturing, setIsCapturing] = useState(false);
 
     const handleScreenshot = async () => {
-        if (!cardRef.current) return;
+        setIsCapturing(true);
         try {
-            const canvas = await html2canvas(cardRef.current, { useCORS: true, logging: false });
-            canvas.toBlob((blob) => {
-                if (!blob) return;
-                saveAs(blob, `aptech_screenshot_${Date.now()}.png`);
+            const iframeWidth = iframeRef.current ? Math.max(800, iframeRef.current.clientWidth) : window.innerWidth;
+
+            const response = await fetch('http://localhost:3001/api/screenshot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url: 'https://aptrack.asia/', width: iframeWidth })
             });
+
+            if (!response.ok) {
+                throw new Error('Không thể chụp màn hình từ server');
+            }
+
+            const blob = await response.blob();
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aptech_screenshot_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            alert('Ảnh chụp đã tải về thành công!');
         } catch (err) {
-            // Cross-origin iframe content may prevent a full screenshot; capture may be blank due to browser policies
-            alert('Không thể chụp nội dung trong iframe do chính sách trình duyệt (cross-origin).');
+            console.error('Screenshot error:', err);
+            alert('Không thể chụp màn hình. Vui lòng chắc chắn screenshot service đang chạy.');
+        } finally {
+            setIsCapturing(false);
         }
     };
 
     return (
         <MainLayout>
-            <div style={{ padding: 24 }}>
-                <h2>Tham gia Kỳ thi Aptech</h2>
-
-                <div style={{ marginTop: 16, marginBottom: 12 }}>
-                    <button className="btn btn-primary me-2" onClick={handleScreenshot}>
-                        <i className="bi bi-camera"></i>
-                        <span> Chụp màn hình</span>
-                    </button>
+            <div className="page-align-with-form page-admin-add-teacher">
+                <div className="content-header">
+                    <div className="content-title">
+                        <button className="back-button" onClick={() => navigate(-1)}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h3 className="page-title">Tham gia Kỳ thi Aptech</h3>
+                    </div>
+                    <div className="aptech-header-actions">
+                        <button 
+                            className="btn btn-primary" 
+                            onClick={handleScreenshot}
+                            disabled={isCapturing}
+                        >
+                            <i className="bi bi-camera"></i>
+                            <span> {isCapturing ? 'Đang chụp...' : 'Chụp màn hình'}</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div ref={cardRef} style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, background: '#fff' }}>
-                    <div style={{ marginBottom: 12 }}>
-                        <strong>Embedded site:</strong> https://aptrack.asia/
-                    </div>
+                <div style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, background: '#fff', marginTop: 12 }}>
                     <div style={{ width: '100%', height: 600, overflow: 'hidden' }}>
                         <iframe
+                            ref={iframeRef}
                             title="aptrack-embed"
                             src="https://aptrack.asia/"
                             style={{ width: '100%', height: '100%', border: 0 }}
