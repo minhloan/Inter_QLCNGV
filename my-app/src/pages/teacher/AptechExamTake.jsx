@@ -1,11 +1,13 @@
 import MainLayout from '../../components/Layout/MainLayout';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Toast from '../../components/Common/Toast';
 
 const AptechExamTake = () => {
     const navigate = useNavigate();
     const iframeRef = useRef(null);
     const [isCapturing, setIsCapturing] = useState(false);
+    const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
     const handleScreenshot = async () => {
         setIsCapturing(true);
@@ -25,7 +27,7 @@ const AptechExamTake = () => {
             }
 
             const blob = await response.blob();
-            
+
             // Create download link
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -35,11 +37,14 @@ const AptechExamTake = () => {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            
-            alert('Ảnh chụp đã tải về thành công!');
-        } catch (err) {
+
+            // Show app toast instead of browser alert
+                {toast.show && (
+                    <Toast title={toast.title} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, show: false }))} />
+                )}
             console.error('Screenshot error:', err);
-            alert('Không thể chụp màn hình. Vui lòng chắc chắn screenshot service đang chạy.');
+            setToast({ show: true, title: 'Lỗi', message: 'Chụp màn hình thất bại', type: 'danger' });
+            setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3500);
         } finally {
             setIsCapturing(false);
         }
@@ -83,3 +88,4 @@ const AptechExamTake = () => {
 };
 
 export default AptechExamTake;
+

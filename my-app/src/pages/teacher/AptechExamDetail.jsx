@@ -162,11 +162,11 @@ const AptechExamDetail = () => {
         try {
             setLoading(true);
             await uploadFinalCertificate(id, file);
-            showToast('Thành công', 'Đã tải bằng Aptech', 'success');
+            // Intentionally do not show toast for 'Upload bằng' as requested
             await loadExamDetail();
         } catch (err) {
             console.error('Final certificate upload error:', err);
-            showToast('Lỗi', err.response?.data?.error || 'Không thể tải bằng', 'danger');
+            // Intentionally suppress toast on failure for 'Upload bằng'
         } finally {
             event.target.value = '';
             setLoading(false);
