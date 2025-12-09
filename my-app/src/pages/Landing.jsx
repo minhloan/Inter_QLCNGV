@@ -57,7 +57,6 @@ const Landing = () => {
 
         <div className="hero-section">
           <h1 className="hero-title">Hệ thống quản lý giáo viên</h1>
-          <p className="hero-subtitle">Designed by David Nguyen & Designed by David Nguyen</p>
           <a href="#" className="btn-login" onClick={(e) => { e.preventDefault(); handleLoginClick(); }}>
             LOGIN
           </a>
