@@ -23,7 +23,19 @@ export const getMenuItems = (role) => {
   ];
 
   const isAdmin = role === 'Manage-Leader' || role === 'admin';
+  if (pathname) {
+    const normalized = pathname.split('?')[0];
 
+    if (normalized.startsWith('/teacher')) {
+      return teacherMenuItems;
+    }
+
+    for (const item of teacherMenuItems) {
+      if (item.path === '/') continue;
+      if (normalized === item.path) return teacherMenuItems;
+      if (normalized.startsWith(item.path + '/')) return teacherMenuItems;
+    }
+  }
   return isAdmin ? adminMenuItems : teacherMenuItems;
 };
 
