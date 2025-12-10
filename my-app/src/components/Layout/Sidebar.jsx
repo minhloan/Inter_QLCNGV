@@ -17,7 +17,8 @@ const Sidebar = () => {
         });
     };
 
-    const menuItems = getMenuItems(user?.role);
+const menuItems = getMenuItems(user?.role, location.pathname);
+
 
     return (
         <div className={`left-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
