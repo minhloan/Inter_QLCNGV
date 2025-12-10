@@ -61,7 +61,7 @@ const createApiInstance = (baseURL) => {
                             config.headers.Authorization = `Bearer ${newAccessToken}`;
                             config.withCredentials = true;
                             console.log('[Token Refresh] Successfully refreshed token');
-                            return config;
+                            //return config;
                         } catch (refreshError) {
                             // console.error('[Token Refresh] Failed to refresh token:', refreshError);
                             // Continue with old token, let response interceptor handle 401

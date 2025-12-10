@@ -46,7 +46,23 @@ const AptechExamAdd = () => {
                 getAllSubjects(),
                 getTeacherAptechExams()
             ]);
-            setSessions(sessionsData);
+            
+            // Filter out past sessions - only show upcoming ones
+            const now = new Date();
+            const upcomingSessions = Array.isArray(sessionsData) 
+                ? sessionsData.filter(session => {
+                    let dateStr = session.examDate || '';
+                    if (dateStr.includes('/')) {
+                        const [d, m, y] = dateStr.split('/');
+                        dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                    }
+                    const timeStr = session.examTime || '00:00';
+                    const sessionDateTime = new Date(`${dateStr}T${timeStr}`);
+                    return !isNaN(sessionDateTime.getTime()) && sessionDateTime >= now;
+                })
+                : [];
+            
+            setSessions(upcomingSessions);
             setSubjects(subjectsData);
             setPreviousExams(examsData);
         } catch (error) {

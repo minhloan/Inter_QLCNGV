@@ -61,6 +61,7 @@ import AdminAptechSesssionExamAdd from "./pages/admin/AdminAptechSesssionExamAdd
 import AdminAptechSessionList from "./pages/admin/AdminAptechSessionList.jsx";
 import AptechExamDetail from "./pages/teacher/AptechExamDetail.jsx";
 import TeacherRegisterNew from "./pages/teacher/TeacherRegisterNew.jsx";
+import AdminDashboard from './pages/AdminDashboard';
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -179,6 +180,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
             <TeacherDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-dashboard"
+        element={
+          <ProtectedRoute requiredRole="Manage-Leader">
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />

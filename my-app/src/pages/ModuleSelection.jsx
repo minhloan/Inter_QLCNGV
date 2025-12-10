@@ -17,7 +17,7 @@ const ModuleSelection = () => {
           title: 'Quản lý giáo viên & môn học',
           description: 'Quản lý thông tin giáo viên, môn học và các hoạt động trong hệ thống. Bao gồm Teacher Management và Subject Management.',
           icon: 'bi bi-gear-fill',
-          path: '/manage-teacher'
+              path: '/admin-dashboard'
         },
         {
           id: 'teacher-module',

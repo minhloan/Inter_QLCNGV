@@ -12,6 +12,7 @@ import com.example.teacherservice.model.*;
 import com.example.teacherservice.repository.*;
 import com.example.teacherservice.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xwpf.usermodel.*;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRow;
 import org.springframework.core.io.ClassPathResource;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AptechExamServiceImpl implements AptechExamService {
     private static final int SECTION_ROW_HEIGHT = 500; // twips (≈ 25pt)
     private static final int DATA_ROW_HEIGHT    = 420; // twips (≈ 21pt)
@@ -461,19 +463,31 @@ public class AptechExamServiceImpl implements AptechExamService {
     @Override
     @Transactional
     public void updateStatus(String id, String status) {
-        AptechExam exam = examRepository.findById(id).orElseThrow(() -> new RuntimeException("Exam not found"));
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("Missing status");
+        }
+
+        AptechExam exam = examRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
+
         try {
             com.example.teacherservice.enums.AptechStatus oldStatus = exam.getAptechStatus();
-            com.example.teacherservice.enums.AptechStatus s = com.example.teacherservice.enums.AptechStatus.valueOf(status);
+            com.example.teacherservice.enums.AptechStatus s = com.example.teacherservice.enums.AptechStatus
+                    .valueOf(status.trim().toUpperCase(java.util.Locale.ROOT));
             exam.setAptechStatus(s);
             examRepository.save(exam);
-            
+
             // Gửi thông báo cho giảng viên khi trạng thái thay đổi
             if (oldStatus != s) {
-                notifyTeacherAboutStatusUpdate(exam, s);
+                try {
+                    notifyTeacherAboutStatusUpdate(exam, s);
+                } catch (Exception notifyEx) {
+                    // Không để notification làm sập cả request. Ghi log và tiếp tục.
+                    log.error("Failed to send aptech status notification for exam {}: {}", id, notifyEx.getMessage(), notifyEx);
+                }
             }
         } catch (IllegalArgumentException ex) {
-            throw new RuntimeException("Invalid status");
+            throw new IllegalArgumentException("Invalid status: " + status);
         }
     }
 
@@ -505,10 +519,20 @@ public class AptechExamServiceImpl implements AptechExamService {
     @Transactional
     public void updateScore(String id, Integer score, String result) {
         AptechExam exam = examRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Exam not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Exam not found"));
 
         exam.setScore(score);
-        exam.setResult(ExamResult.valueOf(result)); // vì result là Enum
+
+        if (result == null || result.isBlank()) {
+            exam.setResult(null);
+        } else {
+            try {
+                ExamResult r = ExamResult.valueOf(result.trim().toUpperCase(java.util.Locale.ROOT));
+                exam.setResult(r);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Invalid result: " + result);
+            }
+        }
 
         examRepository.save(exam);
     }

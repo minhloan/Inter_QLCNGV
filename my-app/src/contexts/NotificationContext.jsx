@@ -116,6 +116,16 @@ export const NotificationProvider = ({ children }) => {
       return;
     }
 
+    // Quick toggle to disable WS during debugging: set localStorage.disableWs = '1'
+    const disableWs = typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem('disableWs') === '1';
+    // eslint-disable-next-line no-console
+    console.debug('[Notifications] isAuthenticated:', isAuthenticated, 'disableWs:', disableWs);
+    if (disableWs) {
+      // Do not attempt to connect when debugging WebSocket issues
+      setError('WebSocket disabled (debug)');
+      return;
+    }
+
     // Kết nối WebSocket
     const handleNotification = (notificationPayload) => {
 
@@ -153,6 +163,8 @@ export const NotificationProvider = ({ children }) => {
 
     // Kết nối WebSocket (async)
     connectWebSocket(handleNotification, handleError, handleConnect).catch(err => {
+      // eslint-disable-next-line no-console
+      console.error('[Notifications] connectWebSocket failed:', err);
       setError('Lỗi kết nối thông báo thời gian thực.');
     });
 

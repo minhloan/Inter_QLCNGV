@@ -9,6 +9,7 @@ import com.example.teacherservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataAccessException;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public class NotificationServiceImpl implements NotificationService{
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationPersistenceService notificationPersistenceService;
 
     @Override
     public Notification createAndSend(String userId, String title, String message, NotificationType type, String relatedEntity, String relatedId) {
@@ -53,14 +55,25 @@ public class NotificationServiceImpl implements NotificationService{
                 .relatedEntity(relatedEntity)
                 .relatedId(relatedId)
                 .build();
-        Notification saved = notificationRepository.save(n);
-        var payload = new NotificationPayload(
-                saved.getId(), title, message,
-                type != null ? type.name() : null,
-                relatedEntity, relatedId, saved.getCreationTimestamp()
-        );
-        messagingTemplate.convertAndSendToUser(user.getId(), "/queue/notifications", payload);
-        return saved;
+        try {
+            Notification saved = notificationPersistenceService.saveAndFlush(n);
+            var payload = new NotificationPayload(
+                    saved.getId(), title, message,
+                    type != null ? type.name() : null,
+                    relatedEntity, relatedId, saved.getCreationTimestamp()
+            );
+            try {
+                messagingTemplate.convertAndSendToUser(user.getId(), "/queue/notifications", payload);
+            } catch (Exception ex) {
+                // Messaging failure should not impact persistence or caller
+                System.err.println("Failed to send websocket notification: " + ex.getMessage());
+            }
+            return saved;
+        } catch (DataAccessException dae) {
+            // Persisting notification failed (schema mismatch, etc.) -- log and continue
+            System.err.println("Failed to persist notification: " + dae.getMessage());
+            return null;
+        }
     }
 
     @Override

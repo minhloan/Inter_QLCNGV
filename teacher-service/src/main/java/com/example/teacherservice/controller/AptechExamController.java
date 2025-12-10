@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/teacher/aptech-exam")
@@ -260,12 +261,30 @@ public class AptechExamController {
     }
 
     @PutMapping("/admin/{id}/status")
-    public ResponseEntity<?> adminUpdateStatus(@PathVariable String id, @RequestBody java.util.Map<String, String> req) {
+    public ResponseEntity<?> adminUpdateStatus(
+            @PathVariable String id,
+            @RequestBody Map<String, String> req) {
+
         String status = req.get("status");
-        if (status == null) return ResponseEntity.badRequest().body("Missing status");
-        examService.updateStatus(id, status);
-        return ResponseEntity.ok("Status updated");
+
+        if (status == null || status.isBlank()) {
+            return ResponseEntity.badRequest().body("Missing status");
+        }
+
+        // Log request values to help debugging if something fails
+        log.info("Admin update aptech exam status request: id={}, status={}", id, status);
+
+        try {
+            examService.updateStatus(id, status.trim());
+            return ResponseEntity.ok("Status updated");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to update aptech exam status for id {}", id, e);
+            return ResponseEntity.internalServerError().body("Failed to update status");
+        }
     }
+
 
     private HttpHeaders buildDocxHeaders(String filename) {
         HttpHeaders headers = new HttpHeaders();

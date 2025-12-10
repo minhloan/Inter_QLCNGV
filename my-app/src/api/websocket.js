@@ -58,28 +58,45 @@ export const connectWebSocket = async (onNotification, onError, onConnect) => {
         // console.log('[STOMP]', str);
       }
     },
-    onConnect: (frame) => {
+    onConnect: function (frame) {
+      // Use `this` which is the connected Client instance to avoid races
+      // where the outer `stompClient` variable may have been nulled.
       // console.log('[WebSocket] Connected successfully');
       reconnectAttempts = 0;
-      
-      // Subscribe vào queue notifications của user
-      stompClient.subscribe('/user/queue/notifications', (message) => {
-        try {
-          const notification = JSON.parse(message.body);
-          // console.log('[WebSocket] Received notification:', notification);
-          
-          if (savedCallbacks?.onNotification) {
-            savedCallbacks.onNotification(notification);
-          }
-        } catch (error) {
-          // console.error('[WebSocket] Error parsing notification:', error);
-        }
-      });
 
-      // console.log('[WebSocket] Subscribed to /user/queue/notifications');
-      
-      if (savedCallbacks?.onConnect) {
-        savedCallbacks.onConnect();
+      const client = this;
+
+      try {
+        // Ensure the client reports it's connected before subscribing
+        if (client && client.connected) {
+          client.subscribe('/user/queue/notifications', (message) => {
+            try {
+              const notification = JSON.parse(message.body);
+              // console.log('[WebSocket] Received notification:', notification);
+              if (savedCallbacks?.onNotification) {
+                savedCallbacks.onNotification(notification);
+              }
+            } catch (error) {
+              // console.error('[WebSocket] Error parsing notification:', error);
+            }
+          });
+
+          // console.log('[WebSocket] Subscribed to /user/queue/notifications');
+        } else {
+          // console.warn('[WebSocket] onConnect called but client not connected');
+        }
+
+        if (savedCallbacks?.onConnect) {
+          try {
+            savedCallbacks.onConnect();
+          } catch (err) {
+            // Avoid crashing if callback throws
+            // console.error('[WebSocket] Error in onConnect callback:', err);
+          }
+        }
+      } catch (err) {
+        // STOMP subscription or parsing error — log and continue without throwing
+        // console.error('[WebSocket] Error during onConnect handling:', err);
       }
     },
     onStompError: (frame) => {
