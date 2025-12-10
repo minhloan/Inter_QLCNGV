@@ -1,4 +1,4 @@
-export const getMenuItems = (role) => {
+export const getMenuItems = (role, pathname) => {
   const adminMenuItems = [
     { path: '/manage-teacher', icon: 'bi-people', label: 'Quản lý Giáo viên' },
     { path: '/manage-subjects', icon: 'bi-book', label: 'Quản lý Môn học' },
