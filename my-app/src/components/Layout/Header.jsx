@@ -91,7 +91,8 @@ const Header = () => {
   // Get user display name and email
   const displayName = user?.username  || 'USER';
   const displayEmail = user?.userData?.email || user?.email || '';
-  const menuItems = getMenuItems(user?.role);
+  const menuItems = getMenuItems(user?.role, location.pathname);
+
   
   // Determine logo link based on location
   const logoLink = location.pathname === '/module-selection' ? '/module-selection' : '/';
