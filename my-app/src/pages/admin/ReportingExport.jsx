@@ -56,6 +56,17 @@ const ReportingExport = () => {
         applyFilters();
     }, [reports, reportType, yearFilter, quarterFilter]);
 
+    useEffect(() => {
+        if (['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(reportType)) {
+            setYearFilter((currentYear - 1).toString());
+        }
+        if (reportType === 'QUARTER') {
+            setQuarterFilter('1');
+        } else if (['APTECH', 'TRIAL', 'YEAR'].includes(reportType)) {
+            setQuarterFilter('');
+        }
+    }, [reportType]);
+
     const loadReports = async () => {
         try {
             setLoading(true);
@@ -121,7 +132,7 @@ const ReportingExport = () => {
             };
 
             const response = await apiGenerateReport(reportRequest);
-            setReports(prev => [response, ...prev]);
+            await loadReports(); // Reload reports to show the new report with creation date immediately
             showToast('Thành công', 'Tạo báo cáo thành công', 'success');
         } catch (error) {
             console.error('Error generating report:', error);
@@ -263,27 +274,31 @@ const ReportingExport = () => {
                                     value={yearFilter}
                                     onChange={(e) => setYearFilter(e.target.value)}
                                 >
-                                    <option value="">Chọn năm</option>
                                     {[currentYear - 1, currentYear, currentYear + 1].map(year => (
                                         <option key={year} value={year}>{year}</option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="filter-group">
-                                <label className="filter-label">Quý</label>
-                                <select
-                                    className="filter-select"
-                                    value={quarterFilter}
-                                    onChange={(e) => setQuarterFilter(e.target.value)}
-                                    disabled={reportType !== 'QUARTER' && reportType !== 'APTECH'}
-                                >
-                                    <option value="">Tất cả</option>
-                                    <option value="1">Quý 1</option>
-                                    <option value="2">Quý 2</option>
-                                    <option value="3">Quý 3</option>
-                                    <option value="4">Quý 4</option>
-                                </select>
-                            </div>
+                            {['QUARTER', 'APTECH', 'TRIAL', 'YEAR'].includes(reportType) && (
+                                <div className="filter-group">
+                                    <label className="filter-label">Quý</label>
+                                    <select
+                                        className="filter-select"
+                                        value={quarterFilter}
+                                        onChange={(e) => setQuarterFilter(e.target.value)}
+                                    >
+                                        {['APTECH', 'TRIAL', 'YEAR'].includes(reportType) && <option value="">Tất cả</option>}
+                                        {['QUARTER', 'APTECH', 'TRIAL'].includes(reportType) && (
+                                            <>
+                                                <option value="1">Quý 1</option>
+                                                <option value="2">Quý 2</option>
+                                                <option value="3">Quý 3</option>
+                                                <option value="4">Quý 4</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+                            )}
                         </>
                     )}
 
@@ -384,6 +399,22 @@ const ReportingExport = () => {
                                 ))}
                             </select>
                         </div>
+                        {['QUARTER', 'APTECH', 'TRIAL'].includes(reportType) && (
+                            <div className="filter-group">
+                                <label className="filter-label">Quý</label>
+                                <select
+                                    className="filter-select"
+                                    value={quarterFilter}
+                                    onChange={(e) => setQuarterFilter(e.target.value)}
+                                >
+                                    {['APTECH', 'TRIAL'].includes(reportType) && <option value="">Tất cả</option>}
+                                    <option value="1">Quý 1</option>
+                                    <option value="2">Quý 2</option>
+                                    <option value="3">Quý 3</option>
+                                    <option value="4">Quý 4</option>
+                                </select>
+                            </div>
+                        )}
                         <div className="filter-group">
                             <button className="btn btn-secondary" onClick={() => {
                                 setReportType('');

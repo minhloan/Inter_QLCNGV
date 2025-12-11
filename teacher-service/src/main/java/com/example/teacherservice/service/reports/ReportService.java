@@ -629,9 +629,7 @@ public class ReportService {
         return ReportDTO.builder()
                 .id(report.getId())
                 .teacherId(report.getTeacher() != null ? report.getTeacher().getId() : null)
-                .teacherName(report.getTeacher() != null && report.getTeacher().getUserDetails() != null ?
-                        report.getTeacher().getUserDetails().getFirstName() + " " +
-                        report.getTeacher().getUserDetails().getLastName() : null)
+                .teacherName(report.getTeacher() != null ? report.getTeacher().getUsername() : null)
                 .year(report.getYear())
                 .quarter(report.getQuarter())
                 .reportType(report.getReportType())
@@ -639,9 +637,7 @@ public class ReportService {
                 .filePath(report.getFile() != null ? report.getFile().getFilePath() : null)
                 .paramsJson(report.getParamsJson())
                 .status(report.getStatus())
-                .generatedBy(report.getGeneratedBy() != null && report.getGeneratedBy().getUserDetails() != null ?
-                        report.getGeneratedBy().getUserDetails().getFirstName() + " " +
-                        report.getGeneratedBy().getUserDetails().getLastName() : null)
+                .generatedBy(report.getGeneratedBy() != null ? report.getGeneratedBy().getUsername() : null)
                 .createdAt(report.getCreationTimestamp())
                 .updatedAt(report.getUpdateTimestamp())
                 .build();
@@ -939,9 +935,7 @@ public class ReportService {
                 .map(teacher -> {
                     Map<String, Object> stats = new HashMap<>();
                     stats.put("teacherCode", teacher.getTeacherCode());
-                    String fullName = teacher.getUserDetails() != null ?
-                            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId();
-                    stats.put("teacherName", fullName);
+                    stats.put("teacherName", teacher.getUsername());
                     long totalSub = subjectTotals.getOrDefault(teacher, 0L);
                     long completedSub = completedSubjects.getOrDefault(teacher, 0L);
                     double rate = totalSub > 0 ? (double) completedSub / totalSub * 100 : 0;
@@ -1059,9 +1053,7 @@ public class ReportService {
                 .map(teacher -> {
                     Map<String, Object> stats = new HashMap<>();
                     stats.put("teacherCode", teacher.getTeacherCode());
-                    String fullName = teacher.getUserDetails() != null ?
-                            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId();
-                    stats.put("teacherName", fullName);
+                    stats.put("teacherName", teacher.getUsername());
                     long totalSub = subjectTotals.getOrDefault(teacher, 0L);
                     long completedSub = completedSubjects.getOrDefault(teacher, 0L);
                     double rate = totalSub > 0 ? (double) completedSub / totalSub * 100 : 0;
@@ -1151,9 +1143,7 @@ public class ReportService {
                 .map(exam -> {
                     Map<String, Object> examInfo = new HashMap<>();
                     examInfo.put("teacherCode", exam.getTeacher() != null ? exam.getTeacher().getTeacherCode() : "N/A");
-                    examInfo.put("teacherName", exam.getTeacher() != null && exam.getTeacher().getUserDetails() != null ?
-                            exam.getTeacher().getUserDetails().getFirstName() + " " +
-                                    exam.getTeacher().getUserDetails().getLastName() : (exam.getTeacher() != null ? exam.getTeacher().getId() : "N/A"));
+                    examInfo.put("teacherName", exam.getTeacher() != null ? exam.getTeacher().getUsername() : "N/A");
                     examInfo.put("subjectName", exam.getSubject() != null ? exam.getSubject().getSubjectName() : "N/A");
                     examInfo.put("subjectCode", exam.getSubject() != null ? exam.getSubject().getSkillCode() : "N/A");
                     LocalDate examDate = exam.getExamDate() != null ? exam.getExamDate() : (exam.getSession() != null ? exam.getSession().getExamDate() : null);
@@ -1232,9 +1222,7 @@ public class ReportService {
                 .map(trial -> {
                     Map<String, Object> trialInfo = new HashMap<>();
                     trialInfo.put("teacherCode", trial.getTeacher().getTeacherCode());
-                    trialInfo.put("teacherName", trial.getTeacher().getUserDetails() != null ?
-                            trial.getTeacher().getUserDetails().getFirstName() + " " +
-                                    trial.getTeacher().getUserDetails().getLastName() : trial.getTeacher().getId());
+                    trialInfo.put("teacherName", trial.getTeacher().getUsername());
                     trialInfo.put("subjectName", trial.getSubject().getSubjectName());
                     trialInfo.put("subjectCode", trial.getSubject().getSkillCode());
                     trialInfo.put("teachingDate", trial.getTeachingDate());
@@ -1274,8 +1262,7 @@ public class ReportService {
         // Get teacher info
         User teacher = userRepository.findById(teacherId)
             .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
-        data.put("teacherName", teacher.getUserDetails() != null ? 
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : "N/A");
+        data.put("teacherName", teacher.getUsername());
         data.put("qualification", teacher.getAcademicRank() != null ? teacher.getAcademicRank() : "N/A");
         data.put("email", teacher.getEmail());
         
@@ -1355,8 +1342,7 @@ public class ReportService {
                 Map<String, Object> teacher = new HashMap<>();
                 User user = reg.getTeacher();
                 teacher.put("teacherId", user.getTeacherCode());
-                teacher.put("teacherName", user.getUserDetails() != null ? 
-                    user.getUserDetails().getFirstName() + " " + user.getUserDetails().getLastName() : "N/A");
+                teacher.put("teacherName", user.getUsername());
                 teacher.put("qualification", user.getAcademicRank() != null ? user.getAcademicRank() : "N/A");
                 teacher.put("registeredDate", reg.getCreationTimestamp());
                 return teacher;
@@ -1411,8 +1397,7 @@ public class ReportService {
             .map(exam -> {
                 Map<String, Object> examData = new HashMap<>();
                 examData.put("teacherCode", exam.getTeacher() != null ? exam.getTeacher().getTeacherCode() : "N/A");
-                examData.put("teacherName", exam.getTeacher() != null && exam.getTeacher().getUserDetails() != null ?
-                    exam.getTeacher().getUserDetails().getFirstName() + " " + exam.getTeacher().getUserDetails().getLastName() : "N/A");
+                examData.put("teacherName", exam.getTeacher() != null ? exam.getTeacher().getUsername() : "N/A");
                 examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
                 examData.put("subjectName", exam.getSubject().getSubjectName());
                 examData.put("examDate", exam.getExamDate());
@@ -1493,12 +1478,10 @@ public class ReportService {
         // Get teacher info
         User teacher = userRepository.findById(teacherId)
             .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
-        String fullName = teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : "N/A";
 
         // Profile section
         Map<String, Object> profile = new HashMap<>();
-        profile.put("fullName", fullName);
+        profile.put("fullName", teacher.getUsername());
         profile.put("email", teacher.getEmail());
         data.put("profile", profile);
 

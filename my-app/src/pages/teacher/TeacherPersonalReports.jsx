@@ -151,7 +151,12 @@ const TeacherPersonalReports = () => {
             };
 
             const response = await generatePersonalReport(reportRequest);
-            setReports(prev => [response, ...prev]);
+            // Ensure createdAt is set to current date/time for immediate display
+            const reportWithDate = {
+                ...response,
+                createdAt: response.createdAt || new Date().toISOString()
+            };
+            setReports(prev => [reportWithDate, ...prev]);
             showToast('Thành công', 'Tạo báo cáo thành công', 'success');
         } catch (error) {
             console.error('Error generating personal report:', error);

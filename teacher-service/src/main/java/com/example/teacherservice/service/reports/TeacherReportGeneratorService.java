@@ -828,8 +828,7 @@ public class TeacherReportGeneratorService {
         // Teacher info
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
-        teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+        teacherRun.setText("Giảng viên: " + teacher.getUsername());
         teacherRun.addBreak();
         teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
         teacherRun.addBreak();
@@ -871,7 +870,6 @@ public class TeacherReportGeneratorService {
             row.getCell(0).setText("1");
             row.getCell(1).setText("Không có dữ liệu môn học trong quý này.");
             row.getCell(2).setText("");
-            row.getCell(3).setText("");
         }
 
         // Summary section in a new paragraph after the table
@@ -915,8 +913,7 @@ public class TeacherReportGeneratorService {
         // Teacher info
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
-        teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+        teacherRun.setText("Giảng viên: " + teacher.getUsername());
         teacherRun.addBreak();
         teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
         teacherRun.addBreak();
@@ -991,8 +988,7 @@ public class TeacherReportGeneratorService {
         // Teacher info
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
-        teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+        teacherRun.setText("Giảng viên: " + teacher.getUsername());
         teacherRun.addBreak();
         teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
 
@@ -1072,8 +1068,7 @@ public class TeacherReportGeneratorService {
         // Teacher info
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
-        teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+        teacherRun.setText("Giảng viên: " + teacher.getUsername());
         teacherRun.addBreak();
         teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
 
@@ -1190,12 +1185,7 @@ public class TeacherReportGeneratorService {
 
     private String safeTeacherName(User teacher) {
         if (teacher == null) return "";
-        if (teacher.getUserDetails() != null) {
-            String firstName = teacher.getUserDetails().getFirstName();
-            String lastName = teacher.getUserDetails().getLastName();
-            return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
-        }
-        return teacher.getId() != null ? teacher.getId() : "";
+        return teacher.getUsername() != null ? teacher.getUsername() : (teacher.getId() != null ? teacher.getId() : "");
     }
 
     private String safeTeacherCode(User teacher) {

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Loading from '../components/Common/Loading';
 import { getAptechExamSessions, getAllAptechExams } from '../api/aptechExam';
 import { getAuditLogs } from '../api/auditLog';
+import { getAllUsers } from '../api/user';
+import { listAllSubjects } from '../api/subject';
 import { useAuth } from '../contexts/AuthContext';
 import '../assets/styles/AdminDashboard.css';
 
@@ -41,12 +43,12 @@ const AdminDashboard = () => {
   const [upcomingSessionsCount, setUpcomingSessionsCount] = useState(0);
   const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState(0);
   const [recentActivities, setRecentActivities] = useState([]);
-  const [stats, setStats] = useState([
-    { icon: 'bi-person-fill', title: 'Tổng giảng viên', value: 0, color: 'primary' },
-    { icon: 'bi-journal-bookmark-fill', title: 'Môn học', value: 0, color: 'success' },
-    { icon: 'bi-calendar3', title: 'Phiên thi sắp tới', value: 0, color: 'warning' },
-    { icon: 'bi-exclamation-circle-fill', title: 'Môn chưa phê duyệt', value: 0, color: 'danger' }
-  ]);
+  const [stats, setStats] = useState({
+    totalTeachers: 0,
+    totalSubjects: 0,
+    upcomingSessions: 0,
+    pendingApprovals: 0
+  });
 
   const handleNavigate = (path) => () => navigate(path);
 
@@ -121,13 +123,24 @@ const AdminDashboard = () => {
         
         setRecentActivities(activityMessages);
 
-        // Update stats
-        setStats(prev => [
-          { ...prev[0], value: 124 }, // TODO: replace with real data
-          { ...prev[1], value: 42 }, // TODO: replace with real data
-          { ...prev[2], value: upcomingCount },
-          { ...prev[3], value: pendingExamCount }
-        ]);
+        // Fetch teachers count
+        const usersData = await getAllUsers(1, 1000);
+        const allUsers = usersData?.content || usersData || [];
+        const teachersCount = Array.isArray(allUsers)
+          ? allUsers.filter(u => (u.role || '').toString().toUpperCase() === 'TEACHER' && (u.active || '').toString().toUpperCase() === 'ACTIVE').length
+          : 0;
+
+        // Fetch subjects count
+        const subjectsData = await listAllSubjects();
+        const subjectsCount = Array.isArray(subjectsData) ? subjectsData.length : (subjectsData?.content?.length || 0);
+
+        // Update stats object
+        setStats({
+          totalTeachers: teachersCount,
+          totalSubjects: subjectsCount,
+          upcomingSessions: upcomingCount,
+          pendingApprovals: pendingExamCount
+        });
       } catch (err) {
         console.error('Error loading dashboard data:', err);
       } finally {
@@ -154,19 +167,53 @@ const AdminDashboard = () => {
       <div className="container mt-4">
         <div className="dashboard-grid">
           <div className="cards-row">
-            {stats.map((s) => (
-              <div key={s.title} className="card-modern card-stat">
-                <div className="d-flex align-items-center justify-content-between">
-                  <div>
-                    <div className="label">{s.title}</div>
-                    <div className="value">{s.value}</div>
-                  </div>
-                  <div className={`rounded-circle bg-${s.color} d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>
-                    <i className={`${s.icon} fs-5 text-white`}></i>
-                  </div>
+            <div className="card-modern card-stat">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="label">Tổng giảng viên</div>
+                  <div className="value">{stats?.totalTeachers || 0}</div>
+                </div>
+                <div className={`rounded-circle bg-primary d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>
+                  <i className={`bi-person-fill fs-5 text-white`}></i>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="card-modern card-stat">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="label">Môn học</div>
+                  <div className="value">{stats?.totalSubjects || 0}</div>
+                </div>
+                <div className={`rounded-circle bg-success d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>
+                  <i className={`bi-journal-bookmark-fill fs-5 text-white`}></i>
+                </div>
+              </div>
+            </div>
+
+            <div className="card-modern card-stat">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="label">Phiên thi sắp tới</div>
+                  <div className="value">{stats?.upcomingSessions || 0}</div>
+                </div>
+                <div className={`rounded-circle bg-warning d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>
+                  <i className={`bi-calendar3 fs-5 text-white`}></i>
+                </div>
+              </div>
+            </div>
+
+            <div className="card-modern card-stat">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="label">Môn chưa phê duyệt</div>
+                  <div className="value">{stats?.pendingApprovals || 0}</div>
+                </div>
+                <div className={`rounded-circle bg-danger d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>
+                  <i className={`bi-exclamation-circle-fill fs-5 text-white`}></i>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="card-modern" style={{ gridColumn: '1 / -1' }}>
@@ -176,7 +223,7 @@ const AdminDashboard = () => {
                 <svg width="180" height="180" viewBox="0 0 42 42" className="donut">
                   {/* create donut from stats values */}
                   {(() => {
-                    const vals = stats.map(s => Number(s.value) || 0);
+                    const vals = [Number(stats?.totalTeachers||0), Number(stats?.totalSubjects||0), Number(stats?.upcomingSessions||0), Number(stats?.pendingApprovals||0)];
                     const total = vals.reduce((a,b) => a+b, 0) || 1;
                     const colors = ['#2563eb','#10b981','#f59e0b','#ef4444'];
                     let acc = 0;
@@ -191,7 +238,12 @@ const AdminDashboard = () => {
                   })()}
                 </svg>
                 <div className="legend">
-                  {stats.map((s, i) => (
+                  {([
+                    { title: 'Tổng giảng viên', value: stats?.totalTeachers || 0 },
+                    { title: 'Môn học', value: stats?.totalSubjects || 0 },
+                    { title: 'Phiên thi sắp tới', value: stats?.upcomingSessions || 0 },
+                    { title: 'Môn chưa phê duyệt', value: stats?.pendingApprovals || 0 }
+                  ]).map((s, i) => (
                     <div className="item" key={s.title}><span className="swatch" style={{ background: ['#2563eb','#10b981','#f59e0b','#ef4444'][i%4] }}></span>{s.title}: <strong style={{marginLeft:6}}>{s.value}</strong></div>
                   ))}
                 </div>
@@ -201,14 +253,20 @@ const AdminDashboard = () => {
                 <h6 className="card-title">So sánh chỉ số</h6>
                 <div style={{display:'flex', flexDirection:'column', gap:10, width:'100%'}}>
                   {(() => {
-                    const vals = stats.map(s => Number(s.value) || 0);
+                    const items = [
+                      { title: 'Tổng giảng viên', value: Number(stats?.totalTeachers||0) },
+                      { title: 'Môn học', value: Number(stats?.totalSubjects||0) },
+                      { title: 'Phiên thi sắp tới', value: Number(stats?.upcomingSessions||0) },
+                      { title: 'Môn chưa phê duyệt', value: Number(stats?.pendingApprovals||0) }
+                    ];
+                    const vals = items.map(i => i.value);
                     const max = Math.max(...vals, 1);
                     const colors = ['#2563eb','#10b981','#f59e0b','#ef4444'];
-                    return stats.map((s, i) => (
+                    return items.map((s, i) => (
                       <div key={s.title} style={{display:'flex', alignItems:'center', gap:12}}>
                         <div style={{width:160, color:'var(--muted)'}}>{s.title}</div>
                         <div style={{flex:1, background:'#eef2f6', height:14, borderRadius:8, position:'relative'}}>
-                          <div style={{width:`${(Number(s.value)||0)/max*100}%`, height:'100%', background:colors[i%colors.length], borderRadius:8}} title={`${s.value}`}></div>
+                          <div style={{width:`${(s.value||0)/max*100}%`, height:'100%', background:colors[i%colors.length], borderRadius:8}} title={`${s.value}`}></div>
                         </div>
                         <div style={{width:64, textAlign:'right', fontWeight:700}}>{s.value}</div>
                       </div>
