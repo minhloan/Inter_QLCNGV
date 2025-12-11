@@ -1,6 +1,7 @@
 package com.example.teacherservice.repository;
 
 import com.example.teacherservice.enums.Active;
+import com.example.teacherservice.enums.Role;
 import com.example.teacherservice.model.User;
 import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -39,5 +40,7 @@ public interface UserRepository extends JpaRepository<User, String> {
        OR LOWER(u.teacherCode) = LOWER(:searchTerm)
     """)
     Optional<User> findByUsernameOrTeacherCode(@Param("searchTerm") String searchTerm);
+
+    List<User> findByActiveAndPrimaryRole(Active active, Role role);
 }
 

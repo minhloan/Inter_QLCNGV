@@ -15,5 +15,7 @@ public interface EvidenceService {
     EvidenceResponseDTO updateOCRText(String id, UpdateOCRTextDTO dto);
     EvidenceResponseDTO verifyEvidence(String id, String verifiedById, boolean approved);
     void processOCRAsync(String evidenceId);
+
+    void processOCRAsync(String evidenceId, String filePath, String fileName);
     List<EvidenceResponseDTO> findAll();
 }

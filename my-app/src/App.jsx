@@ -12,6 +12,7 @@ import ManageTeacher from './pages/ManageTeacher';
 import AddTeacher from './pages/AddTeacher';
 import TeacherDashboard from './pages/TeacherDashboard';
 import ModuleSelection from './pages/ModuleSelection';
+import EvidenceDetail from './pages/teacher/EvidenceDetail';
 
 // Admin pages
 import SubjectRegistrationManagement from './pages/admin/SubjectRegistrationManagement';
@@ -442,6 +443,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+       <Route
+              path="/evidence-detail/:id"
+              element={
+                <ProtectedRoute allowedRoles={['Manage-Leader', 'Teacher']}>
+                  <EvidenceDetail />
+                </ProtectedRoute>
+              }
+            />
       <Route
         path="/teacher-teaching-assignment"
         element={

@@ -74,5 +74,5 @@ public class TrialTeaching extends BaseEntity {
     private List<TrialAttendee> attendees;
 
     @OneToMany(mappedBy = "trial", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<TrialEvaluation> evaluations;
+    private List<TrialEvaluation> evaluation;
 }

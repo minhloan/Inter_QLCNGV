@@ -38,4 +38,7 @@ public class UserDetails {
     @ElementCollection
     @Builder.Default
     private List<String> skills = new ArrayList<>();
+
+    @jakarta.persistence.Transient
+    private String teacherCode;
 }

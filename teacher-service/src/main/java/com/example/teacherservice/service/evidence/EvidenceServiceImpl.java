@@ -82,7 +82,7 @@ public class EvidenceServiceImpl implements EvidenceService {
         evidence = evidenceRepository.save(evidence);
 
         // 5. Gọi xử lý OCR bất đồng bộ, không chặn API upload
-        processOCRAsync(evidence.getId());
+        processOCRAsync(evidence.getId(), fileEntity.getFilePath(), fileEntity.getOriginalFileName());
 
         return convertToDTO(evidence);
     }
@@ -172,10 +172,35 @@ public class EvidenceServiceImpl implements EvidenceService {
     @Async
     // Xử lý OCR bất đồng bộ:
     // - Được gọi sau khi upload minh chứng thành công
-    // - Lấy file của Evidence, gọi OCRService.processFile
+    // - Nhận file path và file name trực tiếp để tránh Hibernate lazy loading issues
+    // - Gọi OCRService.processFile với file paths
     // - Lưu lại kết quả OCR vào bản ghi Evidence
     // Lưu ý: dùng @Async nên hàm này chạy trên thread riêng, không ảnh hưởng tới response upload
     public void processOCRAsync(String evidenceId) {
+        Evidence evidence = evidenceRepository.findById(evidenceId)
+                .orElseThrow(() -> GenericErrorResponse.builder()
+                        .message("Evidence not found")
+                        .httpStatus(HttpStatus.NOT_FOUND)
+                        .build());
+
+        if (evidence.getFile() == null) {
+            throw GenericErrorResponse.builder()
+                    .message("File not found for evidence")
+                    .httpStatus(HttpStatus.NOT_FOUND)
+                    .build();
+        }
+
+        processOCRAsync(evidenceId, evidence.getFile().getFilePath(), evidence.getFile().getOriginalFileName());
+    }
+
+    @Async
+    // Xử lý OCR bất đồng bộ:
+    // - Được gọi sau khi upload minh chứng thành công
+    // - Nhận file path và file name trực tiếp để tránh Hibernate lazy loading issues
+    // - Gọi OCRService.processFile với file paths
+    // - Lưu lại kết quả OCR vào bản ghi Evidence
+    // Lưu ý: dùng @Async nên hàm này chạy trên thread riêng, không ảnh hưởng tới response upload
+    public void processOCRAsync(String evidenceId, String filePath, String fileName) {
 
         try {
             Evidence evidence = evidenceRepository.findById(evidenceId)
@@ -186,21 +211,15 @@ public class EvidenceServiceImpl implements EvidenceService {
                                 .build();
                     });
 
-            // Lấy file gắn với minh chứng
-            File fileEntity = evidence.getFile();
-            if (fileEntity == null) {
-                return;
-            }
-
             // Kiểm tra file vật lý có tồn tại trên hệ thống không
-            java.io.File physicalFile = new java.io.File(fileEntity.getFilePath());
+            java.io.File physicalFile = new java.io.File(filePath);
             if (!physicalFile.exists()) {
                 return;
             }
 
-            // Tiến hành OCR trên file
+            // Tiến hành OCR trên file sử dụng file paths để tránh Hibernate lazy loading
             try {
-                OCRResultDTO ocrResult = ocrService.processFile(fileEntity);
+                OCRResultDTO ocrResult = ocrService.processFile(filePath, fileName);
 
                 // Cập nhật lại minh chứng với kết quả OCR (nếu có)
                 if (ocrResult != null) {

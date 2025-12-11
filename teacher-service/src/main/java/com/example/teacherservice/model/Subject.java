@@ -82,4 +82,7 @@ public class Subject extends BaseEntity {
         assignments.add(assignment);
         assignment.setSubject(this);
     }
+    public Integer getCredit() {
+        return this.hours;
+    }
 }

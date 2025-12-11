@@ -39,5 +39,11 @@ public interface AptechExamRepository extends JpaRepository<AptechExam, String> 
     List<AptechExam> findByTeacherId(@Param("teacherId") String teacherId);
 
     List<AptechExam> findBySession(AptechExamSession session);
+
+    @Query("SELECT ae FROM AptechExam ae WHERE YEAR(ae.examDate) = :year")
+    List<AptechExam> findByYear(@Param("year") Integer year);
+
+    @Query("SELECT ae FROM AptechExam ae WHERE YEAR(ae.examDate) = :year AND QUARTER(ae.examDate) = :quarter")
+    List<AptechExam> findByYearAndQuarter(@Param("year") Integer year, @Param("quarter") Integer quarter);
 }
 

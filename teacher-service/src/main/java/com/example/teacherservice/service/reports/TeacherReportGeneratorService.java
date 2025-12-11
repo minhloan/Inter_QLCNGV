@@ -1,23 +1,11 @@
 package com.example.teacherservice.service.reports;
 
 import com.example.teacherservice.model.User;
-import com.itextpdf.io.font.constants.StandardFonts;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -33,26 +21,13 @@ import java.util.Map;
 @Slf4j
 public class TeacherReportGeneratorService {
 
-    private PdfFont loadCustomFont(String fontName) throws IOException {
-        try {
-            // Load font from classpath resources
-            InputStream fontStream = getClass().getClassLoader().getResourceAsStream("fonts/" + fontName);
-            if (fontStream == null) {
-                log.warn("Custom font {} not found, falling back to Helvetica", fontName);
-                return PdfFontFactory.createFont(StandardFonts.HELVETICA);
-            }
-            byte[] fontBytes = fontStream.readAllBytes();
-            PdfFont font = PdfFontFactory.createFont(fontBytes, com.itextpdf.io.font.PdfEncodings.IDENTITY_H);
-            fontStream.close();
-            return font;
-        } catch (Exception e) {
-            log.warn("Failed to load custom font {}, falling back to Helvetica: {}", fontName, e.getMessage());
-            return PdfFontFactory.createFont(StandardFonts.HELVETICA);
+    public byte[] generateExcelReport(Map<String, Object> data, User teacher) throws IOException, InvalidFormatException {
+        InputStream templateStream = getClass().getClassLoader().getResourceAsStream("templates/baocao-template.xlsx");
+        if (templateStream == null) {
+            throw new IOException("Template file baocao-template.xlsx not found");
         }
-    }
-
-    public byte[] generateExcelReport(Map<String, Object> data, User teacher) throws IOException {
-        Workbook workbook = WorkbookFactory.create(true);
+        Workbook workbook = WorkbookFactory.create(templateStream);
+        templateStream.close();
         String reportType = (String) data.get("reportType");
 
         switch (reportType) {
@@ -69,16 +44,9 @@ public class TeacherReportGeneratorService {
         }
     }
 
-    private byte[] generateQuarterReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
-        Sheet sheet = workbook.createSheet("Báo cáo Quý");
-
-        // Create styles
-        CellStyle headerStyle = workbook.createCellStyle();
-        Font headerFont = workbook.createFont();
-        headerFont.setBold(true);
-        headerFont.setFontHeightInPoints((short) 14);
-        headerStyle.setFont(headerFont);
-        headerStyle.setAlignment(HorizontalAlignment.CENTER);
+    private byte[] generateYearReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
+        Sheet sheet = workbook.getSheetAt(0);
+        // Insert refactored header (overwrites template header to standardize)
 
         CellStyle titleStyle = workbook.createCellStyle();
         Font titleFont = workbook.createFont();
@@ -86,89 +54,156 @@ public class TeacherReportGeneratorService {
         titleFont.setFontHeightInPoints((short) 16);
         titleStyle.setFont(titleFont);
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        titleStyle.setWrapText(true);
 
-        CellStyle normalStyle = workbook.createCellStyle();
-        normalStyle.setAlignment(HorizontalAlignment.LEFT);
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerFont.setFontHeightInPoints((short) 12);
+        headerStyle.setFont(headerFont);
+        headerStyle.setBorderTop(BorderStyle.THIN);
+        headerStyle.setBorderBottom(BorderStyle.THIN);
+        headerStyle.setBorderLeft(BorderStyle.THIN);
+        headerStyle.setBorderRight(BorderStyle.THIN);
 
-        // Title
-        Row titleRow = sheet.createRow(0);
-        org.apache.poi.ss.usermodel.Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("BÁO CÁO HOẠT ĐỘNG GIẢNG DẠY QUÝ " + data.get("quarter") + " NĂM " + data.get("year"));
+
+        CellStyle wrapStyle = workbook.createCellStyle();
+        wrapStyle.setWrapText(true);
+        wrapStyle.setBorderTop(BorderStyle.THIN);
+        wrapStyle.setBorderBottom(BorderStyle.THIN);
+        wrapStyle.setBorderLeft(BorderStyle.THIN);
+        wrapStyle.setBorderRight(BorderStyle.THIN);
+
+        CellStyle boldLabelStyle = workbook.createCellStyle();
+        Font boldLabelFont = workbook.createFont();
+        boldLabelFont.setBold(true);
+        boldLabelStyle.setFont(boldLabelFont);
+        boldLabelStyle.setWrapText(true);
+
+        CellStyle boldLabelSummaryStyle = workbook.createCellStyle();
+        Font boldLabelSummaryFont = workbook.createFont();
+        boldLabelSummaryFont.setBold(true);
+        boldLabelSummaryStyle.setFont(boldLabelSummaryFont);
+        boldLabelSummaryStyle.setWrapText(true);
+        boldLabelSummaryStyle.setBorderTop(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderBottom(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderLeft(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderRight(BorderStyle.THIN);
+
+        CellStyle dataStyle = workbook.createCellStyle();
+        dataStyle.setBorderTop(BorderStyle.THIN);
+        dataStyle.setBorderBottom(BorderStyle.THIN);
+        dataStyle.setBorderLeft(BorderStyle.THIN);
+        dataStyle.setBorderRight(BorderStyle.THIN);
+
+        // Title at row 6 (after header)
+        Row titleRow = sheet.createRow(6);
+        titleRow.setHeight((short)-1); // Auto height
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("BÁO CÁO TỔNG HỢP HOẠT ĐỘNG GIẢNG DẠY NĂM " + data.get("year"));
         titleCell.setCellStyle(titleStyle);
-        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 4));
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(6, 6, 0, 7));
 
-        // Header info
-        Row headerInfoRow = sheet.createRow(2);
-        headerInfoRow.createCell(0).setCellValue("Giảng viên:");
-        headerInfoRow.createCell(1).setCellValue(teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
+        // Period info at row 8
+        Row periodRow = sheet.createRow(8);
+        periodRow.setHeight((short)-1);
+        Cell periodLabel = periodRow.createCell(0);
+        periodLabel.setCellValue("Năm:");
+        periodLabel.setCellStyle(boldLabelStyle);
+        Cell periodValue = periodRow.createCell(1);
+        periodValue.setCellValue(data.get("year").toString());
 
-        Row headerInfoRow2 = sheet.createRow(3);
-        headerInfoRow2.createCell(0).setCellValue("Mã giảng viên:");
-        headerInfoRow2.createCell(1).setCellValue(teacher.getId());
+        // Teacher info at row 9
+        Row teacherRow = sheet.createRow(9);
+        teacherRow.setHeight((short)-1);
+        teacherRow.createCell(0).setCellValue("Mã giảng viên:");
+        teacherRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell codeValue = teacherRow.createCell(1);
+        codeValue.setCellValue(safeTeacherCode(teacher));
+        teacherRow.createCell(2).setCellValue("Họ tên giảng viên:");
+        teacherRow.getCell(2).setCellStyle(boldLabelStyle);
+        Cell nameValue = teacherRow.createCell(3);
+        nameValue.setCellValue(safeTeacherName(teacher));
+    
 
-        Row headerInfoRow3 = sheet.createRow(4);
-        headerInfoRow3.createCell(0).setCellValue("Ngày tạo báo cáo:");
-        headerInfoRow3.createCell(1).setCellValue(((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-
-        // Table headers
-        Row tableHeaderRow = sheet.createRow(6);
-        String[] headers = {"STT", "Môn học", "Lớp", "Số tiết", "Trạng thái", "Ghi chú"};
+        // Table headers at row 11 (shifted up since teacher info in header)
+        String[] headers = {"STT", "Quý", "Tổng môn", "Hoàn thành", "Tỷ lệ", "Ghi chú"};
+        Row headerRow = sheet.createRow(11);
         for (int i = 0; i < headers.length; i++) {
-            org.apache.poi.ss.usermodel.Cell cell = tableHeaderRow.createCell(i);
+            Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
             cell.setCellStyle(headerStyle);
         }
 
-        // Get actual data from report data
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> subjects = (List<Map<String, Object>>) data.get("subjects");
-        if (subjects != null && !subjects.isEmpty()) {
-            for (int i = 0; i < subjects.size(); i++) {
-                Map<String, Object> subject = subjects.get(i);
-                Row dataRow = sheet.createRow(7 + i);
-                dataRow.createCell(0).setCellValue(String.valueOf(i + 1));
-                dataRow.createCell(1).setCellValue((String) subject.get("subjectName"));
-                dataRow.createCell(2).setCellValue((String) subject.get("className"));
-                dataRow.createCell(3).setCellValue(subject.get("totalHours").toString());
-                dataRow.createCell(4).setCellValue((String) subject.get("status"));
-                dataRow.createCell(5).setCellValue((String) subject.get("notes"));
-            }
-        } else {
-            // Fallback sample data if no real data
-            String[][] sampleData = {
-                {"1", "Java Programming", "APTECH01", "45", "Hoàn thành", ""},
-                {"2", "Web Development", "APTECH02", "30", "Đang dạy", ""},
-                {"3", "Database Design", "APTECH03", "40", "Hoàn thành", ""}
-            };
+        // Data rows start at row 12
+        List<Map<String, Object>> quarterlyStats = getSafeList(data, "quarterlyStats");
+        int dataSize = quarterlyStats != null ? quarterlyStats.size() : 0;
+        for (int i = 0; i < dataSize; i++) {
+            Map<String, Object> quarter = quarterlyStats.get(i);
+            Row dataRow = sheet.createRow(12 + i);
+            dataRow.setHeight((short)-1);
+            Cell sttCell = dataRow.createCell(0);
+            sttCell.setCellValue(String.valueOf(i + 1));
+            sttCell.setCellStyle(wrapStyle);
+            Cell quarterCell = dataRow.createCell(1);
+            quarterCell.setCellValue("Q" + safeToString(quarter.get("quarter")));
+            quarterCell.setCellStyle(wrapStyle);
+            Cell totalCell = dataRow.createCell(2);
+            totalCell.setCellValue(safeToString(quarter.get("totalSubjects")));
+            totalCell.setCellStyle(wrapStyle);
+            Cell completedCell = dataRow.createCell(3);
+            completedCell.setCellValue(safeToString(quarter.get("completedSubjects")));
+            completedCell.setCellStyle(wrapStyle);
+            long total = safeLongValue(quarter.get("totalSubjects"));
+            
+            long completed = safeLongValue(quarter.get("completedSubjects"));
+            double rate = total > 0 ? Math.round((double) completed / total * 10000.0) / 100.0 : 0.0;
+            Cell rateCell = dataRow.createCell(4);
+            rateCell.setCellValue(rate + "%");
+            rateCell.setCellStyle(wrapStyle);
+            Cell notesCell = dataRow.createCell(5);
+            notesCell.setCellValue(safeToString(quarter.get("notes")));
+            notesCell.setCellStyle(wrapStyle);
+        }
 
-            for (int i = 0; i < sampleData.length; i++) {
-                Row dataRow = sheet.createRow(7 + i);
-                for (int j = 0; j < sampleData[i].length; j++) {
-                    dataRow.createCell(j).setCellValue(sampleData[i][j]);
-                }
+
+
+        // Set column widths for wrapping columns
+        sheet.setColumnWidth(5, 40 * 256); // Ghi chú
+
+        // Auto-size other columns
+        for (int i = 0; i < headers.length; i++) {
+            if (i != 5) {
+                sheet.autoSizeColumn(i);
             }
         }
 
-        // Summary section
-        int summaryStartRow = 7 + (subjects != null ? subjects.size() : 3) + 2;
+        // Summary section start row after data + 2 rows
+        int summaryStartRow = 12 + dataSize + 2;
         Row summaryTitleRow = sheet.createRow(summaryStartRow);
-        org.apache.poi.ss.usermodel.Cell summaryTitleCell = summaryTitleRow.createCell(0);
-        summaryTitleCell.setCellValue("TỔNG KẾT");
+        summaryTitleRow.setHeight((short)-1);
+        Cell summaryTitleCell = summaryTitleRow.createCell(0);
+        summaryTitleCell.setCellValue("TỔNG KẾT NĂM");
         summaryTitleCell.setCellStyle(headerStyle);
+        Cell summaryTitleCell2 = summaryTitleRow.createCell(1);
+        summaryTitleCell2.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(summaryStartRow, summaryStartRow, 0, 1));
 
         Row totalRow = sheet.createRow(summaryStartRow + 1);
+        totalRow.setHeight((short)-1);
         totalRow.createCell(0).setCellValue("Tổng số môn:");
-        totalRow.createCell(1).setCellValue(data.get("totalSubjects") != null ? data.get("totalSubjects").toString() : "0");
+        totalRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell totalValue = totalRow.createCell(1);
+        totalValue.setCellValue(safeToString(data.get("totalRegistrations")));
+        totalValue.setCellStyle(wrapStyle);
 
         Row completedRow = sheet.createRow(summaryStartRow + 2);
+        completedRow.setHeight((short)-1);
         completedRow.createCell(0).setCellValue("Số môn hoàn thành:");
-        completedRow.createCell(1).setCellValue(data.get("completedSubjects") != null ? data.get("completedSubjects").toString() : "0");
-
-        // Auto-size columns
-        for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
+        completedRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell completedValue = completedRow.createCell(1);
+        completedValue.setCellValue(safeToString(data.get("completedRegistrations")));
+        completedValue.setCellStyle(wrapStyle);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         workbook.write(outputStream);
@@ -176,8 +211,8 @@ public class TeacherReportGeneratorService {
         return outputStream.toByteArray();
     }
 
-    private byte[] generateYearReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
-        Sheet sheet = workbook.createSheet("Báo cáo Năm");
+    private byte[] generateQuarterReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
+        Sheet sheet = workbook.getSheetAt(0);
 
         CellStyle titleStyle = workbook.createCellStyle();
         Font titleFont = workbook.createFont();
@@ -185,101 +220,152 @@ public class TeacherReportGeneratorService {
         titleFont.setFontHeightInPoints((short) 16);
         titleStyle.setFont(titleFont);
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        titleStyle.setWrapText(true);
 
         CellStyle headerStyle = workbook.createCellStyle();
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
         headerFont.setFontHeightInPoints((short) 12);
         headerStyle.setFont(headerFont);
+        headerStyle.setBorderTop(BorderStyle.THIN);
+        headerStyle.setBorderBottom(BorderStyle.THIN);
+        headerStyle.setBorderLeft(BorderStyle.THIN);
+        headerStyle.setBorderRight(BorderStyle.THIN);
 
-        // Title
-        Row titleRow = sheet.createRow(0);
-        org.apache.poi.ss.usermodel.Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("BÁO CÁO TỔNG HỢP NĂM " + data.get("year"));
+        CellStyle boldLabelStyle = workbook.createCellStyle();
+        Font boldLabelFont = workbook.createFont();
+        boldLabelFont.setBold(true);
+        boldLabelStyle.setFont(boldLabelFont);
+        boldLabelStyle.setWrapText(true);
+
+        CellStyle boldLabelSummaryStyle = workbook.createCellStyle();
+        Font boldLabelSummaryFont = workbook.createFont();
+        boldLabelSummaryFont.setBold(true);
+        boldLabelSummaryStyle.setFont(boldLabelSummaryFont);
+        boldLabelSummaryStyle.setWrapText(true);
+        boldLabelSummaryStyle.setBorderTop(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderBottom(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderLeft(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderRight(BorderStyle.THIN);
+
+        CellStyle wrapStyle = workbook.createCellStyle();
+        wrapStyle.setWrapText(true);
+        wrapStyle.setBorderTop(BorderStyle.THIN);
+        wrapStyle.setBorderBottom(BorderStyle.THIN);
+        wrapStyle.setBorderLeft(BorderStyle.THIN);
+        wrapStyle.setBorderRight(BorderStyle.THIN);
+
+        CellStyle dataStyle = workbook.createCellStyle();
+        dataStyle.setBorderTop(BorderStyle.THIN);
+        dataStyle.setBorderBottom(BorderStyle.THIN);
+        dataStyle.setBorderLeft(BorderStyle.THIN);
+        dataStyle.setBorderRight(BorderStyle.THIN);
+
+        // Title at row 6
+        Row titleRow = sheet.createRow(6);
+        titleRow.setHeight((short)-1);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("BÁO CÁO TỔNG HỢP HOẠT ĐỘNG GIẢNG DẠY QUÝ " + data.get("quarter") + " NĂM " + data.get("year"));
         titleCell.setCellStyle(titleStyle);
-        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 6));
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(6, 6, 0, 7));
 
-        // Teacher info
-        Row teacherRow = sheet.createRow(2);
-        teacherRow.createCell(0).setCellValue("Giảng viên:");
-        teacherRow.createCell(1).setCellValue(teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
+        // Period info at row 8
+        Row periodRow = sheet.createRow(8);
+        periodRow.setHeight((short)-1);
+        periodRow.createCell(0).setCellValue("Thời gian:");
+        periodRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell periodValue = periodRow.createCell(1);
+        periodValue.setCellValue("Quý " + data.get("quarter") + " năm " + data.get("year"));
 
-        // Statistics section
-        Row statsTitleRow = sheet.createRow(4);
-        org.apache.poi.ss.usermodel.Cell statsTitleCell = statsTitleRow.createCell(0);
-        statsTitleCell.setCellValue("THỐNG KÊ TỔNG HỢP");
-        statsTitleCell.setCellStyle(headerStyle);
+        // Teacher info at row 9
+        Row teacherRow = sheet.createRow(9);
+        teacherRow.setHeight((short)-1);
+        teacherRow.createCell(0).setCellValue("Mã giảng viên:");
+        teacherRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell codeValue = teacherRow.createCell(1);
+        codeValue.setCellValue(safeTeacherCode(teacher));
+        teacherRow.createCell(2).setCellValue("Họ tên giảng viên:");
+        teacherRow.getCell(2).setCellStyle(boldLabelStyle);
+        Cell nameValue = teacherRow.createCell(3);
+        nameValue.setCellValue(safeTeacherName(teacher));
+     
 
-        // Use real data from database
-        String[][] statsData = {
-            {"Tổng số môn đăng ký:", data.get("totalRegistrations").toString()},
-            {"Số môn hoàn thành:", data.get("completedRegistrations").toString()},
-            {"Số môn chưa hoàn thành:", String.valueOf((Long) data.get("totalRegistrations") - (Long) data.get("completedRegistrations"))},
-            {"Tỷ lệ hoàn thành:", data.get("completionRate") + "%"},
-            {"Số kỳ thi Aptech:", data.get("totalExams").toString()},
-            {"Số lần thi đạt:", data.get("passedExams").toString()},
-            {"Số buổi giảng thử:", data.get("totalTrials").toString()},
-            {"Số buổi đạt:", data.get("passedTrials").toString()}
-        };
-
-        for (int i = 0; i < statsData.length; i++) {
-            Row row = sheet.createRow(5 + i);
-            row.createCell(0).setCellValue(statsData[i][0]);
-            row.createCell(1).setCellValue(statsData[i][1]);
-        }
-
-        // Quarterly breakdown
-        Row quarterlyTitleRow = sheet.createRow(15);
-        org.apache.poi.ss.usermodel.Cell quarterlyTitleCell = quarterlyTitleRow.createCell(0);
-        quarterlyTitleCell.setCellValue("CHI TIẾT THEO QUÝ");
-        quarterlyTitleCell.setCellStyle(headerStyle);
-
-        String[] quarterlyHeaders = {"Quý", "Số môn", "Hoàn thành", "Tỷ lệ"};
-        Row quarterlyHeaderRow = sheet.createRow(16);
-        for (int i = 0; i < quarterlyHeaders.length; i++) {
-            org.apache.poi.ss.usermodel.Cell cell = quarterlyHeaderRow.createCell(i);
-            cell.setCellValue(quarterlyHeaders[i]);
+        // Table headers at row 11
+        String[] headers = {"STT", "Mã GV", "Môn học", "Chương Trình", "Trạng thái", "Ghi chú"};
+        Row headerRow = sheet.createRow(11);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
             cell.setCellStyle(headerStyle);
         }
 
-        // Use real quarterly data
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> quarterlyStats = (List<Map<String, Object>>) data.get("quarterlyStats");
-        if (quarterlyStats != null && !quarterlyStats.isEmpty()) {
-            for (int i = 0; i < quarterlyStats.size(); i++) {
-                Map<String, Object> quarter = quarterlyStats.get(i);
-                Row row = sheet.createRow(17 + i);
-                row.createCell(0).setCellValue("Quý " + quarter.get("quarter"));
-                row.createCell(1).setCellValue(quarter.get("totalSubjects").toString());
-                row.createCell(2).setCellValue(quarter.get("completedSubjects").toString());
-                // Calculate completion rate for quarter
-                long total = ((Number) quarter.get("totalSubjects")).longValue();
-                long completed = ((Number) quarter.get("completedSubjects")).longValue();
-                double rate = total > 0 ? Math.round((double) completed / total * 10000.0) / 100.0 : 0.0;
-                row.createCell(3).setCellValue(rate + "%");
-            }
-        } else {
-            // Fallback if no quarterly data
-            String[][] quarterlyData = {
-                {"Quý 1", "0", "0", "0%"},
-                {"Quý 2", "0", "0", "0%"},
-                {"Quý 3", "0", "0", "0%"},
-                {"Quý 4", "0", "0", "0%"}
-            };
+        // Data rows start at row 12
+        List<Map<String, Object>> subjects = getSafeList(data, "subjects");
+        int dataSize = subjects != null ? subjects.size() : 0;
+        for (int i = 0; i < dataSize; i++) {
+            Map<String, Object> subject = subjects.get(i);
+            Row dataRow = sheet.createRow(12 + i);
+            dataRow.setHeight((short)-1);
+            Cell sttCell = dataRow.createCell(0);
+            sttCell.setCellValue(String.valueOf(i + 1));
+            sttCell.setCellStyle(wrapStyle);
+            Cell codeCell = dataRow.createCell(1);
+            codeCell.setCellValue(teacher.getTeacherCode());
+            codeCell.setCellStyle(wrapStyle);
+            Cell subjectCell = dataRow.createCell(2);
+            subjectCell.setCellValue(safeToString(subject.get("subjectName")));
+            subjectCell.setCellStyle(wrapStyle);
+            Cell programCell = dataRow.createCell(3);
+            programCell.setCellValue(safeToString(subject.get("programName")));
+            programCell.setCellStyle(wrapStyle);
+            Cell statusCell = dataRow.createCell(4);
+            statusCell.setCellValue(safeToString(subject.get("status")));
+            statusCell.setCellStyle(wrapStyle);
+            Cell notesCell = dataRow.createCell(5);
+            notesCell.setCellValue(safeToString(subject.get("notes")));
+            notesCell.setCellStyle(wrapStyle);
+        }
 
-            for (int i = 0; i < quarterlyData.length; i++) {
-                Row row = sheet.createRow(17 + i);
-                for (int j = 0; j < quarterlyData[i].length; j++) {
-                    row.createCell(j).setCellValue(quarterlyData[i][j]);
-                }
+
+
+        // Set column widths for wrapping columns
+        sheet.setColumnWidth(2, 30 * 256); // Môn học
+        sheet.setColumnWidth(3, 20 * 256);  // Chương Trình
+        sheet.setColumnWidth(4, 18 * 256); // Trạng thái
+        sheet.setColumnWidth(6, 40 * 256); // Ghi chú
+
+        // Auto-size other columns
+        for (int i = 0; i < headers.length; i++) {
+            if (i != 2 && i != 3 && i != 4 && i != 6) {
+                sheet.autoSizeColumn(i);
             }
         }
 
-        // Auto-size columns
-        for (int i = 0; i < 7; i++) {
-            sheet.autoSizeColumn(i);
-        }
+        // Summary section start row after data + 2 rows
+        int summaryStartRow = 12 + dataSize + 2;
+        Row summaryTitleRow = sheet.createRow(summaryStartRow);
+        Cell summaryTitleCell = summaryTitleRow.createCell(0);
+        summaryTitleCell.setCellValue("TỔNG KẾT QUÝ");
+        summaryTitleCell.setCellStyle(headerStyle);
+        Cell summaryTitleCell2 = summaryTitleRow.createCell(1);
+        summaryTitleCell2.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(summaryStartRow, summaryStartRow, 0, 1));
+
+        Row totalRow = sheet.createRow(summaryStartRow + 1);
+        totalRow.setHeight((short)-1);
+        totalRow.createCell(0).setCellValue("Tổng số môn:");
+        totalRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell totalValue = totalRow.createCell(1);
+        totalValue.setCellValue(safeToString(data.get("totalSubjects")));
+        totalValue.setCellStyle(wrapStyle);
+
+        Row completedRow = sheet.createRow(summaryStartRow + 2);
+        completedRow.setHeight((short)-1);
+        completedRow.createCell(0).setCellValue("Số môn hoàn thành:");
+        completedRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell completedValue = completedRow.createCell(1);
+        completedValue.setCellValue(safeToString(data.get("completedSubjects")));
+        completedValue.setCellStyle(wrapStyle);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         workbook.write(outputStream);
@@ -288,7 +374,8 @@ public class TeacherReportGeneratorService {
     }
 
     private byte[] generateAptechReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
-        Sheet sheet = workbook.createSheet("Kỳ thi Aptech");
+        Sheet sheet = workbook.getSheetAt(0);
+        // Insert refactored header
 
         CellStyle titleStyle = workbook.createCellStyle();
         Font titleFont = workbook.createFont();
@@ -296,102 +383,174 @@ public class TeacherReportGeneratorService {
         titleFont.setFontHeightInPoints((short) 16);
         titleStyle.setFont(titleFont);
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        titleStyle.setWrapText(true);
 
         CellStyle headerStyle = workbook.createCellStyle();
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
         headerFont.setFontHeightInPoints((short) 12);
         headerStyle.setFont(headerFont);
+        headerStyle.setBorderTop(BorderStyle.THIN);
+        headerStyle.setBorderBottom(BorderStyle.THIN);
+        headerStyle.setBorderLeft(BorderStyle.THIN);
+        headerStyle.setBorderRight(BorderStyle.THIN);
 
-        // Title
-        Row titleRow = sheet.createRow(0);
-        org.apache.poi.ss.usermodel.Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("DANH SÁCH THI CHỨNG NHẬN APTECH");
+        CellStyle boldLabelStyle = workbook.createCellStyle();
+        Font boldLabelFont = workbook.createFont();
+        boldLabelFont.setBold(true);
+        boldLabelStyle.setFont(boldLabelFont);
+        boldLabelStyle.setWrapText(true);
+
+        CellStyle boldLabelSummaryStyle = workbook.createCellStyle();
+        Font boldLabelSummaryFont = workbook.createFont();
+        boldLabelSummaryFont.setBold(true);
+        boldLabelSummaryStyle.setFont(boldLabelSummaryFont);
+        boldLabelSummaryStyle.setWrapText(true);
+        boldLabelSummaryStyle.setBorderTop(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderBottom(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderLeft(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderRight(BorderStyle.THIN);
+
+        CellStyle wrapStyle = workbook.createCellStyle();
+        wrapStyle.setWrapText(true);
+        wrapStyle.setBorderTop(BorderStyle.THIN);
+        wrapStyle.setBorderBottom(BorderStyle.THIN);
+        wrapStyle.setBorderLeft(BorderStyle.THIN);
+        wrapStyle.setBorderRight(BorderStyle.THIN);
+
+        // Title at row 6
+        Row titleRow = sheet.createRow(6);
+        titleRow.setHeight((short)-1);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("BÁO CÁO KẾT QUẢ THI CHỨNG NHẬN APTECH CÁ NHÂN");
         titleCell.setCellStyle(titleStyle);
-        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 7));
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(6, 6, 0, 7));
 
-        // Period info
-        Row periodRow = sheet.createRow(2);
+        // Period info at row 8
+        Row periodRow = sheet.createRow(8);
+        periodRow.setHeight((short)-1);
         periodRow.createCell(0).setCellValue("Năm:");
-        periodRow.createCell(1).setCellValue(data.get("year").toString());
+        periodRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell yearValue = periodRow.createCell(1);
+        yearValue.setCellValue(safeToString(data.get("year")));
         if (data.get("quarter") != null) {
             periodRow.createCell(2).setCellValue("Quý:");
-            periodRow.createCell(3).setCellValue("Q" + data.get("quarter"));
+            periodRow.getCell(2).setCellStyle(boldLabelStyle);
+            Cell quarterValue = periodRow.createCell(3);
+            quarterValue.setCellValue("Q" + data.get("quarter"));
         }
 
-        // Table headers
+        // Teacher info at row 9
+        Row teacherRow = sheet.createRow(9);
+        teacherRow.setHeight((short)-1);
+        teacherRow.createCell(0).setCellValue("Mã giảng viên:");
+        teacherRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell codeValue = teacherRow.createCell(1);
+        codeValue.setCellValue(safeTeacherCode(teacher));
+       
+        teacherRow.createCell(2).setCellValue("Họ tên giảng viên:");
+        teacherRow.getCell(2).setCellStyle(boldLabelStyle);
+        Cell nameValue = teacherRow.createCell(3);
+        nameValue.setCellValue(safeTeacherName(teacher));
+       
+
+        // Table headers at row 11
         String[] headers = {"STT", "Họ tên", "Mã GV", "Môn thi", "Ngày thi", "Điểm", "Kết quả", "Lần thi"};
-        Row headerRow = sheet.createRow(4);
+        Row headerRow = sheet.createRow(11);
         for (int i = 0; i < headers.length; i++) {
-            org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
+            Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
             cell.setCellStyle(headerStyle);
         }
 
-        // Get actual exam data from database
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> exams = (List<Map<String, Object>>) data.get("exams");
-        if (exams != null && !exams.isEmpty()) {
-            for (int i = 0; i < exams.size(); i++) {
-                Map<String, Object> exam = exams.get(i);
-                Row row = sheet.createRow(5 + i);
-                row.createCell(0).setCellValue(String.valueOf(i + 1));
-                row.createCell(1).setCellValue(teacher.getUserDetails() != null ?
-                    teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
-                row.createCell(2).setCellValue(teacher.getId());
-                row.createCell(3).setCellValue((String) exam.get("subjectName"));
-                row.createCell(4).setCellValue(exam.get("examDate") != null ?
-                    exam.get("examDate").toString() : "N/A");
-                row.createCell(5).setCellValue(exam.get("score") != null ?
-                    exam.get("score").toString() : "0");
-                row.createCell(6).setCellValue((String) exam.get("result"));
-                row.createCell(7).setCellValue(exam.get("attempt") != null ?
-                    exam.get("attempt").toString() : "1");
-            }
-        } else {
-            // Fallback sample data if no real data
-            String[][] examData = {
-                {"1", teacher.getUserDetails() != null ? teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId(),
-                 teacher.getId(), "Java Programming", "15/01/2024", "85", "PASS", "1"},
-                {"2", teacher.getUserDetails() != null ? teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId(),
-                 teacher.getId(), "Web Development", "20/02/2024", "78", "PASS", "1"},
-                {"3", teacher.getUserDetails() != null ? teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId(),
-                 teacher.getId(), "Database Design", "10/03/2024", "92", "PASS", "1"}
-            };
-
-            for (int i = 0; i < examData.length; i++) {
-                Row row = sheet.createRow(5 + i);
-                for (int j = 0; j < examData[i].length; j++) {
-                    row.createCell(j).setCellValue(examData[i][j]);
-                }
-            }
+        // Data rows start at row 12
+        List<Map<String, Object>> exams = getSafeList(data, "exams");
+        int dataSize = exams != null ? exams.size() : 0;
+        String teacherName = safeTeacherName(teacher);
+        for (int i = 0; i < dataSize; i++) {
+            Map<String, Object> exam = exams.get(i);
+            Row row = sheet.createRow(12 + i);
+            row.setHeight((short)-1);
+            Cell sttCell = row.createCell(0);
+            sttCell.setCellValue(String.valueOf(i + 1));
+            sttCell.setCellStyle(wrapStyle);
+            Cell nameCell = row.createCell(1);
+            nameCell.setCellValue(teacherName);
+            nameCell.setCellStyle(wrapStyle);
+            Cell codeCell = row.createCell(2);
+            codeCell.setCellValue(teacher.getTeacherCode());
+            codeCell.setCellStyle(wrapStyle);
+            Cell subjectCell = row.createCell(3);
+            subjectCell.setCellValue(safeToString(exam.get("subjectName")));
+            subjectCell.setCellStyle(wrapStyle);
+            Cell dateCell = row.createCell(4);
+            dateCell.setCellValue(safeToString(exam.get("examDate")));
+            dateCell.setCellStyle(wrapStyle);
+            Cell scoreCell = row.createCell(5);
+            scoreCell.setCellValue(safeToString(exam.get("score")));
+            scoreCell.setCellStyle(wrapStyle);
+            Cell resultCell = row.createCell(6);
+            resultCell.setCellValue(safeToString(exam.get("result")));
+            resultCell.setCellStyle(wrapStyle);
+            Cell attemptCell = row.createCell(7);
+            attemptCell.setCellValue(safeToString(exam.get("attempt")));
+            attemptCell.setCellStyle(wrapStyle);
         }
 
-        // Summary section
-        int summaryStartRow = 5 + (exams != null ? exams.size() : 3) + 2;
-        Row summaryTitleRow = sheet.createRow(summaryStartRow);
-        org.apache.poi.ss.usermodel.Cell summaryTitleCell = summaryTitleRow.createCell(0);
-        summaryTitleCell.setCellValue("TỔNG HỢP KẾT QUẢ");
-        summaryTitleCell.setCellStyle(headerStyle);
 
-        // Use real summary data
-        String[][] summaryData = {
-            {"Tổng số môn thi:", data.get("totalExams").toString()},
-            {"Số môn đạt:", data.get("passedExams").toString()},
-            {"Số môn không đạt:", String.valueOf((Long) data.get("totalExams") - (Long) data.get("passedExams"))},
-            {"Tỷ lệ đạt:", data.get("passRate") + "%"}
-        };
 
-        for (int i = 0; i < summaryData.length; i++) {
-            Row row = sheet.createRow(summaryStartRow + 1 + i);
-            row.createCell(0).setCellValue(summaryData[i][0]);
-            row.createCell(1).setCellValue(summaryData[i][1]);
-        }
+        // Set column widths for wrapping columns
+        sheet.setColumnWidth(1, 25 * 256); // Họ tên
+        sheet.setColumnWidth(3, 30 * 256); // Môn thi
 
-        // Auto-size columns
+        // Auto-size other columns
         for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i);
+            if (i != 1 && i != 3) {
+                sheet.autoSizeColumn(i);
+            }
         }
+
+        // Summary section start row after data + 2 rows
+        int summaryStartRow = 12 + dataSize + 2;
+        Row summaryTitleRow = sheet.createRow(summaryStartRow);
+        Cell summaryTitleCell = summaryTitleRow.createCell(0);
+        summaryTitleCell.setCellValue("TỔNG HỢP KẾT QUẢ");
+         summaryTitleCell.setCellStyle(headerStyle);
+        Cell summaryTitleCell2 = summaryTitleRow.createCell(1);
+        summaryTitleCell2.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(summaryStartRow, summaryStartRow, 0, 1));
+
+        Row totalExamsRow = sheet.createRow(summaryStartRow + 1);
+        totalExamsRow.setHeight((short)-1);
+        totalExamsRow.createCell(0).setCellValue("Tổng số môn thi:");
+        totalExamsRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell totalExamsValue = totalExamsRow.createCell(1);
+        totalExamsValue.setCellValue(safeToString(data.get("totalExams")));
+        totalExamsValue.setCellStyle(wrapStyle);
+
+        Row passedRow = sheet.createRow(summaryStartRow + 2);
+        passedRow.setHeight((short)-1);
+        passedRow.createCell(0).setCellValue("Số môn đạt:");
+        passedRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell passedValue = passedRow.createCell(1);
+        passedValue.setCellValue(safeToString(data.get("passedExams")));
+        passedValue.setCellStyle(wrapStyle);
+
+        Row failedRow = sheet.createRow(summaryStartRow + 3);
+        failedRow.setHeight((short)-1);
+        failedRow.createCell(0).setCellValue("Số môn không đạt:");
+        failedRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell failedValue = failedRow.createCell(1);
+        failedValue.setCellValue(String.valueOf(safeLongValue(data.get("totalExams")) - safeLongValue(data.get("passedExams"))));
+        failedValue.setCellStyle(wrapStyle);
+
+        Row rateRow = sheet.createRow(summaryStartRow + 4);
+        rateRow.setHeight((short)-1);
+        rateRow.createCell(0).setCellValue("Tỷ lệ đạt:");
+        rateRow.getCell(0).setCellStyle(boldLabelSummaryStyle);   
+        Cell rateValue = rateRow.createCell(1);
+        rateValue.setCellValue(safeToString(data.get("passRate")) + "%");
+        rateValue.setCellStyle(wrapStyle);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         workbook.write(outputStream);
@@ -400,7 +559,8 @@ public class TeacherReportGeneratorService {
     }
 
     private byte[] generateTrialReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
-        Sheet sheet = workbook.createSheet("Giảng thử");
+        Sheet sheet = workbook.getSheetAt(0);
+        // Insert refactored header
 
         CellStyle titleStyle = workbook.createCellStyle();
         Font titleFont = workbook.createFont();
@@ -408,90 +568,168 @@ public class TeacherReportGeneratorService {
         titleFont.setFontHeightInPoints((short) 16);
         titleStyle.setFont(titleFont);
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
+        titleStyle.setWrapText(true);
 
         CellStyle headerStyle = workbook.createCellStyle();
         Font headerFont = workbook.createFont();
         headerFont.setBold(true);
         headerFont.setFontHeightInPoints((short) 12);
         headerStyle.setFont(headerFont);
+        headerStyle.setBorderTop(BorderStyle.THIN);
+        headerStyle.setBorderBottom(BorderStyle.THIN);
+        headerStyle.setBorderLeft(BorderStyle.THIN);
+        headerStyle.setBorderRight(BorderStyle.THIN);
 
-        // Title
-        Row titleRow = sheet.createRow(0);
-        org.apache.poi.ss.usermodel.Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("BIÊN BẢN GIẢNG THỬ");
+        CellStyle boldLabelStyle = workbook.createCellStyle();
+        Font boldLabelFont = workbook.createFont();
+        boldLabelFont.setBold(true);
+        boldLabelStyle.setFont(boldLabelFont);
+        boldLabelStyle.setWrapText(true);
+
+        CellStyle boldLabelSummaryStyle = workbook.createCellStyle();
+        Font boldLabelSummaryFont = workbook.createFont();
+        boldLabelSummaryFont.setBold(true);
+        boldLabelSummaryStyle.setFont(boldLabelSummaryFont);
+        boldLabelSummaryStyle.setWrapText(true);
+        boldLabelSummaryStyle.setBorderTop(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderBottom(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderLeft(BorderStyle.THIN);
+        boldLabelSummaryStyle.setBorderRight(BorderStyle.THIN);
+
+
+        CellStyle wrapStyle = workbook.createCellStyle();
+        wrapStyle.setWrapText(true);
+        wrapStyle.setBorderTop(BorderStyle.THIN);
+        wrapStyle.setBorderBottom(BorderStyle.THIN);
+        wrapStyle.setBorderLeft(BorderStyle.THIN);
+        wrapStyle.setBorderRight(BorderStyle.THIN);
+
+       
+        // Title at row 6
+        Row titleRow = sheet.createRow(6);
+        titleRow.setHeight((short)-1);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("BÁO CÁO KẾT QUẢ GIẢNG THỬ CÁ NHÂN");
         titleCell.setCellStyle(titleStyle);
-        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 6));
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(6, 6, 0, 6));
 
-        // Teacher info
-        Row teacherRow = sheet.createRow(2);
-        teacherRow.createCell(0).setCellValue("Giảng viên:");
-        teacherRow.createCell(1).setCellValue(teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
+        // Period info at row 8
+        Row periodRow = sheet.createRow(8);
+        periodRow.setHeight((short)-1);
+        periodRow.createCell(0).setCellValue("Năm:");
+        periodRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell yearValue = periodRow.createCell(1);
+        yearValue.setCellValue(safeToString(data.get("year")));
 
-        Row teacherCodeRow = sheet.createRow(3);
-        teacherCodeRow.createCell(0).setCellValue("Mã giảng viên:");
-        teacherCodeRow.createCell(1).setCellValue(teacher.getId());
+        // Teacher info at row 9
+        Row teacherRow = sheet.createRow(9);
+        teacherRow.setHeight((short)-1);
+        teacherRow.createCell(0).setCellValue("Mã giảng viên:");
+        teacherRow.getCell(0).setCellStyle(boldLabelStyle);
+        Cell codeValue = teacherRow.createCell(1);
+        codeValue.setCellValue(safeTeacherCode(teacher));
 
-        // Table headers
+        teacherRow.createCell(2).setCellValue("Họ tên giảng viên:");
+        teacherRow.getCell(2).setCellStyle(boldLabelStyle);
+        Cell nameValue = teacherRow.createCell(3);
+        nameValue.setCellValue(safeTeacherName(teacher));
+
+
+        // Table headers at row 11
         String[] headers = {"STT", "Môn học", "Ngày giảng thử", "Địa điểm", "Điểm", "Kết quả", "Nhận xét"};
-        Row headerRow = sheet.createRow(5);
+        Row headerRow = sheet.createRow(11);
         for (int i = 0; i < headers.length; i++) {
-            org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
+            Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
             cell.setCellStyle(headerStyle);
         }
 
-        // Get actual trial data from database
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> trials = (List<Map<String, Object>>) data.get("trials");
-        if (trials != null && !trials.isEmpty()) {
-            for (int i = 0; i < trials.size(); i++) {
-                Map<String, Object> trial = trials.get(i);
-                Row row = sheet.createRow(6 + i);
-                row.createCell(0).setCellValue(String.valueOf(i + 1));
-                row.createCell(1).setCellValue((String) trial.get("subjectName"));
-                row.createCell(2).setCellValue(trial.get("teachingDate") != null ?
-                    trial.get("teachingDate").toString() : "N/A");
-                row.createCell(3).setCellValue((String) trial.get("location"));
-                row.createCell(4).setCellValue(trial.get("score") != null ?
-                    trial.get("score").toString() : "0");
-                row.createCell(5).setCellValue((String) trial.get("conclusion"));
-                row.createCell(6).setCellValue((String) trial.get("comments"));
-            }
-        } else {
-            // Fallback sample data if no real data
-            String[][] trialData = {
-                {"1", "Java Programming", "15/01/2024", "Phòng 101", "85", "PASS", "Giảng viên trình bày tốt, tương tác với học viên hiệu quả"},
-                {"2", "Web Development", "20/02/2024", "Phòng 102", "78", "PASS", "Nội dung bài giảng logic, minh họa rõ ràng"},
-                {"3", "Database Design", "10/03/2024", "Phòng 103", "92", "PASS", "Kiến thức chuyên môn vững, phương pháp giảng dạy tốt"}
-            };
-
-            for (int i = 0; i < trialData.length; i++) {
-                Row row = sheet.createRow(6 + i);
-                for (int j = 0; j < trialData[i].length; j++) {
-                    row.createCell(j).setCellValue(trialData[i][j]);
-                }
-            }
+        // Data rows start at row 12
+        List<Map<String, Object>> trials = getSafeList(data, "trials");
+        int dataSize = trials != null ? trials.size() : 0;
+        for (int i = 0; i < dataSize; i++) {
+            Map<String, Object> trial = trials.get(i);
+            Row row = sheet.createRow(12 + i);
+            row.setHeight((short)-1);
+            Cell sttCell = row.createCell(0);
+            sttCell.setCellValue(String.valueOf(i + 1));
+            sttCell.setCellStyle(wrapStyle);
+            Cell subjectCell = row.createCell(1);
+            subjectCell.setCellValue(safeToString(trial.get("subjectName")));
+            subjectCell.setCellStyle(wrapStyle);
+            Cell dateCell = row.createCell(2);
+            dateCell.setCellValue(safeToString(trial.get("teachingDate")));
+            dateCell.setCellStyle(wrapStyle);
+            Cell locationCell = row.createCell(3);
+            locationCell.setCellValue(safeToString(trial.get("location")));
+            locationCell.setCellStyle(wrapStyle);
+            Cell scoreCell = row.createCell(4);
+            scoreCell.setCellValue(safeToString(trial.get("score")));
+            scoreCell.setCellStyle(wrapStyle);
+            Cell conclusionCell = row.createCell(5);
+            conclusionCell.setCellValue(safeToString(trial.get("conclusion")));
+            conclusionCell.setCellStyle(wrapStyle);
+            Cell commentsCell = row.createCell(6);
+            commentsCell.setCellValue(safeToString(trial.get("comments")));
+            commentsCell.setCellStyle(wrapStyle);
         }
 
-        // Summary
-        int summaryStartRow = 6 + (trials != null ? trials.size() : 3) + 2;
-        Row summaryRow = sheet.createRow(summaryStartRow);
-        summaryRow.createCell(0).setCellValue("Tổng số buổi giảng thử:");
-        summaryRow.createCell(1).setCellValue(data.get("totalTrials").toString());
 
-        Row passRow = sheet.createRow(summaryStartRow + 1);
-        passRow.createCell(0).setCellValue("Số buổi đạt:");
-        passRow.createCell(1).setCellValue(data.get("passedTrials").toString());
 
-        Row rateRow = sheet.createRow(summaryStartRow + 2);
-        rateRow.createCell(0).setCellValue("Tỷ lệ đạt:");
-        rateRow.createCell(1).setCellValue(data.get("passRate") + "%");
+        // Set column widths for wrapping columns
+        sheet.setColumnWidth(1, 30 * 256); // Môn học
+        sheet.setColumnWidth(3, 20 * 256); // Địa điểm
+        sheet.setColumnWidth(6, 50 * 256); // Nhận xét
 
-        // Auto-size columns
+        // Auto-size other columns
         for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i);
+            if (i != 1 && i != 3 && i != 6) {
+                sheet.autoSizeColumn(i);
+            }
         }
+
+        // Summary section start row after data + 2 rows
+        int summaryStartRow = 12 + dataSize + 2;
+        Row summaryTitleRow = sheet.createRow(summaryStartRow);
+        summaryTitleRow.setHeight((short)-1);
+        Cell summaryTitleCell = summaryTitleRow.createCell(0);
+        summaryTitleCell.setCellValue("TỔNG HỢP KẾT QUẢ");
+         summaryTitleCell.setCellStyle(headerStyle);
+        Cell summaryTitleCell2 = summaryTitleRow.createCell(1);
+        summaryTitleCell2.setCellStyle(headerStyle);
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(summaryStartRow, summaryStartRow, 0, 1));
+
+        Row totalRow = sheet.createRow(summaryStartRow + 1);
+        totalRow.setHeight((short)-1);
+        totalRow.createCell(0).setCellValue("Tổng số buổi giảng thử:");
+        totalRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell totalValue = totalRow.createCell(1);
+        totalValue.setCellValue(safeToString(data.get("totalTrials")));
+        totalValue.setCellStyle(wrapStyle);
+
+        Row passedRow = sheet.createRow(summaryStartRow + 2);
+        passedRow.setHeight((short)-1);
+        passedRow.createCell(0).setCellValue("Số buổi đạt:");
+        passedRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell passedValue = passedRow.createCell(1);
+        passedValue.setCellValue(safeToString(data.get("passedTrials")));
+        passedValue.setCellStyle(wrapStyle);
+
+        Row failedRow = sheet.createRow(summaryStartRow + 3);
+        failedRow.setHeight((short)-1);
+        failedRow.createCell(0).setCellValue("Số buổi không đạt:");
+        failedRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell failedValue = failedRow.createCell(1);
+        failedValue.setCellValue(String.valueOf(safeLongValue(data.get("totalTrials")) - safeLongValue(data.get("passedTrials"))));
+        failedValue.setCellStyle(wrapStyle);
+
+        Row rateRow = sheet.createRow(summaryStartRow + 4);
+        rateRow.setHeight((short)-1);
+        rateRow.createCell(0).setCellValue("Tỷ lệ đạt:");
+        rateRow.getCell(0).setCellStyle(boldLabelSummaryStyle);
+        Cell rateValue = rateRow.createCell(1);
+        rateValue.setCellValue(safeToString(data.get("passRate")) + "%");
+        rateValue.setCellStyle(wrapStyle);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         workbook.write(outputStream);
@@ -501,9 +739,18 @@ public class TeacherReportGeneratorService {
 
     private byte[] generateDefaultReportExcel(Workbook workbook, Map<String, Object> data, User teacher) throws IOException {
         Sheet sheet = workbook.createSheet("Report");
+        // Insert header if needed, but for default, keep simple
+
+        CellStyle wrapStyle = workbook.createCellStyle();
+        wrapStyle.setWrapText(true);
+        wrapStyle.setBorderTop(BorderStyle.THIN);
+        wrapStyle.setBorderBottom(BorderStyle.THIN);
+        wrapStyle.setBorderLeft(BorderStyle.THIN);
+        wrapStyle.setBorderRight(BorderStyle.THIN);
 
         // Create header row
         Row headerRow = sheet.createRow(0);
+        headerRow.setHeight((short)-1);
         headerRow.createCell(0).setCellValue("Report Type");
         headerRow.createCell(1).setCellValue("Teacher");
         headerRow.createCell(2).setCellValue("Year");
@@ -512,16 +759,26 @@ public class TeacherReportGeneratorService {
 
         // Create data row
         Row dataRow = sheet.createRow(1);
-        dataRow.createCell(0).setCellValue((String) data.get("reportType"));
-        dataRow.createCell(1).setCellValue(teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
-        dataRow.createCell(2).setCellValue(data.get("year") != null ? data.get("year").toString() : "");
-        dataRow.createCell(3).setCellValue(data.get("quarter") != null ? data.get("quarter").toString() : "");
-        dataRow.createCell(4).setCellValue(((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        dataRow.setHeight((short)-1);
+        Cell typeCell = dataRow.createCell(0);
+        typeCell.setCellValue(safeToString(data.get("reportType")));
+        typeCell.setCellStyle(wrapStyle);
+        Cell teacherCell = dataRow.createCell(1);
+        teacherCell.setCellValue(safeTeacherName(teacher));
+        teacherCell.setCellStyle(wrapStyle);
+        Cell yearCell = dataRow.createCell(2);
+        yearCell.setCellValue(safeToString(data.get("year")));
+        yearCell.setCellStyle(wrapStyle);
+        Cell quarterCell = dataRow.createCell(3);
+        quarterCell.setCellValue(safeToString(data.get("quarter")));
+        quarterCell.setCellStyle(wrapStyle);
+        Cell generatedCell = dataRow.createCell(4);
+        generatedCell.setCellValue(safeDateTimeFormat(data.get("generatedAt")));
+        generatedCell.setCellStyle(wrapStyle);
 
-        // Auto-size columns
+        // Set reasonable column widths and auto-size where appropriate
         for (int i = 0; i < 5; i++) {
-            sheet.autoSizeColumn(i);
+            sheet.setColumnWidth(i, 30 * 256);
         }
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -530,8 +787,14 @@ public class TeacherReportGeneratorService {
         return outputStream.toByteArray();
     }
 
-    public byte[] generateWordReport(Map<String, Object> data, User teacher) throws IOException {
-        XWPFDocument document = new XWPFDocument();
+    public byte[] generateWordReport(Map<String, Object> data, User teacher) throws IOException, InvalidFormatException {
+        InputStream templateStream = getClass().getClassLoader().getResourceAsStream("templates/baocao-template.docx");
+        if (templateStream == null) {
+            throw new IOException("Template file baocao-template.docx not found");
+        }
+        XWPFDocument document = new XWPFDocument(templateStream);
+        templateStream.close();
+
         String reportType = (String) data.get("reportType");
 
         switch (reportType) {
@@ -566,9 +829,9 @@ public class TeacherReportGeneratorService {
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
         teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
         teacherRun.addBreak();
-        teacherRun.setText("Mã giảng viên: " + teacher.getId());
+        teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
         teacherRun.addBreak();
         teacherRun.setText("Ngày tạo báo cáo: " + ((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
 
@@ -583,36 +846,51 @@ public class TeacherReportGeneratorService {
         contentRun.addBreak();
         contentRun.addBreak();
 
+        // Create table for subjects
+        XWPFTable table = document.createTable();
+        // Header row
+        XWPFTableRow headerRow = table.getRow(0);
+        headerRow.getCell(0).setText("STT");
+        headerRow.addNewTableCell().setText("Môn học");
+        headerRow.addNewTableCell().setText("Chương Trình");
+
         // Get actual subjects data from database
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> subjects = (List<Map<String, Object>>) data.get("subjects");
         if (subjects != null && !subjects.isEmpty()) {
             for (int i = 0; i < subjects.size(); i++) {
                 Map<String, Object> subject = subjects.get(i);
-                contentRun.setText((i + 1) + ". " + subject.get("subjectName") + " - Lớp " + subject.get("className"));
-                contentRun.addBreak();
+                XWPFTableRow row = table.createRow();
+                row.getCell(0).setText(String.valueOf(i + 1));
+                row.getCell(1).setText(safeToString(subject.get("subjectName")));
+                row.getCell(2).setText(safeToString(subject.get("programName")));
             }
         } else {
             // Fallback if no data
-            contentRun.setText("Không có dữ liệu môn học trong quý này.");
-            contentRun.addBreak();
+            XWPFTableRow row = table.createRow();
+            row.getCell(0).setText("1");
+            row.getCell(1).setText("Không có dữ liệu môn học trong quý này.");
+            row.getCell(2).setText("");
+            row.getCell(3).setText("");
         }
 
-        contentRun.addBreak();
-        contentRun.setText("II. KẾT QUẢ ĐẠT ĐƯỢC");
-        contentRun.setBold(true);
-        contentRun.addBreak();
+        // Summary section in a new paragraph after the table
+        XWPFParagraph summaryParagraph = document.createParagraph();
+        XWPFRun summaryRun = summaryParagraph.createRun();
+        summaryRun.setText("II. KẾT QUẢ ĐẠT ĐƯỢC");
+        summaryRun.setBold(true);
+        summaryRun.addBreak();
 
-        contentRun.setText("- Tổng số môn học: " + data.get("totalSubjects") + " môn");
-        contentRun.addBreak();
-        contentRun.setText("- Số môn hoàn thành: " + data.get("completedSubjects") + " môn");
-        contentRun.addBreak();
-        contentRun.setText("- Số môn đang thực hiện: " + (((Number) data.get("totalSubjects")).longValue() - ((Number) data.get("completedSubjects")).longValue()) + " môn");
-        contentRun.addBreak();
+        summaryRun.setText("- Tổng số môn học: " + data.get("totalSubjects") + " môn");
+        summaryRun.addBreak();
+        summaryRun.setText("- Số môn hoàn thành: " + data.get("completedSubjects") + " môn");
+        summaryRun.addBreak();
+        summaryRun.setText("- Số môn đang thực hiện: " + (((Number) data.get("totalSubjects")).longValue() - ((Number) data.get("completedSubjects")).longValue()) + " môn");
+        summaryRun.addBreak();
         long total = ((Number) data.get("totalSubjects")).longValue();
         long completed = ((Number) data.get("completedSubjects")).longValue();
         double rate = total > 0 ? Math.round((double) completed / total * 10000.0) / 100.0 : 0.0;
-        contentRun.setText("- Tỷ lệ hoàn thành: " + rate + "%");
+        summaryRun.setText("- Tỷ lệ hoàn thành: " + rate + "%");
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         document.write(outputStream);
@@ -638,9 +916,9 @@ public class TeacherReportGeneratorService {
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
         teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
         teacherRun.addBreak();
-        teacherRun.setText("Mã giảng viên: " + teacher.getId());
+        teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
         teacherRun.addBreak();
         teacherRun.setText("Ngày tạo báo cáo: " + ((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
 
@@ -653,14 +931,14 @@ public class TeacherReportGeneratorService {
 
         // Use real data from database
         String[] stats = {
-            "Tổng số môn đăng ký: " + data.get("totalRegistrations") + " môn",
-            "Số môn hoàn thành: " + data.get("completedRegistrations") + " môn",
-            "Số môn chưa hoàn thành: " + (String.valueOf(((Number) data.get("totalRegistrations")).longValue() - ((Number) data.get("completedRegistrations")).longValue())) + " môn",
-            "Tỷ lệ hoàn thành: " + data.get("completionRate") + "%",
-            "Số kỳ thi Aptech: " + data.get("totalExams") + " kỳ",
-            "Số lần thi đạt: " + data.get("passedExams") + " lần",
-            "Số buổi giảng thử: " + data.get("totalTrials") + " buổi",
-            "Số buổi đạt: " + data.get("passedTrials") + " buổi"
+                "Tổng số môn đăng ký: " + data.get("totalRegistrations") + " môn",
+                "Số môn hoàn thành: " + data.get("completedRegistrations") + " môn",
+                "Số môn chưa hoàn thành: " + (String.valueOf(((Number) data.get("totalRegistrations")).longValue() - ((Number) data.get("completedRegistrations")).longValue())) + " môn",
+                "Tỷ lệ hoàn thành: " + data.get("completionRate") + "%",
+                "Số kỳ thi Aptech: " + data.get("totalExams") + " kỳ",
+                "Số lần thi đạt: " + data.get("passedExams") + " lần",
+                "Số buổi giảng thử: " + data.get("totalTrials") + " buổi",
+                "Số buổi đạt: " + data.get("passedTrials") + " buổi"
         };
 
         for (String stat : stats) {
@@ -701,7 +979,7 @@ public class TeacherReportGeneratorService {
         // Title
         XWPFParagraph titleParagraph = document.createParagraph();
         XWPFRun titleRun = titleParagraph.createRun();
-        titleRun.setText("DANH SÁCH THI CHỨNG NHẬN APTECH");
+        titleRun.setText("BÁO CÁO KẾT QUẢ THI CHỨNG NHẬN APTECH CÁ NHÂN");
         titleRun.setBold(true);
         titleRun.setFontSize(16);
 
@@ -714,9 +992,9 @@ public class TeacherReportGeneratorService {
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
         teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
         teacherRun.addBreak();
-        teacherRun.setText("Mã giảng viên: " + teacher.getId());
+        teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
 
         // Content
         XWPFParagraph contentParagraph = document.createParagraph();
@@ -725,37 +1003,56 @@ public class TeacherReportGeneratorService {
         contentRun.setBold(true);
         contentRun.addBreak();
 
+        // Create table for exams
+        XWPFTable table = document.createTable();
+        // Header row
+        XWPFTableRow headerRow = table.getRow(0);
+        headerRow.getCell(0).setText("STT");
+        headerRow.addNewTableCell().setText("Môn thi");
+        headerRow.addNewTableCell().setText("Ngày thi");
+        headerRow.addNewTableCell().setText("Điểm");
+        headerRow.addNewTableCell().setText("Kết quả");
+        headerRow.addNewTableCell().setText("Lần thi");
+
         // Get actual exam data from database
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> exams = (List<Map<String, Object>>) data.get("exams");
         if (exams != null && !exams.isEmpty()) {
             for (int i = 0; i < exams.size(); i++) {
                 Map<String, Object> exam = exams.get(i);
-                contentRun.setText((i + 1) + ". " + exam.get("subjectName") + " - Ngày thi: " +
-                    (exam.get("examDate") != null ? exam.get("examDate").toString() : "N/A") +
-                    " - Điểm: " + (exam.get("score") != null ? exam.get("score").toString() : "0") +
-                    " - Kết quả: " + (String) exam.get("result") +
-                    " - Lần thi: " + (exam.get("attempt") != null ? exam.get("attempt").toString() : "1"));
-                contentRun.addBreak();
+                XWPFTableRow row = table.createRow();
+                row.getCell(0).setText(String.valueOf(i + 1));
+                row.getCell(1).setText(safeToString(exam.get("subjectName")));
+                row.getCell(2).setText(exam.get("examDate") != null ? exam.get("examDate").toString() : "N/A");
+                row.getCell(3).setText(exam.get("score") != null ? exam.get("score").toString() : "0");
+                row.getCell(4).setText(safeToString(exam.get("result")));
+                row.getCell(5).setText(exam.get("attempt") != null ? exam.get("attempt").toString() : "1");
             }
         } else {
             // Fallback if no exam data
-            contentRun.setText("Không có dữ liệu kỳ thi Aptech.");
-            contentRun.addBreak();
+            XWPFTableRow row = table.createRow();
+            row.getCell(0).setText("1");
+            row.getCell(1).setText("Không có dữ liệu kỳ thi Aptech.");
+            row.getCell(2).setText("");
+            row.getCell(3).setText("");
+            row.getCell(4).setText("");
+            row.getCell(5).setText("");
         }
 
-        contentRun.addBreak();
-        contentRun.setText("TỔNG HỢP KẾT QUẢ");
-        contentRun.setBold(true);
-        contentRun.addBreak();
+        // Summary section in a new paragraph after the table
+        XWPFParagraph summaryParagraph = document.createParagraph();
+        XWPFRun summaryRun = summaryParagraph.createRun();
+        summaryRun.setText("TỔNG HỢP KẾT QUẢ");
+        summaryRun.setBold(true);
+        summaryRun.addBreak();
 
-        contentRun.setText("Tổng số môn thi: " + data.get("totalExams") + " môn");
-        contentRun.addBreak();
-        contentRun.setText("Số môn đạt: " + data.get("passedExams") + " môn");
-        contentRun.addBreak();
-        contentRun.setText("Số môn không đạt: " + (String.valueOf((Long) data.get("totalExams") - (Long) data.get("passedExams"))) + " môn");
-        contentRun.addBreak();
-        contentRun.setText("Tỷ lệ đạt: " + data.get("passRate") + "%");
+        summaryRun.setText("Tổng số môn thi: " + data.get("totalExams") + " môn");
+        summaryRun.addBreak();
+        summaryRun.setText("Số môn đạt: " + data.get("passedExams") + " môn");
+        summaryRun.addBreak();
+        summaryRun.setText("Số môn không đạt: " + (String.valueOf((Long) data.get("totalExams") - (Long) data.get("passedExams"))) + " môn");
+        summaryRun.addBreak();
+        summaryRun.setText("Tỷ lệ đạt: " + data.get("passRate") + "%");
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         document.write(outputStream);
@@ -766,8 +1063,9 @@ public class TeacherReportGeneratorService {
     private byte[] generateTrialReportWord(XWPFDocument document, Map<String, Object> data, User teacher) throws IOException {
         // Title
         XWPFParagraph titleParagraph = document.createParagraph();
+        titleParagraph.setAlignment(ParagraphAlignment.CENTER);
         XWPFRun titleRun = titleParagraph.createRun();
-        titleRun.setText("BIÊN BẢN GIẢNG THỬ");
+        titleRun.setText("BÁO CÁO KẾT QUẢ GIẢNG THỬ CÁ NHÂN");
         titleRun.setBold(true);
         titleRun.setFontSize(16);
 
@@ -775,9 +1073,9 @@ public class TeacherReportGeneratorService {
         XWPFParagraph teacherParagraph = document.createParagraph();
         XWPFRun teacherRun = teacherParagraph.createRun();
         teacherRun.setText("Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
         teacherRun.addBreak();
-        teacherRun.setText("Mã giảng viên: " + teacher.getId());
+        teacherRun.setText("Mã giảng viên: " + teacher.getTeacherCode());
 
         // Content
         XWPFParagraph contentParagraph = document.createParagraph();
@@ -786,36 +1084,57 @@ public class TeacherReportGeneratorService {
         contentRun.setBold(true);
         contentRun.addBreak();
 
+        // Create table for trials
+        XWPFTable table = document.createTable();
+        // Header row
+        XWPFTableRow headerRow = table.getRow(0);
+        headerRow.getCell(0).setText("STT");
+        headerRow.addNewTableCell().setText("Môn học");
+        headerRow.addNewTableCell().setText("Ngày giảng thử");
+        headerRow.addNewTableCell().setText("Địa điểm");
+        headerRow.addNewTableCell().setText("Điểm");
+        headerRow.addNewTableCell().setText("Kết quả");
+        headerRow.addNewTableCell().setText("Nhận xét");
+
         // Get actual trial data from database
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> trials = (List<Map<String, Object>>) data.get("trials");
         if (trials != null && !trials.isEmpty()) {
             for (int i = 0; i < trials.size(); i++) {
                 Map<String, Object> trial = trials.get(i);
-                contentRun.setText((i + 1) + ". " + trial.get("subjectName") + " - Ngày giảng thử: " +
-                    (trial.get("teachingDate") != null ? trial.get("teachingDate").toString() : "N/A") +
-                    " - Địa điểm: " + (String) trial.get("location") +
-                    " - Điểm: " + (trial.get("score") != null ? trial.get("score").toString() : "0") +
-                    " - Kết quả: " + (String) trial.get("conclusion") +
-                    " - Nhận xét: " + (String) trial.get("comments"));
-                contentRun.addBreak();
+                XWPFTableRow row = table.createRow();
+                row.getCell(0).setText(String.valueOf(i + 1));
+                row.getCell(1).setText(safeToString(trial.get("subjectName")));
+                row.getCell(2).setText(trial.get("teachingDate") != null ? trial.get("teachingDate").toString() : "N/A");
+                row.getCell(3).setText(safeToString(trial.get("location")));
+                row.getCell(4).setText(trial.get("score") != null ? trial.get("score").toString() : "0");
+                row.getCell(5).setText(safeToString(trial.get("conclusion")));
+                row.getCell(6).setText(safeToString(trial.get("comments")));
             }
         } else {
             // Fallback if no trial data
-            contentRun.setText("Không có dữ liệu buổi giảng thử.");
-            contentRun.addBreak();
+            XWPFTableRow row = table.createRow();
+            row.getCell(0).setText("1");
+            row.getCell(1).setText("Không có dữ liệu buổi giảng thử.");
+            row.getCell(2).setText("");
+            row.getCell(3).setText("");
+            row.getCell(4).setText("");
+            row.getCell(5).setText("");
+            row.getCell(6).setText("");
         }
 
-        contentRun.addBreak();
-        contentRun.setText("TỔNG HỢP");
-        contentRun.setBold(true);
-        contentRun.addBreak();
+        // Summary section in a new paragraph after the table
+        XWPFParagraph summaryParagraph = document.createParagraph();
+        XWPFRun summaryRun = summaryParagraph.createRun();
+        summaryRun.setText("TỔNG HỢP");
+        summaryRun.setBold(true);
+        summaryRun.addBreak();
 
-        contentRun.setText("Tổng số buổi giảng thử: " + data.get("totalTrials") + " buổi");
-        contentRun.addBreak();
-        contentRun.setText("Số buổi đạt: " + data.get("passedTrials") + " buổi");
-        contentRun.addBreak();
-        contentRun.setText("Tỷ lệ đạt: " + data.get("passRate") + "%");
+        summaryRun.setText("Tổng số buổi giảng thử: " + data.get("totalTrials") + " buổi");
+        summaryRun.addBreak();
+        summaryRun.setText("Số buổi đạt: " + data.get("passedTrials") + " buổi");
+        summaryRun.addBreak();
+        summaryRun.setText("Tỷ lệ đạt: " + data.get("passRate") + "%");
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         document.write(outputStream);
@@ -829,7 +1148,7 @@ public class TeacherReportGeneratorService {
         run.setText("Report Type: " + data.get("reportType"));
         run.addBreak();
         run.setText("Teacher: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
+                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()));
         run.addBreak();
         run.setText("Year: " + (data.get("year") != null ? data.get("year").toString() : ""));
         run.addBreak();
@@ -843,128 +1162,55 @@ public class TeacherReportGeneratorService {
         return outputStream.toByteArray();
     }
 
-    public byte[] generatePdfReport(Map<String, Object> data, User teacher) throws IOException {
-        String reportType = (String) data.get("reportType");
 
-        switch (reportType) {
-            case "QUARTER":
-                return generateQuarterReportPdf(data, teacher);
-            case "YEAR":
-                return generateYearReportPdf(data, teacher);
-            case "APTECH":
-                return generateAptechReportPdf(data, teacher);
-            case "TRIAL":
-                return generateTrialReportPdf(data, teacher);
-            default:
-                return generateDefaultReportPdf(data, teacher);
+    private String safeToString(Object obj) {
+        return obj != null ? obj.toString() : "";
+    }
+
+    private long safeLongValue(Object obj) {
+        if (obj instanceof Number) {
+            return ((Number) obj).longValue();
+        }
+        try {
+            return Long.parseLong(safeToString(obj));
+        } catch (Exception e) {
+            return 0L;
         }
     }
 
-    private byte[] generateQuarterReportPdf(Map<String, Object> data, User teacher) throws IOException {
-        log.info("Starting PDF generation for quarterly report - Teacher: {}, Quarter: {}, Year: {}",
-                teacher.getId(), data.get("quarter"), data.get("year"));
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(outputStream);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        Document document = new Document(pdfDoc);
-
-        PdfFont boldFont = loadCustomFont("DejaVuSans-Bold.ttf");
-        PdfFont normalFont = loadCustomFont("DejaVuSans.ttf");
-
-        // Title
-        Paragraph title = new Paragraph("BÁO CÁO HOẠT ĐỘNG GIẢNG DẠY")
-                .setFont(boldFont)
-                .setFontSize(16)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(title);
-
-        // Subtitle
-        Paragraph subtitle = new Paragraph("Quý " + data.get("quarter") + " Năm " + data.get("year"))
-                .setFont(boldFont)
-                .setFontSize(14)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(subtitle);
-
-        // Teacher info
-        String teacherName = "Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
-        document.add(new Paragraph(teacherName).setFont(normalFont).setFontSize(12));
-
-        String teacherId = "Mã giảng viên: " + teacher.getId();
-        document.add(new Paragraph(teacherId).setFont(normalFont).setFontSize(12));
-
-        String generatedAt = "Ngày tạo báo cáo: " + ((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        document.add(new Paragraph(generatedAt).setFont(normalFont).setFontSize(12));
-
-        // Section 1
-        document.add(new Paragraph("I. TỔNG QUAN HOẠT ĐỘNG").setFont(boldFont).setFontSize(12));
-
-        String overviewText = "Trong quý " + data.get("quarter") + " năm " + data.get("year") + ", giảng viên đã tham gia giảng dạy các môn học sau:";
-        document.add(new Paragraph(overviewText).setFont(normalFont).setFontSize(12));
-
-        // Table
-        Table table = new Table(UnitValue.createPercentArray(new float[]{10, 30, 20, 12, 16, 20}));
-        table.setWidth(UnitValue.createPercentValue(100));
-
-        // Headers
-        String[] headers = {"STT", "Môn học", "Lớp", "Số tiết", "Trạng thái", "Ghi chú"};
-        for (String header : headers) {
-            table.addHeaderCell(new Cell().add(new Paragraph(header).setFont(boldFont).setFontSize(10)));
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> getSafeList(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object value = map.get(key);
+        if (value instanceof List<?>) {
+            return (List<Map<String, Object>>) value;
         }
+        return null;
+    }
 
-        // Get subjects data
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> subjects = (List<Map<String, Object>>) data.get("subjects");
-        if (subjects != null && !subjects.isEmpty()) {
-            for (int i = 0; i < subjects.size(); i++) {
-                Map<String, Object> subject = subjects.get(i);
-                table.addCell(new Cell().add(new Paragraph(String.valueOf(i + 1)).setFont(normalFont).setFontSize(9)));
-                table.addCell(new Cell().add(new Paragraph((String) subject.get("subjectName")).setFont(normalFont).setFontSize(9)));
-                table.addCell(new Cell().add(new Paragraph((String) subject.get("className")).setFont(normalFont).setFontSize(9)));
-                table.addCell(new Cell().add(new Paragraph(subject.get("totalHours").toString()).setFont(normalFont).setFontSize(9)));
-                table.addCell(new Cell().add(new Paragraph((String) subject.get("status")).setFont(normalFont).setFontSize(9)));
-                table.addCell(new Cell().add(new Paragraph((String) subject.get("notes")).setFont(normalFont).setFontSize(9)));
-            }
-        } else {
-            // Fallback sample data
-            String[][] tableData = {
-                {"1", "Java Programming", "APTECH01", "45", "Hoàn thành", ""},
-                {"2", "Web Development", "APTECH02", "30", "Đang dạy", ""},
-                {"3", "Database Design", "APTECH03", "40", "Hoàn thành", ""}
-            };
-            for (String[] row : tableData) {
-                for (String cell : row) {
-                    table.addCell(new Cell().add(new Paragraph(cell).setFont(normalFont).setFontSize(9)));
-                }
-            }
+    private String safeTeacherName(User teacher) {
+        if (teacher == null) return "";
+        if (teacher.getUserDetails() != null) {
+            String firstName = teacher.getUserDetails().getFirstName();
+            String lastName = teacher.getUserDetails().getLastName();
+            return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
         }
+        return teacher.getId() != null ? teacher.getId() : "";
+    }
 
-        document.add(table);
-
-        // Section 2
-        document.add(new Paragraph("II. KẾT QUẢ ĐẠT ĐƯỢC").setFont(boldFont).setFontSize(12));
-
-        long total = ((Number) data.get("totalSubjects")).longValue();
-        long completed = ((Number) data.get("completedSubjects")).longValue();
-        double rate = total > 0 ? Math.round((double) completed / total * 10000.0) / 100.0 : 0.0;
-
-        String[] results = {
-            "- Tổng số môn học: " + data.get("totalSubjects") + " môn",
-            "- Số môn hoàn thành: " + data.get("completedSubjects") + " môn",
-            "- Số môn đang thực hiện: " + (total - completed) + " môn",
-            "- Tỷ lệ hoàn thành: " + rate + "%"
-        };
-
-        for (String result : results) {
-            document.add(new Paragraph(result).setFont(normalFont).setFontSize(12));
+    private String safeTeacherCode(User teacher) {
+        if (teacher == null) return "";
+        if (teacher.getUserDetails() != null && teacher.getUserDetails().getTeacherCode() != null) {
+            return teacher.getUserDetails().getTeacherCode();
         }
+        return teacher.getId() != null ? teacher.getTeacherCode() : "";
+    }
 
-        document.close();
-
-        log.info("Successfully generated PDF report for quarterly report - Teacher: {}, Quarter: {}, Year: {}",
-                teacher.getId(), data.get("quarter"), data.get("year"));
-        return outputStream.toByteArray();
+    private String safeDateTimeFormat(Object obj) {
+        if (obj instanceof LocalDateTime) {
+            return ((LocalDateTime) obj).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+        return "";
     }
 
     private float sum(float[] array) {
@@ -973,240 +1219,5 @@ public class TeacherReportGeneratorService {
             total += value;
         }
         return total;
-    }
-
-    private byte[] generateYearReportPdf(Map<String, Object> data, User teacher) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(outputStream);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        Document document = new Document(pdfDoc);
-
-        PdfFont boldFont = loadCustomFont("DejaVuSans-Bold.ttf");
-        PdfFont normalFont = loadCustomFont("DejaVuSans.ttf");
-
-        // Title
-        Paragraph title = new Paragraph("BÁO CÁO TỔNG HỢP HOẠT ĐỘNG GIẢNG DẠY")
-                .setFont(boldFont)
-                .setFontSize(16)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(title);
-
-        // Subtitle
-        Paragraph subtitle = new Paragraph("Năm " + data.get("year"))
-                .setFont(boldFont)
-                .setFontSize(14)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(subtitle);
-
-        // Teacher info
-        String teacherName = "Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
-        document.add(new Paragraph(teacherName).setFont(normalFont).setFontSize(12));
-
-        String teacherId = "Mã giảng viên: " + teacher.getId();
-        document.add(new Paragraph(teacherId).setFont(normalFont).setFontSize(12));
-
-        String generatedAt = "Ngày tạo báo cáo: " + ((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        document.add(new Paragraph(generatedAt).setFont(normalFont).setFontSize(12));
-
-        // Section 1
-        document.add(new Paragraph("I. THỐNG KÊ TỔNG HỢP").setFont(boldFont).setFontSize(12));
-
-        long totalRegistrations = ((Number) data.get("totalRegistrations")).longValue();
-        long completedRegistrations = ((Number) data.get("completedRegistrations")).longValue();
-        long totalExams = ((Number) data.get("totalExams")).longValue();
-        long passedExams = ((Number) data.get("passedExams")).longValue();
-        long totalTrials = ((Number) data.get("totalTrials")).longValue();
-        long passedTrials = ((Number) data.get("passedTrials")).longValue();
-
-        String[] stats = {
-            "Tổng số môn đăng ký: " + totalRegistrations + " môn",
-            "Số môn hoàn thành: " + completedRegistrations + " môn",
-            "Số môn chưa hoàn thành: " + (totalRegistrations - completedRegistrations) + " môn",
-            "Tỷ lệ hoàn thành: " + data.get("completionRate") + "%",
-            "Số kỳ thi Aptech: " + totalExams + " kỳ",
-            "Số lần thi đạt: " + passedExams + " lần",
-            "Số buổi giảng thử: " + totalTrials + " buổi",
-            "Số buổi đạt: " + passedTrials + " buổi"
-        };
-
-        for (String stat : stats) {
-            document.add(new Paragraph(stat).setFont(normalFont).setFontSize(12));
-        }
-
-        // Section 2
-        document.add(new Paragraph("II. CHI TIẾT THEO QUÝ").setFont(boldFont).setFontSize(12));
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> quarterlyStats = (List<Map<String, Object>>) data.get("quarterlyStats");
-        if (quarterlyStats != null && !quarterlyStats.isEmpty()) {
-            for (Map<String, Object> quarter : quarterlyStats) {
-                long q = ((Number) quarter.get("quarter")).longValue();
-                long qTotal = ((Number) quarter.get("totalSubjects")).longValue();
-                long qCompleted = ((Number) quarter.get("completedSubjects")).longValue();
-                double qRate = qTotal > 0 ? Math.round((double) qCompleted / qTotal * 10000.0) / 100.0 : 0.0;
-                String quarterText = "Quý " + q + ": " + qTotal + " môn - Hoàn thành " + qCompleted + " môn (" + qRate + "%)";
-                document.add(new Paragraph(quarterText).setFont(normalFont).setFontSize(12));
-            }
-        } else {
-            document.add(new Paragraph("Không có dữ liệu chi tiết theo quý.").setFont(normalFont).setFontSize(12));
-        }
-
-        document.close();
-        return outputStream.toByteArray();
-    }
-
-    private byte[] generateAptechReportPdf(Map<String, Object> data, User teacher) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(outputStream);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        Document document = new Document(pdfDoc);
-
-        PdfFont boldFont = loadCustomFont("DejaVuSans-Bold.ttf");
-        PdfFont normalFont = loadCustomFont("DejaVuSans.ttf");
-
-        // Title
-        Paragraph title = new Paragraph("DANH SÁCH THI CHỨNG NHẬN APTECH")
-                .setFont(boldFont)
-                .setFontSize(16)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(title);
-
-        // Period
-        Paragraph period = new Paragraph("Năm " + data.get("year") + (data.get("quarter") != null ? " - Quý " + data.get("quarter") : ""))
-                .setFont(boldFont)
-                .setFontSize(14)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(period);
-
-        // Teacher info
-        String teacherName = "Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
-        document.add(new Paragraph(teacherName).setFont(normalFont).setFontSize(12));
-
-        String teacherId = "Mã giảng viên: " + teacher.getId();
-        document.add(new Paragraph(teacherId).setFont(normalFont).setFontSize(12));
-
-        // Section
-        document.add(new Paragraph("DANH SÁCH CÁC MÔN ĐÃ THI:").setFont(boldFont).setFontSize(12));
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> exams = (List<Map<String, Object>>) data.get("exams");
-        if (exams != null && !exams.isEmpty()) {
-            for (int i = 0; i < exams.size(); i++) {
-                Map<String, Object> exam = exams.get(i);
-                String examText = (i + 1) + ". " + exam.get("subjectName") + " - Ngày thi: " +
-                    (exam.get("examDate") != null ? exam.get("examDate").toString() : "N/A") +
-                    " - Điểm: " + (exam.get("score") != null ? exam.get("score").toString() : "0") +
-                    " - Kết quả: " + (String) exam.get("result") +
-                    " - Lần thi: " + (exam.get("attempt") != null ? exam.get("attempt").toString() : "1");
-                document.add(new Paragraph(examText).setFont(normalFont).setFontSize(12));
-            }
-        } else {
-            document.add(new Paragraph("Không có dữ liệu kỳ thi Aptech.").setFont(normalFont).setFontSize(12));
-        }
-
-        // Summary
-        document.add(new Paragraph("TỔNG HỢP KẾT QUẢ").setFont(boldFont).setFontSize(12));
-
-        String[] summary = {
-            "Tổng số môn thi: " + data.get("totalExams") + " môn",
-            "Số môn đạt: " + data.get("passedExams") + " môn",
-            "Số môn không đạt: " + (String.valueOf((Long) data.get("totalExams") - (Long) data.get("passedExams"))) + " môn",
-            "Tỷ lệ đạt: " + data.get("passRate") + "%"
-        };
-
-        for (String line : summary) {
-            document.add(new Paragraph(line).setFont(normalFont).setFontSize(12));
-        }
-
-        document.close();
-        return outputStream.toByteArray();
-    }
-
-    private byte[] generateTrialReportPdf(Map<String, Object> data, User teacher) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(outputStream);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        Document document = new Document(pdfDoc);
-
-        PdfFont boldFont = loadCustomFont("DejaVuSans-Bold.ttf");
-        PdfFont normalFont = loadCustomFont("DejaVuSans.ttf");
-
-        // Title
-        Paragraph title = new Paragraph("BIÊN BẢN GIẢNG THỬ")
-                .setFont(boldFont)
-                .setFontSize(16)
-                .setTextAlignment(TextAlignment.CENTER);
-        document.add(title);
-
-        // Teacher info
-        String teacherName = "Giảng viên: " + (teacher.getUserDetails() != null ?
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId());
-        document.add(new Paragraph(teacherName).setFont(normalFont).setFontSize(12));
-
-        String teacherId = "Mã giảng viên: " + teacher.getId();
-        document.add(new Paragraph(teacherId).setFont(normalFont).setFontSize(12));
-
-        // Section
-        document.add(new Paragraph("DANH SÁCH CÁC BUỔI GIẢNG THỬ:").setFont(boldFont).setFontSize(12));
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> trials = (List<Map<String, Object>>) data.get("trials");
-        if (trials != null && !trials.isEmpty()) {
-            for (int i = 0; i < trials.size(); i++) {
-                Map<String, Object> trial = trials.get(i);
-                String trialText = (i + 1) + ". " + trial.get("subjectName") + " - Ngày giảng thử: " +
-                    (trial.get("teachingDate") != null ? trial.get("teachingDate").toString() : "N/A") +
-                    " - Địa điểm: " + (String) trial.get("location") +
-                    " - Điểm: " + (trial.get("score") != null ? trial.get("score").toString() : "0") +
-                    " - Kết quả: " + (String) trial.get("conclusion") +
-                    " - Nhận xét: " + (String) trial.get("comments");
-                document.add(new Paragraph(trialText).setFont(normalFont).setFontSize(12));
-            }
-        } else {
-            document.add(new Paragraph("Không có dữ liệu buổi giảng thử.").setFont(normalFont).setFontSize(12));
-        }
-
-        // Summary
-        document.add(new Paragraph("TỔNG HỢP").setFont(boldFont).setFontSize(12));
-
-        String[] summary = {
-            "Tổng số buổi giảng thử: " + data.get("totalTrials") + " buổi",
-            "Số buổi đạt: " + data.get("passedTrials") + " buổi",
-            "Tỷ lệ đạt: " + data.get("passRate") + "%"
-        };
-
-        for (String line : summary) {
-            document.add(new Paragraph(line).setFont(normalFont).setFontSize(12));
-        }
-
-        document.close();
-        return outputStream.toByteArray();
-    }
-
-    private byte[] generateDefaultReportPdf(Map<String, Object> data, User teacher) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(outputStream);
-        PdfDocument pdfDoc = new PdfDocument(writer);
-        Document document = new Document(pdfDoc);
-
-        PdfFont normalFont = loadCustomFont("DejaVuSans.ttf");
-
-        String[] lines = {
-            "Report Type: " + data.get("reportType"),
-            "Teacher: " + (teacher.getUserDetails() != null ?
-                teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId()),
-            "Year: " + (data.get("year") != null ? data.get("year").toString() : ""),
-            "Quarter: " + (data.get("quarter") != null ? data.get("quarter").toString() : ""),
-            "Generated At: " + ((LocalDateTime) data.get("generatedAt")).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-        };
-
-        for (String line : lines) {
-            document.add(new Paragraph(line).setFont(normalFont).setFontSize(12));
-        }
-
-        document.close();
-        return outputStream.toByteArray();
     }
 }

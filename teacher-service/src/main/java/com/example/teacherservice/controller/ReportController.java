@@ -12,6 +12,7 @@ import com.example.teacherservice.repository.UserRepository;
 import com.example.teacherservice.service.reports.ManagerReportGeneratorService;
 import com.example.teacherservice.service.reports.ReportService;
 import com.example.teacherservice.service.reports.TeacherReportGeneratorService;
+import com.example.teacherservice.service.reports.TemplateReportService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ public class ReportController {
     private final UserRepository userRepository;
     private final TeacherReportGeneratorService teacherReportGeneratorService;
     private final ManagerReportGeneratorService managerReportGeneratorService;
-    private final com.example.teacherservice.service.reports.TemplateReportService templateReportService;
+    private final TemplateReportService templateReportService;
     private final JwtUtil jwtUtil;
 
     @GetMapping("/dashboard/stats")
@@ -111,42 +112,54 @@ public class ReportController {
 
             // Determine which service to use based on primaryRole
             boolean useManagerService = isAdmin && (report.getTeacher() == null ||
-                (report.getTeacher() != null && report.getTeacher().getPrimaryRole() == Role.MANAGE));
+                    (report.getTeacher() != null && report.getTeacher().getPrimaryRole() == Role.MANAGE));
             boolean useTeacherService = !useManagerService; // Personal reports or admin downloading teacher report
 
             switch (format.toLowerCase()) {
-                case "pdf":
-                    // Keep using existing PDF generation
-                    if (useManagerService) {
-                        fileContent = managerReportGeneratorService.generatePdfReport(reportData);
-                    } else {
-                        fileContent = teacherReportGeneratorService.generatePdfReport(reportData, report.getTeacher());
-                    }
-                    fileName = generateFileName(report, ".pdf");
-                    contentType = "application/pdf";
-                    break;
                 case "excel":
-                    // NEW: Use TemplateReportService for Excel
+                    // Use appropriate service based on report type for QUARTER, YEAR, APTECH, TRIAL
                     String reportType = report.getReportType();
-                    fileContent = templateReportService.generateExcelFromTemplate(reportType, reportData);
+                    if (reportType.equals("QUARTER") || reportType.equals("YEAR") || reportType.equals("APTECH") || reportType.equals("TRIAL")) {
+                        if (useManagerService) {
+                            fileContent = managerReportGeneratorService.generateExcelReport(reportData);
+                        } else {
+                            fileContent = teacherReportGeneratorService.generateExcelReport(reportData, report.getTeacher());
+                        }
+                    } else {
+                        fileContent = templateReportService.generateExcelFromTemplate(reportType, reportData);
+                    }
                     fileName = generateFileName(report, ".xlsx");
                     contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
                     break;
                 case "word":
-                    // NEW: Use TemplateReportService for Word  
+                    // Use appropriate service based on report type for QUARTER, YEAR, APTECH, TRIAL
                     reportType = report.getReportType();
-                    fileContent = templateReportService.generateWordFromTemplate(reportType, reportData);
+                    if (reportType.equals("QUARTER") || reportType.equals("YEAR") || reportType.equals("APTECH") || reportType.equals("TRIAL")) {
+                        if (useManagerService) {
+                            fileContent = managerReportGeneratorService.generateWordReport(reportData);
+                        } else {
+                            fileContent = teacherReportGeneratorService.generateWordReport(reportData, report.getTeacher());
+                        }
+                    } else {
+                        fileContent = templateReportService.generateWordFromTemplate(reportType, reportData);
+                    }
                     fileName = generateFileName(report, ".docx");
                     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
                     break;
                 default:
-                    if (useManagerService) {
-                        fileContent = managerReportGeneratorService.generatePdfReport(reportData);
+                    // Default to Excel
+                    reportType = report.getReportType();
+                    if (reportType.equals("QUARTER") || reportType.equals("YEAR") || reportType.equals("APTECH") || reportType.equals("TRIAL")) {
+                        if (useManagerService) {
+                            fileContent = managerReportGeneratorService.generateExcelReport(reportData);
+                        } else {
+                            fileContent = teacherReportGeneratorService.generateExcelReport(reportData, report.getTeacher());
+                        }
                     } else {
-                        fileContent = teacherReportGeneratorService.generatePdfReport(reportData, report.getTeacher());
+                        fileContent = templateReportService.generateExcelFromTemplate(reportType, reportData);
                     }
-                    fileName = generateFileName(report, ".pdf");
-                    contentType = "application/pdf";
+                    fileName = generateFileName(report, ".xlsx");
+                    contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
             }
 
             HttpHeaders headers = new HttpHeaders();
@@ -163,18 +176,9 @@ public class ReportController {
     }
 
     private String generateFileName(Report report, String extension) {
-        if (report.getFile() != null && report.getFile().getFileName() != null) {
-            // Use existing filename but replace extension
-            return report.getFile().getFileName().replaceAll("\\.[^.]*$", extension);
-        } else {
-            // Generate filename dynamically
-            String type = report.getReportType().toLowerCase();
-            String year = report.getYear() != null ? "_" + report.getYear() : "";
-            String quarter = report.getQuarter() != null ? "_q" + report.getQuarter() : "";
-            String timestamp = String.valueOf(System.currentTimeMillis());
-
-            return type + "_report" + year + quarter + "_" + timestamp + extension;
-        }
+        // Generate filename in format: baocao-reporttype.extension
+        String type = report.getReportType().toLowerCase();
+        return "baocao-" + type + extension;
     }
 
     // Personal reports for teachers

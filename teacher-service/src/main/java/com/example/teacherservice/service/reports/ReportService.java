@@ -6,18 +6,18 @@ import com.example.teacherservice.dto.reports.ReportRequestDTO;
 import com.example.teacherservice.enums.*;
 import com.example.teacherservice.model.*;
 import com.example.teacherservice.repository.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -63,10 +63,10 @@ public class ReportService {
 
     // Helper method to get first evaluation from a trial
     private TrialEvaluation getFirstEvaluation(TrialTeaching trial) {
-        if (trial.getEvaluations() == null || trial.getEvaluations().isEmpty()) {
+        if (trial.getEvaluation() == null || trial.getEvaluation().isEmpty()) {
             return null;
         }
-        return trial.getEvaluations().get(0);
+        return trial.getEvaluation().get(0);
     }
 
     @Transactional(readOnly = true)
@@ -179,6 +179,9 @@ public class ReportService {
             if (request.getTeacherId() != null && !"all".equals(request.getTeacherId())) {
                 teacher = userRepository.findById(request.getTeacherId())
                         .orElseThrow(() -> new RuntimeException("Teacher not found"));
+            } else {
+                // For manager reports or when teacherId is "all", set teacher to the generatedBy user
+                teacher = generatedBy;
             }
 
             // Generate report data based on type
@@ -191,7 +194,7 @@ public class ReportService {
             String paramsJson = request.getParamsJson();
             if (paramsJson == null || paramsJson.isEmpty()) {
                 try {
-                    Map<String, Object> params = new java.util.HashMap<>();
+                    Map<String, Object> params = new HashMap<>();
                     if (request.getStartDate() != null) params.put("startDate", request.getStartDate().toString());
                     if (request.getEndDate() != null) params.put("endDate", request.getEndDate().toString());
                     if (request.getSubjectId() != null) params.put("subjectId", request.getSubjectId());
@@ -230,7 +233,7 @@ public class ReportService {
         Integer quarter = request.getQuarter();
         String teacherId = request.getTeacherId();
 
-        Map<String, Object> reportData = new java.util.HashMap<>();
+        Map<String, Object> reportData = new HashMap<>();
         reportData.put("reportType", reportType);
         reportData.put("year", year);
         reportData.put("quarter", quarter);
@@ -251,27 +254,8 @@ public class ReportService {
                 case "TRIAL":
                     reportData.putAll(generateManagerTrialReportData(year, quarter));
                     break;
-                case "TEACHER_PERFORMANCE":
-                    // For manager, teacherId is usually "all", but for this report we need a specific teacher.
-                    // If teacherId is "all", we might need to handle it or throw error.
-                    // But wait, the request might have a specific teacherId even if user is manager.
-                    // If teacherId is "all", we can't generate a single teacher performance report.
-                    // Assuming manager selects a teacher for this report, so teacherId won't be "all".
-                    // But the logic above says if ("all".equals(teacherId))...
-                    // So if manager requests this, they MUST provide a teacherId, so it goes to the 'else' block?
-                    // Actually, for TEACHER_PERFORMANCE, manager selects a teacher. So teacherId will NOT be "all".
-                    // So it will fall into the 'else' block below.
-                    // But what about SUBJECT_ANALYSIS? That doesn't need a teacher.
-                    // So we need to handle non-teacher-specific reports here.
-                    break;
                 case "SUBJECT_ANALYSIS":
                     reportData.putAll(aggregateSubjectAnalysisData(request.getSubjectId(), request.getStartDate(), request.getEndDate()));
-                    break;
-                case "APTECH_DETAIL":
-                    reportData.putAll(aggregateAptechDetailsData(request.getStartDate(), request.getEndDate()));
-                    break;
-                case "TRIAL_DETAIL":
-                    reportData.putAll(aggregateTrialDetailsData(request.getStartDate(), request.getEndDate()));
                     break;
             }
         } else {
@@ -302,26 +286,62 @@ public class ReportService {
     }
 
     private Map<String, Object> generateQuarterReportData(String teacherId, Integer year, Integer quarter) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
         // Get subject registrations for the quarter
         List<SubjectRegistration> registrations = subjectRegistrationRepository
                 .findByTeacherIdAndYearAndQuarter(teacherId, year, intToQuarter(quarter));
 
-        List<Map<String, Object>> subjectsData = registrations.stream()
-                .map(reg -> {
-                    Map<String, Object> subjectData = new java.util.HashMap<>();
+        // Group by SubjectSystem (program)
+        Map<String, List<Map<String, Object>>> programsMap = registrations.stream()
+                .collect(Collectors.groupingBy(reg -> {
+                    SubjectSystem system = reg.getSubject().getSystem();
+                    return system != null ? system.getSystemName() : "Khác";
+                }, Collectors.mapping(reg -> {
+                    Map<String, Object> subjectData = new HashMap<>();
                     subjectData.put("subjectName", reg.getSubject().getSubjectName());
                     subjectData.put("subjectCode", reg.getSubject().getSkillCode());
-                    subjectData.put("className", "APTECH" + (reg.getSubject().getSkillCode().hashCode() % 10 + 1)); // Mock class name
-//                    subjectData.put("totalHours", reg.getSubject().getCredit() * 15); // Mock hours
+                    // Removed mock class name from sample data
+                    Integer credit = reg.getSubject().getCredit();
+                    int totalHours = (credit != null ? credit : 0) * 15; // Safe calculation
+                    subjectData.put("totalHours", totalHours); // Real hours based on credit
+                    subjectData.put("status", reg.getStatus().toString());
+                    subjectData.put("notes", "");
+                    return subjectData;
+                }, Collectors.toList())));
+
+        // Prepare list of program summary entries
+        List<Map<String, Object>> programSummaries = new ArrayList<>();
+        for (Map.Entry<String, List<Map<String, Object>>> entry : programsMap.entrySet()) {
+            String programName = entry.getKey();
+            List<Map<String, Object>> subjects = entry.getValue();
+
+            long completedSubjects = subjects.stream()
+                    .filter(subj -> "COMPLETED".equals(subj.get("status")))
+                    .count();
+
+            Map<String, Object> programSummary = new HashMap<>();
+            programSummary.put("programName", programName);
+            programSummary.put("subjects", subjects);
+            programSummary.put("totalSubjects", subjects.size());
+            programSummary.put("completedSubjects", completedSubjects);
+            programSummaries.add(programSummary);
+        }
+
+        // Create flat subjects list for Excel generator compatibility
+        List<Map<String, Object>> subjects = registrations.stream()
+                .map(reg -> {
+                    Map<String, Object> subjectData = new HashMap<>();
+                    subjectData.put("subjectName", reg.getSubject().getSubjectName());
+                    subjectData.put("programName", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
                     subjectData.put("status", reg.getStatus().toString());
                     subjectData.put("notes", "");
                     return subjectData;
                 })
                 .collect(Collectors.toList());
 
-        data.put("subjects", subjectsData);
+        data.put("programs", programSummaries);
+        data.put("subjects", subjects); // Add flat subjects list for Excel generator
         data.put("totalSubjects", registrations.size());
         data.put("completedSubjects", registrations.stream()
                 .filter(reg -> reg.getStatus() == RegistrationStatus.COMPLETED)
@@ -331,7 +351,7 @@ public class ReportService {
     }
 
     private Map<String, Object> generateYearReportData(String teacherId, Integer year) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
         // Get all registrations for the year
         List<SubjectRegistration> registrations = subjectRegistrationRepository
@@ -355,19 +375,19 @@ public class ReportService {
         long passedTrials = trials.stream()
                 .filter(trial -> {
                     TrialEvaluation eval = getFirstEvaluation(trial);
-                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                    return eval != null && "PASS".equals(eval.getConclusion().toString());
                 })
                 .count();
 
         // Quarterly breakdown
-        List<Map<String, Object>> quarterlyStats = new java.util.ArrayList<>();
+        List<Map<String, Object>> quarterlyStats = new ArrayList<>();
         for (int q = 1; q <= 4; q++) {
             Quarter quarterEnum = intToQuarter(q);
             List<SubjectRegistration> quarterRegs = registrations.stream()
                     .filter(reg -> reg.getQuarter().equals(quarterEnum))
                     .collect(Collectors.toList());
 
-            Map<String, Object> quarterData = new java.util.HashMap<>();
+            Map<String, Object> quarterData = new HashMap<>();
             quarterData.put("quarter", q);
             quarterData.put("totalSubjects", quarterRegs.size());
             quarterData.put("completedSubjects", quarterRegs.stream()
@@ -397,7 +417,7 @@ public class ReportService {
     }
 
     private Map<String, Object> generateAptechReportData(String teacherId, Integer year, Integer quarter) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
         // Get exam results
         List<AptechExam> exams;
@@ -409,7 +429,7 @@ public class ReportService {
 
         List<Map<String, Object>> examData = exams.stream()
                 .map(exam -> {
-                    Map<String, Object> examInfo = new java.util.HashMap<>();
+                    Map<String, Object> examInfo = new HashMap<>();
                     examInfo.put("subjectName", exam.getSubject().getSubjectName());
                     examInfo.put("subjectCode", exam.getSubject().getSkillCode());
                     examInfo.put("examDate", exam.getExamDate());
@@ -436,7 +456,7 @@ public class ReportService {
     }
 
     private Map<String, Object> generateTrialReportData(String teacherId, Integer year, Integer quarter) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
         // Get all trial teaching results for the teacher first
         List<TrialTeaching> allTrials = trialTeachingRepository.findByTeacherId(teacherId);
@@ -444,22 +464,22 @@ public class ReportService {
 
         // Filter by year and quarter in Java to handle null dates
         List<TrialTeaching> trials = allTrials.stream()
-                .filter(trial -> {
-                    if (trial.getTeachingDate() == null) {
-                        log.warn("Trial {} has null teachingDate", trial.getId());
+                .filter(t -> {
+                    if (t.getTeachingDate() == null) {
+                        log.warn("Trial {} has null teachingDate", t.getId());
                         return false; // Skip trials with null dates
                     }
-                    int trialYear = trial.getTeachingDate().getYear();
+                    int trialYear = t.getTeachingDate().getYear();
                     boolean yearMatches = year == null || trialYear == year;
                     if (!yearMatches) {
-                        log.debug("Trial {} year {} does not match requested year {}", trial.getId(), trialYear, year);
+                        log.debug("Trial {} year {} does not match requested year {}", t.getId(), trialYear, year);
                         return false;
                     }
                     if (quarter != null) {
-                        int trialQuarter = (trial.getTeachingDate().getMonthValue() - 1) / 3 + 1;
+                        int trialQuarter = (t.getTeachingDate().getMonthValue() - 1) / 3 + 1;
                         boolean quarterMatches = trialQuarter == quarter;
                         if (!quarterMatches) {
-                            log.debug("Trial {} quarter {} does not match requested quarter {}", trial.getId(), trialQuarter, quarter);
+                            log.debug("Trial {} quarter {} does not match requested quarter {}", t.getId(), trialQuarter, quarter);
                             return false;
                         }
                     }
@@ -471,7 +491,7 @@ public class ReportService {
 
         List<Map<String, Object>> trialData = trials.stream()
                 .map(trial -> {
-                    Map<String, Object> trialInfo = new java.util.HashMap<>();
+                    Map<String, Object> trialInfo = new HashMap<>();
                     trialInfo.put("subjectName", trial.getSubject().getSubjectName());
                     trialInfo.put("subjectCode", trial.getSubject().getSkillCode());
                     trialInfo.put("teachingDate", trial.getTeachingDate());
@@ -497,7 +517,7 @@ public class ReportService {
         long passedTrials = trials.stream()
                 .filter(trial -> {
                     TrialEvaluation eval = getFirstEvaluation(trial);
-                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                    return eval != null && "PASS".equals(eval.getConclusion().toString());
                 })
                 .count();
 
@@ -511,7 +531,7 @@ public class ReportService {
         return data;
     }
 
-    private File createReportFile(ReportRequestDTO request, Map<String, Object> reportData, User teacher) throws IOException {
+    private File createReportFile(ReportRequestDTO request, Map<String, Object> reportData, User teacher) throws IOException, InvalidFormatException {
         // Generate file content based on report type
         byte[] fileContent = generateFileContent(request, reportData, teacher);
 
@@ -541,14 +561,13 @@ public class ReportService {
         }
     }
 
-    private byte[] generateFileContent(ReportRequestDTO request, Map<String, Object> reportData, User teacher) throws IOException {
+    private byte[] generateFileContent(ReportRequestDTO request, Map<String, Object> reportData, User teacher) throws IOException, InvalidFormatException {
         // Generate actual file content based on format (PDF, Excel, Word)
         String format = request.getParamsJson() != null && request.getParamsJson().contains("format") ?
             extractFormatFromParams(request.getParamsJson()) : "PDF";
 
-        // Choose report generator service based on primaryRole
-        boolean isManagerReport = "all".equals(request.getTeacherId()) ||
-            (teacher != null && teacher.getPrimaryRole() == Role.MANAGE);
+        // Choose report generator service based on whether it's a manager report (teacherId="all")
+        boolean isManagerReport = "all".equals(request.getTeacherId());
 
         if (isManagerReport) {
             // Manager reports use ManagerReportGeneratorService (no teacher parameter)
@@ -559,9 +578,8 @@ public class ReportService {
                 case "WORD":
                 case "DOCX":
                     return managerReportGeneratorService.generateWordReport(reportData);
-                case "PDF":
                 default:
-                    return managerReportGeneratorService.generatePdfReport(reportData);
+                    return managerReportGeneratorService.generateWordReport(reportData);
             }
         } else {
             // Teacher reports use TeacherReportGeneratorService (with teacher parameter)
@@ -572,9 +590,8 @@ public class ReportService {
                 case "WORD":
                 case "DOCX":
                     return teacherReportGeneratorService.generateWordReport(reportData, teacher);
-                case "PDF":
                 default:
-                    return teacherReportGeneratorService.generatePdfReport(reportData, teacher);
+                    return teacherReportGeneratorService.generateWordReport(reportData, teacher);
             }
         }
     }
@@ -638,7 +655,7 @@ public class ReportService {
 
         return registrations.stream()
                 .map(reg -> {
-                    Map<String, Object> subjectData = new java.util.HashMap<>();
+                    Map<String, Object> subjectData = new HashMap<>();
                     subjectData.put("subjectId", reg.getSubject().getId());
                     subjectData.put("subjectName", reg.getSubject().getSubjectName());
                     subjectData.put("subjectCode", reg.getSubject().getSkillCode());
@@ -657,7 +674,7 @@ public class ReportService {
 
         return exams.stream()
                 .map(exam -> {
-                    Map<String, Object> examData = new java.util.HashMap<>();
+                    Map<String, Object> examData = new HashMap<>();
                     examData.put("examId", exam.getId());
                     examData.put("subjectName", exam.getSubject().getSubjectName());
                     examData.put("subjectCode", exam.getSubject().getSkillCode());
@@ -676,7 +693,7 @@ public class ReportService {
 
         return trials.stream()
                 .map(trial -> {
-                    Map<String, Object> trialData = new java.util.HashMap<>();
+                    Map<String, Object> trialData = new HashMap<>();
                     trialData.put("trialId", trial.getId());
                     trialData.put("subjectName", trial.getSubject().getSubjectName());
                     trialData.put("subjectCode", trial.getSubject().getSkillCode());
@@ -715,7 +732,7 @@ public class ReportService {
         long passedTrials = trials.stream()
                 .filter(trial -> {
                     TrialEvaluation eval = getFirstEvaluation(trial);
-                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+                    return eval != null && "PASS".equals(eval.getConclusion().toString());
                 })
                 .count();
 
@@ -727,7 +744,7 @@ public class ReportService {
                 .filter(reg -> reg.getStatus() == RegistrationStatus.COMPLETED)
                 .count();
 
-        Map<String, Object> passRates = new java.util.HashMap<>();
+        Map<String, Object> passRates = new HashMap<>();
         passRates.put("examPassRate", totalExams > 0 ? Math.round((double) passedExams / totalExams * 10000.0) / 100.0 : 0.0);
         passRates.put("trialPassRate", totalTrials > 0 ? Math.round((double) passedTrials / totalTrials * 10000.0) / 100.0 : 0.0);
         passRates.put("completionRate", totalRegistrations > 0 ? Math.round((double) completedRegistrations / totalRegistrations * 10000.0) / 100.0 : 0.0);
@@ -743,7 +760,7 @@ public class ReportService {
 
         return evidence.stream()
                 .map(ev -> {
-                    Map<String, Object> evidenceData = new java.util.HashMap<>();
+                    Map<String, Object> evidenceData = new HashMap<>();
                     evidenceData.put("evidenceId", ev.getId());
                     evidenceData.put("subjectName", ev.getSubject().getSubjectName());
                     evidenceData.put("subjectCode", ev.getSubject().getSkillCode());
@@ -764,7 +781,7 @@ public class ReportService {
 
         return assignments.stream()
                 .map(assignment -> {
-                    Map<String, Object> assignmentData = new java.util.HashMap<>();
+                    Map<String, Object> assignmentData = new HashMap<>();
                     assignmentData.put("assignmentId", assignment.getId());
                     assignmentData.put("subjectName", assignment.getScheduleClass().getSubject().getSubjectName());
                     assignmentData.put("subjectCode", assignment.getScheduleClass().getSubject().getSkillCode());
@@ -785,29 +802,32 @@ public class ReportService {
         Integer year = report.getYear();
         Integer quarter = report.getQuarter();
 
-        Map<String, Object> reportData = new java.util.HashMap<>();
+        Map<String, Object> reportData = new HashMap<>();
         reportData.put("reportType", reportType);
         reportData.put("year", year);
         reportData.put("quarter", quarter);
         reportData.put("generatedAt", report.getCreationTimestamp());
 
         // Deserialize params
-        java.time.LocalDate startDate = null;
-        java.time.LocalDate endDate = null;
+        LocalDate startDate = null;
+        LocalDate endDate = null;
         String subjectId = null;
 
         if (report.getParamsJson() != null && !report.getParamsJson().isEmpty()) {
             try {
                 Map<String, Object> params = objectMapper.readValue(report.getParamsJson(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>(){});
-                if (params.containsKey("startDate")) startDate = java.time.LocalDate.parse((String) params.get("startDate"));
-                if (params.containsKey("endDate")) endDate = java.time.LocalDate.parse((String) params.get("endDate"));
+                if (params.containsKey("startDate")) startDate = LocalDate.parse((String) params.get("startDate"));
+                if (params.containsKey("endDate")) endDate = LocalDate.parse((String) params.get("endDate"));
                 if (params.containsKey("subjectId")) subjectId = (String) params.get("subjectId");
             } catch (Exception e) {
                 log.error("Error deserializing params for report " + report.getId(), e);
             }
         }
 
-        if (report.getTeacher() == null) {
+        // Check if this is a manager report based on generatedBy's role
+        boolean isManagerReport = report.getGeneratedBy().getPrimaryRole() == Role.MANAGE;
+
+        if (isManagerReport) {
             // Manager report
             switch (reportType) {
                 case "QUARTER":
@@ -861,106 +881,399 @@ public class ReportService {
     }
 
     private Map<String, Object> generateManagerQuarterReportData(Integer year, Integer quarter) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
-        // Get trial statistics for the quarter - aggregate from all teachers
-        List<TrialTeaching> trials = trialTeachingRepository.findAll().stream()
-                .filter(t -> t.getTeachingDate() != null &&
-                        t.getTeachingDate().getYear() == year &&
-                         (quarter == null || ((t.getTeachingDate().getMonthValue() - 1) / 3 + 1) == quarter))
-                .toList();
-        long totalTrials = trials.size();
-        long passedTrials = trials.stream()
-                .filter(t -> {
-                    TrialEvaluation eval = getFirstEvaluation(t);
-                    return eval != null && eval.getConclusion() == TrialConclusion.PASS;
+        List<User> allActiveTeachers = userRepository.findByActiveAndPrimaryRole(Active.ACTIVE, Role.TEACHER);
+
+        List<SubjectRegistration> registrations = subjectRegistrationRepository.findByYearAndQuarter(year, intToQuarter(quarter));
+
+        Map<User, Long> subjectTotals = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> registrations.stream()
+                                .filter(reg -> reg.getTeacher().getId().equals(teacher.getId()))
+                                .count()
+                ));
+
+        Map<User, Long> completedSubjects = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> registrations.stream()
+                                .filter(reg -> reg.getTeacher().getId().equals(teacher.getId()) && reg.getStatus() == RegistrationStatus.COMPLETED)
+                                .count()
+                ));
+
+        List<AptechExam> exams = aptechExamRepository.findByYearAndQuarter(year, quarter);
+
+        Map<User, Long> examTotals = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> exams.stream()
+                                .filter(exam -> exam.getTeacher().getId().equals(teacher.getId()))
+                                .count()
+                ));
+
+        Map<User, Long> passedExamsMap = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> exams.stream()
+                                .filter(exam -> exam.getTeacher().getId().equals(teacher.getId()) && ExamResult.PASS.equals(exam.getResult()))
+                                .count()
+                ));
+
+        List<TrialTeaching> trials = trialTeachingRepository.findByYearAndQuarter(year, quarter);
+
+        Map<User, Long> trialTotals = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> trials.stream()
+                                .filter(trial -> trial.getTeacher().getId().equals(teacher.getId()))
+                                .count()
+                ));
+
+        Set<User> allTeachers = new HashSet<>(allActiveTeachers);
+
+        // Create teacher stats
+        List<Map<String, Object>> teacherQuarterStats = allTeachers.stream()
+                .sorted(Comparator.comparing(u -> u.getUserDetails() != null ? u.getUserDetails().getLastName() + u.getUserDetails().getFirstName() : u.getId()))
+                .map(teacher -> {
+                    Map<String, Object> stats = new HashMap<>();
+                    stats.put("teacherCode", teacher.getTeacherCode());
+                    String fullName = teacher.getUserDetails() != null ?
+                            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId();
+                    stats.put("teacherName", fullName);
+                    long totalSub = subjectTotals.getOrDefault(teacher, 0L);
+                    long completedSub = completedSubjects.getOrDefault(teacher, 0L);
+                    double rate = totalSub > 0 ? (double) completedSub / totalSub * 100 : 0;
+                    stats.put("totalSubjects", totalSub);
+                    stats.put("completedSubjects", completedSub);
+                    stats.put("completionRate", Math.round(rate * 100.0) / 100.0);
+                    stats.put("notes", "");
+                    stats.put("totalExams", examTotals.getOrDefault(teacher, 0L));
+                    stats.put("passedExams", passedExamsMap.getOrDefault(teacher, 0L));
+                    stats.put("totalTrials", trialTotals.getOrDefault(teacher, 0L));
+                    return stats;
                 })
-                .count();
-        double passRate = totalTrials > 0 ? (double) passedTrials / totalTrials * 100 : 0;
+                .collect(Collectors.toList());
 
-        // Get teacher count
+        // Summaries
         long totalTeachers = userRepository.countActiveTeachers();
+        long totalSubjects = subjectTotals.values().stream().mapToLong(Long::longValue).sum();
+        long totalCompleted = completedSubjects.values().stream().mapToLong(Long::longValue).sum();
+        double avgCompletionRate = totalSubjects > 0 ? (double) totalCompleted / totalSubjects * 100 : 0;
+        avgCompletionRate = Math.round(avgCompletionRate * 100.0) / 100.0;
 
-        data.put("totalTrials", totalTrials);
-        data.put("passedTrials", passedTrials);
-        data.put("passRate", Math.round(passRate * 100.0) / 100.0); // Round to 2 decimal places
+        long totalExams = examTotals.values().stream().mapToLong(Long::longValue).sum();
+        long totalPassedExams = passedExamsMap.values().stream().mapToLong(Long::longValue).sum();
+        double avgExamPassRate = totalExams > 0 ? (double) totalPassedExams / totalExams * 100 : 0;
+        avgExamPassRate = Math.round(avgExamPassRate * 100.0) / 100.0;
+
+        data.put("teacherQuarterStats", teacherQuarterStats);
         data.put("totalTeachers", totalTeachers);
+        data.put("totalSubjects", totalSubjects);
+        data.put("totalCompleted", totalCompleted);
+        data.put("avgCompletionRate", avgCompletionRate);
+        data.put("totalExams", totalExams);
+        data.put("totalPassedExams", totalPassedExams);
+        data.put("avgExamPassRate", avgExamPassRate);
 
         return data;
     }
 
     private Map<String, Object> generateManagerYearReportData(Integer year) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
-        // Aggregate data for all quarters in the year
-        long totalTrials = 0;
-        long passedTrials = 0;
+        List<User> allActiveTeachers = userRepository.findByActiveAndPrimaryRole(Active.ACTIVE, Role.TEACHER);
 
-        for (int q = 1; q <= 4; q++) {
-            final int quarter = q; // Make effectively final for lambda
-            List<TrialTeaching> trials = trialTeachingRepository.findAll().stream()
-                    .filter(t -> t.getTeachingDate() != null &&
-                            t.getTeachingDate().getYear() == year &&
-                            ((t.getTeachingDate().getMonthValue() - 1) / 3 + 1) == quarter)
-                    .toList();
-            totalTrials += trials.size();
-            passedTrials += trials.stream()
-                    .filter(t -> {
-                        TrialEvaluation eval = getFirstEvaluation(t);
-                        return eval != null && eval.getConclusion() == TrialConclusion.PASS;
-                    })
-                    .count();
-        }
+        List<SubjectRegistration> registrations = subjectRegistrationRepository.findByYear(year);
 
-        double passRate = totalTrials > 0 ? (double) passedTrials / totalTrials * 100 : 0;
+        Map<User, Long> subjectTotals = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> registrations.stream()
+                                .filter(reg -> reg.getTeacher().getId().equals(teacher.getId()))
+                                .count()
+                ));
+
+        Map<User, Long> completedSubjects = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> registrations.stream()
+                                .filter(reg -> reg.getTeacher().getId().equals(teacher.getId()) && reg.getStatus() == RegistrationStatus.COMPLETED)
+                                .count()
+                ));
+
+        // Get all exams and filter by year in Java to handle null dates
+        List<AptechExam> allExams = aptechExamRepository.findAll();
+        List<AptechExam> exams = allExams.stream()
+                .filter(exam -> {
+                    if (exam.getExamDate() == null) {
+                        return false; // Skip exams with null dates
+                    }
+                    int examYear = exam.getExamDate().getYear();
+                    return examYear == year;
+                })
+                .collect(Collectors.toList());
+
+        Map<User, Long> examTotals = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> exams.stream()
+                                .filter(exam -> exam.getTeacher().getId().equals(teacher.getId()))
+                                .count()
+                ));
+
+        Map<User, Long> passedExamsMap = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> exams.stream()
+                                .filter(exam -> exam.getTeacher().getId().equals(teacher.getId()) && ExamResult.PASS.equals(exam.getResult()))
+                                .count()
+                ));
+
+        // Get all trials and filter by year in Java to handle null dates
+        List<TrialTeaching> allTrials = trialTeachingRepository.findAll();
+        List<TrialTeaching> trials = allTrials.stream()
+                .filter(trial -> {
+                    if (trial.getTeachingDate() == null) {
+                        return false; // Skip trials with null dates
+                    }
+                    int trialYear = trial.getTeachingDate().getYear();
+                    return trialYear == year;
+                })
+                .collect(Collectors.toList());
+
+        Map<User, Long> trialTotals = allActiveTeachers.stream()
+                .collect(Collectors.toMap(
+                        teacher -> teacher,
+                        teacher -> trials.stream()
+                                .filter(trial -> trial.getTeacher().getId().equals(teacher.getId()))
+                                .count()
+                ));
+
+        Set<User> allTeachers = new HashSet<>(allActiveTeachers);
+
+        // Create teacher stats
+        List<Map<String, Object>> teacherYearStats = allTeachers.stream()
+                .sorted(Comparator.comparing(u -> u.getUserDetails() != null ? u.getUserDetails().getLastName() + u.getUserDetails().getFirstName() : u.getId()))
+                .map(teacher -> {
+                    Map<String, Object> stats = new HashMap<>();
+                    stats.put("teacherCode", teacher.getTeacherCode());
+                    String fullName = teacher.getUserDetails() != null ?
+                            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : teacher.getId();
+                    stats.put("teacherName", fullName);
+                    long totalSub = subjectTotals.getOrDefault(teacher, 0L);
+                    long completedSub = completedSubjects.getOrDefault(teacher, 0L);
+                    double rate = totalSub > 0 ? (double) completedSub / totalSub * 100 : 0;
+                    stats.put("totalSubjects", totalSub);
+                    stats.put("completedSubjects", completedSub);
+                    stats.put("completionRate", Math.round(rate * 100.0) / 100.0);
+                    stats.put("notes", "");
+                    stats.put("totalExams", examTotals.getOrDefault(teacher, 0L));
+                    stats.put("passedExams", passedExamsMap.getOrDefault(teacher, 0L));
+                    stats.put("totalTrials", trialTotals.getOrDefault(teacher, 0L));
+                    return stats;
+                })
+                .collect(Collectors.toList());
+
+        // Summaries
         long totalTeachers = userRepository.countActiveTeachers();
+        long totalSubjects = subjectTotals.values().stream().mapToLong(Long::longValue).sum();
+        long totalCompleted = completedSubjects.values().stream().mapToLong(Long::longValue).sum();
+        double avgCompletionRate = totalSubjects > 0 ? (double) totalCompleted / totalSubjects * 100 : 0;
+        avgCompletionRate = Math.round(avgCompletionRate * 100.0) / 100.0;
 
-        data.put("totalTrials", totalTrials);
-        data.put("passedTrials", passedTrials);
-        data.put("passRate", Math.round(passRate * 100.0) / 100.0);
+        long totalExams = examTotals.values().stream().mapToLong(Long::longValue).sum();
+        long totalPassedExams = passedExamsMap.values().stream().mapToLong(Long::longValue).sum();
+        double avgExamPassRate = totalExams > 0 ? (double) totalPassedExams / totalExams * 100 : 0;
+        avgExamPassRate = Math.round(avgExamPassRate * 100.0) / 100.0;
+
+        data.put("teacherYearStats", teacherYearStats);
         data.put("totalTeachers", totalTeachers);
+        data.put("totalSubjects", totalSubjects);
+        data.put("totalCompleted", totalCompleted);
+        data.put("avgCompletionRate", avgCompletionRate);
+        data.put("totalExams", totalExams);
+        data.put("totalPassedExams", totalPassedExams);
+        data.put("avgExamPassRate", avgExamPassRate);
 
         return data;
     }
 
     private Map<String, Object> generateManagerAptechReportData(Integer year, Integer quarter) {
-        Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
 
-        // Get exam statistics for the period - aggregate from all teachers
-        List<AptechExam> exams = aptechExamRepository.findAll().stream()
-                .filter(e -> e.getExamDate() != null &&
-                        e.getExamDate().getYear() == year &&
-                        ((e.getExamDate().getMonthValue() - 1) / 3 + 1) == quarter)
-                .toList();
+        log.debug("Generating manager APTECH report for year: {}, quarter: {}", year, quarter);
+
+        // Get all exams first, then filter by year and quarter in Java to handle null dates
+        List<AptechExam> allExams = aptechExamRepository.findAll();
+        log.debug("Found {} total exams", allExams.size());
+
+        // Filter by year and quarter in Java to handle null dates
+        List<AptechExam> exams = allExams.stream()
+                .filter(exam -> {
+                    if (exam.getExamDate() == null) {
+                        log.warn("Exam {} has null examDate", exam.getId());
+                        return false; // Skip exams with null dates
+                    }
+                    int examYear = exam.getExamDate().getYear();
+                    boolean yearMatches = year == null || examYear == year;
+                    if (!yearMatches) {
+                        return false;
+                    }
+                    if (quarter != null) {
+                        int examQuarter = (exam.getExamDate().getMonthValue() - 1) / 3 + 1;
+                        boolean quarterMatches = examQuarter == quarter;
+                        if (!quarterMatches) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+
+        log.debug("Filtered to {} exams for year {} and quarter {}", exams.size(), year, quarter);
+
         long totalExams = exams.size();
         long passedExams = exams.stream()
                 .filter(e -> ExamResult.PASS.equals(e.getResult()))
                 .count();
         double passRate = totalExams > 0 ? (double) passedExams / totalExams * 100 : 0;
 
+        // Get teacher count from actual distinct participating teachers
+        long totalTeachers = exams.stream()
+                .map(e -> e.getTeacher().getId())
+                .distinct()
+                .count();
+
+        // Create detailed exam data for all teachers
+        List<Map<String, Object>> examDataList = exams.stream()
+                .map(exam -> {
+                    Map<String, Object> examInfo = new HashMap<>();
+                    examInfo.put("teacherCode", exam.getTeacher() != null ? exam.getTeacher().getTeacherCode() : "N/A");
+                    examInfo.put("teacherName", exam.getTeacher() != null && exam.getTeacher().getUserDetails() != null ?
+                            exam.getTeacher().getUserDetails().getFirstName() + " " +
+                                    exam.getTeacher().getUserDetails().getLastName() : (exam.getTeacher() != null ? exam.getTeacher().getId() : "N/A"));
+                    examInfo.put("subjectName", exam.getSubject() != null ? exam.getSubject().getSubjectName() : "N/A");
+                    examInfo.put("subjectCode", exam.getSubject() != null ? exam.getSubject().getSkillCode() : "N/A");
+                    LocalDate examDate = exam.getExamDate() != null ? exam.getExamDate() : (exam.getSession() != null ? exam.getSession().getExamDate() : null);
+                    examInfo.put("examDate", examDate);
+                    examInfo.put("examTime", exam.getSession() != null ? exam.getSession().getExamTime() : null);
+                    examInfo.put("score", exam.getScore());
+                    examInfo.put("result", exam.getResult().toString());
+                    examInfo.put("attempt", exam.getAttempt());
+                    return examInfo;
+                })
+                .collect(Collectors.toList());
+
+        log.debug("Created {} exam info records for examDataList", examDataList.size());
+
         data.put("totalExams", totalExams);
         data.put("passedExams", passedExams);
         data.put("passRate", Math.round(passRate * 100.0) / 100.0);
-        data.put("totalTeachers", userRepository.countActiveTeachers());
+        data.put("participatedTeachers", totalTeachers);
+        data.put("allExams", examDataList);
+
+        log.debug("Manager APTECH report data: totalExams={}, passedExams={}, passRate={}, examDataList.size={}",
+                totalExams, passedExams, passRate, examDataList.size());
 
         return data;
     }
 
     private Map<String, Object> generateManagerTrialReportData(Integer year, Integer quarter) {
-        // Same as quarter report for trials
-        return generateManagerQuarterReportData(year, quarter);
-    }
+        Map<String, Object> data = new HashMap<>();
 
+        // Get all trial teaching results first, then filter by year and quarter in Java to handle null dates
+        List<TrialTeaching> allTrials = trialTeachingRepository.findAll();
+        log.debug("Found {} total trials for manager report", allTrials.size());
+
+        // Filter by year and quarter in Java to handle null dates
+        List<TrialTeaching> trials = allTrials.stream()
+                .filter(t -> {
+                    if (t.getTeachingDate() == null) {
+                        log.warn("Trial {} has null teachingDate", t.getId());
+                        return false; // Skip trials with null dates
+                    }
+                    int trialYear = t.getTeachingDate().getYear();
+                    boolean yearMatches = year == null || trialYear == year;
+                    if (!yearMatches) {
+                        return false;
+                    }
+                    if (quarter != null) {
+                        int trialQuarter = (t.getTeachingDate().getMonthValue() - 1) / 3 + 1;
+                        boolean quarterMatches = trialQuarter == quarter;
+                        if (!quarterMatches) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+
+        log.debug("Filtered to {} trials for year {} and quarter {}", trials.size(), year, quarter);
+
+        long totalTrials = trials.size();
+        long passedTrials = trials.stream()
+                .filter(t -> {
+                    TrialEvaluation eval = getFirstEvaluation(t);
+                    return eval != null && "PASS".equals(eval.getConclusion().toString());
+                })
+                .count();
+        double passRate = totalTrials > 0 ? (double) passedTrials / totalTrials * 100 : 0;
+
+        // Get teacher count from actual distinct participating teachers
+        long totalTeachers = trials.stream()
+                .map(t -> t.getTeacher().getId())
+                .distinct()
+                .count();
+
+        // Create detailed trial data for all teachers
+        List<Map<String, Object>> allTrialsData = trials.stream()
+                .map(trial -> {
+                    Map<String, Object> trialInfo = new HashMap<>();
+                    trialInfo.put("teacherCode", trial.getTeacher().getTeacherCode());
+                    trialInfo.put("teacherName", trial.getTeacher().getUserDetails() != null ?
+                            trial.getTeacher().getUserDetails().getFirstName() + " " +
+                                    trial.getTeacher().getUserDetails().getLastName() : trial.getTeacher().getId());
+                    trialInfo.put("subjectName", trial.getSubject().getSubjectName());
+                    trialInfo.put("subjectCode", trial.getSubject().getSkillCode());
+                    trialInfo.put("teachingDate", trial.getTeachingDate());
+                    trialInfo.put("location", trial.getLocation());
+                    trialInfo.put("status", trial.getStatus().toString());
+
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    if (eval != null) {
+                        trialInfo.put("score", eval.getScore());
+                        trialInfo.put("conclusion", eval.getConclusion().toString());
+                        trialInfo.put("comments", eval.getComments());
+                    } else {
+                        trialInfo.put("score", null);
+                        trialInfo.put("conclusion", "PENDING");
+                        trialInfo.put("comments", "");
+                    }
+
+                    return trialInfo;
+                })
+                .collect(Collectors.toList());
+
+        data.put("totalTrials", totalTrials);
+        data.put("passedTrials", passedTrials);
+        data.put("passRate", Math.round(passRate * 100.0) / 100.0); // Round to 2 decimal places
+        data.put("participatedTeachers", totalTeachers);
+        data.put("allTrials", allTrialsData);
+        return data;
+    }
     /**
      * NEW DATA AGGREGATION METHODS FOR TEMPLATE REPORTS
      */
     
     @Transactional(readOnly = true)
-    public Map<String, Object> aggregateTeacherPerformanceData(String teacherId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        Map<String, Object> data = new java.util.HashMap<>();
-        
+    public Map<String, Object> aggregateTeacherPerformanceData(String teacherId, LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> data = new HashMap<>();
+
         // Get teacher info
-        User teacher = userRepository.findById(teacherId).orElseThrow();
+        User teacher = userRepository.findById(teacherId)
+            .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
         data.put("teacherName", teacher.getUserDetails() != null ? 
             teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : "N/A");
         data.put("qualification", teacher.getAcademicRank() != null ? teacher.getAcademicRank() : "N/A");
@@ -973,7 +1286,7 @@ public class ReportService {
         // Map subjects to DTOs
         List<Map<String, Object>> subjects = registrations.stream()
             .map(reg -> {
-                Map<String, Object> subject = new java.util.HashMap<>();
+                Map<String, Object> subject = new HashMap<>();
                 subject.put("code", reg.getSubject().getSkillCode());
                 subject.put("name", reg.getSubject().getSubjectName());
                 subject.put("system", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
@@ -998,8 +1311,8 @@ public class ReportService {
         // Map exams to DTOs
         List<Map<String, Object>> examList = exams.stream()
             .map(exam -> {
-                Map<String, Object> examData = new java.util.HashMap<>();
-                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getExamDate().toString() : "N/A");
+                Map<String, Object> examData = new HashMap<>();
+                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
                 examData.put("examDate", exam.getExamDate());
                 examData.put("subjectName", exam.getSubject().getSubjectName());
                 examData.put("score", exam.getScore());
@@ -1020,27 +1333,28 @@ public class ReportService {
     }
     
     @Transactional(readOnly = true)
-    public Map<String, Object> aggregateSubjectAnalysisData(String subjectId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        Map<String, Object> data = new java.util.HashMap<>();
-        
+    public Map<String, Object> aggregateSubjectAnalysisData(String subjectId, LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> data = new HashMap<>();
+
         // Get subject info
-        Subject subject = subjectRepository.findById(subjectId).orElseThrow();
+        Subject subject = subjectRepository.findBySkill_SkillCode(subjectId)
+            .orElseThrow(() -> new RuntimeException("Subject not found: " + subjectId));
         data.put("subjectCode", subject.getSkillCode());
         data.put("subjectName", subject.getSubjectName());
         data.put("systemName", subject.getSystem() != null ? subject.getSystem().getSystemName() : "N/A");
         
         // Get registrations by querying all and filtering
         List<SubjectRegistration> registrations = subjectRegistrationRepository.findAll().stream()
-            .filter(r -> r.getSubject().getId().equals(subjectId))
+            .filter(r -> r.getSubject().getSkillCode().equals(subjectId))
             .collect(Collectors.toList());
         data.put("totalTeachersRegistered", registrations.size());
         
         // Map teachers
         List<Map<String, Object>> teachers = registrations.stream()
             .map(reg -> {
-                Map<String, Object> teacher = new java.util.HashMap<>();
+                Map<String, Object> teacher = new HashMap<>();
                 User user = reg.getTeacher();
-                teacher.put("teacherId", user.getId());
+                teacher.put("teacherId", user.getTeacherCode());
                 teacher.put("teacherName", user.getUserDetails() != null ? 
                     user.getUserDetails().getFirstName() + " " + user.getUserDetails().getLastName() : "N/A");
                 teacher.put("qualification", user.getAcademicRank() != null ? user.getAcademicRank() : "N/A");
@@ -1052,7 +1366,7 @@ public class ReportService {
         
         // Get assignments for this subject
         long activeAssignments = teachingAssignmentRepository.findAll().stream()
-            .filter(a -> a.getScheduleClass().getSubject().getId().equals(subjectId))
+            .filter(a -> a.getScheduleClass().getSubject().getSkillCode().equals(subjectId))
             .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
             .count();
         data.put("totalActiveAssignments", activeAssignments);
@@ -1062,7 +1376,7 @@ public class ReportService {
         data.put("hasEnoughTeachers", hasEnoughTeachers);
         
         // Recommendations
-        List<String> recommendations = new java.util.ArrayList<>();
+        List<String> recommendations = new ArrayList<>();
         if (!hasEnoughTeachers) {
             recommendations.add("Cần tuyển thêm giáo viên cho môn học này");
         }
@@ -1077,9 +1391,9 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> aggregateAptechDetailsData(java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        Map<String, Object> data = new java.util.HashMap<>();
-        
+    public Map<String, Object> aggregateAptechDetailsData(LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> data = new HashMap<>();
+
         // Get all exams in period
         List<AptechExam> exams = aptechExamRepository.findAll().stream()
             .filter(e -> {
@@ -1089,40 +1403,42 @@ public class ReportService {
                 return afterStart && beforeEnd;
             })
             .collect(Collectors.toList());
-            
+
         data.put("totalExams", exams.size());
-        
-        // Map to DTOs
-        List<Map<String, Object>> examList = exams.stream()
+
+        // Map to DTOs matching template expectations
+        List<Map<String, Object>> examDetails = exams.stream()
             .map(exam -> {
-                Map<String, Object> examData = new java.util.HashMap<>();
-                examData.put("teacherName", exam.getTeacher() != null && exam.getTeacher().getUserDetails() != null ? 
+                Map<String, Object> examData = new HashMap<>();
+                examData.put("teacherCode", exam.getTeacher() != null ? exam.getTeacher().getTeacherCode() : "N/A");
+                examData.put("teacherName", exam.getTeacher() != null && exam.getTeacher().getUserDetails() != null ?
                     exam.getTeacher().getUserDetails().getFirstName() + " " + exam.getTeacher().getUserDetails().getLastName() : "N/A");
-                examData.put("subjectCode", exam.getSubject().getSkillCode());
+                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
                 examData.put("subjectName", exam.getSubject().getSubjectName());
                 examData.put("examDate", exam.getExamDate());
                 examData.put("score", exam.getScore());
-                examData.put("result", exam.getResult().toString());
+                examData.put("passed", exam.getResult() == ExamResult.PASS);
+                examData.put("certificateUrl", null); // Not implemented yet
                 return examData;
             })
             .collect(Collectors.toList());
-        data.put("exams", examList);
-        
+        data.put("examDetails", examDetails);
+
         // Stats
         long passed = exams.stream().filter(e -> e.getResult() == ExamResult.PASS).count();
         data.put("passedExams", passed);
         data.put("failedExams", exams.size() - passed);
         double passRate = exams.isEmpty() ? 0 : (passed * 100.0 / exams.size());
         data.put("passRate", Math.round(passRate * 100.0) / 100.0);
-        
+
         data.put("period", formatPeriod(startDate, endDate));
-        
+
         return data;
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> aggregateTrialDetailsData(java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        Map<String, Object> data = new java.util.HashMap<>();
+    public Map<String, Object> aggregateTrialDetailsData(LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> data = new HashMap<>();
         
         // Get all trials in period
         List<TrialTeaching> trials = trialTeachingRepository.findAll().stream()
@@ -1139,7 +1455,7 @@ public class ReportService {
         // Map to DTOs
         List<Map<String, Object>> trialList = trials.stream()
             .map(trial -> {
-                Map<String, Object> trialData = new java.util.HashMap<>();
+                Map<String, Object> trialData = new HashMap<>();
                 trialData.put("teacherName", trial.getTeacher() != null && trial.getTeacher().getUserDetails() != null ? 
                     trial.getTeacher().getUserDetails().getFirstName() + " " + trial.getTeacher().getUserDetails().getLastName() : "N/A");
                 trialData.put("subjectCode", trial.getSubject().getSkillCode());
@@ -1172,51 +1488,92 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> aggregatePersonalSummaryData(String teacherId) {
-        Map<String, Object> data = new java.util.HashMap<>();
-        
+        Map<String, Object> data = new HashMap<>();
+
         // Get teacher info
-        User teacher = userRepository.findById(teacherId).orElseThrow();
-        data.put("teacherName", teacher.getUserDetails() != null ? 
-            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : "N/A");
-        data.put("email", teacher.getEmail());
+        User teacher = userRepository.findById(teacherId)
+            .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
+        String fullName = teacher.getUserDetails() != null ?
+            teacher.getUserDetails().getFirstName() + " " + teacher.getUserDetails().getLastName() : "N/A";
+
+        // Profile section
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("fullName", fullName);
+        profile.put("email", teacher.getEmail());
+        data.put("profile", profile);
+
         data.put("qualification", teacher.getAcademicRank() != null ? teacher.getAcademicRank() : "N/A");
-        
-        // Summary stats
-        // Subjects
+
+        // Registered subjects
         List<SubjectRegistration> registrations = subjectRegistrationRepository.findByTeacherId(teacherId);
-        data.put("totalSubjects", registrations.size());
-        long completedSubjects = registrations.stream().filter(r -> r.getStatus() == RegistrationStatus.COMPLETED).count();
-        data.put("completedSubjects", completedSubjects);
-        
-        // Exams
-        List<AptechExam> exams = aptechExamRepository.findByTeacherId(teacherId);
-        data.put("totalExams", exams.size());
-        long passedExams = exams.stream().filter(e -> e.getResult() == ExamResult.PASS).count();
-        data.put("passedExams", passedExams);
-        double examPassRate = exams.isEmpty() ? 0 : (passedExams * 100.0 / exams.size());
-        data.put("examPassRate", Math.round(examPassRate * 100.0) / 100.0);
-        
-        // Trials
-        List<TrialTeaching> trials = trialTeachingRepository.findByTeacherId(teacherId);
-        data.put("totalTrials", trials.size());
-        long passedTrials = trials.stream().filter(t -> {
-            TrialEvaluation eval = getFirstEvaluation(t);
-            return eval != null && eval.getConclusion() == TrialConclusion.PASS;
-        }).count();
-        data.put("passedTrials", passedTrials);
-        double trialPassRate = trials.isEmpty() ? 0 : (passedTrials * 100.0 / trials.size());
-        data.put("trialPassRate", Math.round(trialPassRate * 100.0) / 100.0);
-        
-        // Assignments
+        List<Map<String, Object>> registeredSubjects = registrations.stream()
+            .map(reg -> {
+                Map<String, Object> subject = new HashMap<>();
+                subject.put("code", reg.getSubject().getSkillCode());
+                subject.put("name", reg.getSubject().getSubjectName());
+                subject.put("system", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
+                subject.put("registeredDate", reg.getCreationTimestamp());
+                return subject;
+            })
+            .collect(Collectors.toList());
+        data.put("registeredSubjects", registeredSubjects);
+
+        // Current assignments (assigned but not completed)
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByTeacherId(teacherId);
-        data.put("totalAssignments", assignments.size());
-        long completedAssignments = assignments.stream().filter(a -> a.getStatus() == AssignmentStatus.COMPLETED).count();
-        data.put("completedAssignments", completedAssignments);
-        
+        List<Map<String, Object>> currentAssignments = assignments.stream()
+            .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
+            .map(a -> {
+                Map<String, Object> assign = new HashMap<>();
+                assign.put("subjectName", a.getScheduleClass().getSubject().getSubjectName());
+                assign.put("className", a.getScheduleClass().getClassName());
+                assign.put("startDate", a.getScheduleClass().getStartDate());
+                assign.put("endDate", a.getScheduleClass().getEndDate());
+                return assign;
+            })
+            .collect(Collectors.toList());
+        data.put("currentAssignments", currentAssignments);
+
+        // Past assignments (completed)
+        List<Map<String, Object>> pastAssignments = assignments.stream()
+            .filter(a -> a.getStatus() == AssignmentStatus.COMPLETED)
+            .map(a -> {
+                Map<String, Object> assign = new HashMap<>();
+                assign.put("subjectName", a.getScheduleClass().getSubject().getSubjectName());
+                assign.put("className", a.getScheduleClass().getClassName());
+                assign.put("startDate", a.getScheduleClass().getStartDate());
+                assign.put("endDate", a.getScheduleClass().getEndDate());
+                return assign;
+            })
+            .collect(Collectors.toList());
+        data.put("pastAssignments", pastAssignments);
+
+        // Exam history
+        List<AptechExam> exams = aptechExamRepository.findByTeacherId(teacherId);
+        List<Map<String, Object>> examHistory = exams.stream()
+            .map(exam -> {
+                Map<String, Object> examData = new HashMap<>();
+                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
+                examData.put("examDate", exam.getExamDate());
+                examData.put("subjectName", exam.getSubject().getSubjectName());
+                examData.put("score", exam.getScore());
+                examData.put("passed", exam.getResult() == ExamResult.PASS);
+                return examData;
+            })
+            .collect(Collectors.toList());
+        data.put("examHistory", examHistory);
+
+        // Overall pass rate calculation
+        long totalActivities = registrations.size() + exams.size() + assignments.size();
+        long passedActivities = registrations.stream().filter(r -> r.getStatus() == RegistrationStatus.COMPLETED).count() +
+                               exams.stream().filter(e -> e.getResult() == ExamResult.PASS).count() +
+                               assignments.stream().filter(a -> a.getStatus() == AssignmentStatus.COMPLETED).count();
+        double overallPassRate = totalActivities > 0 ? (passedActivities * 100.0 / totalActivities) : 0;
+        data.put("overallPassRate", Math.round(overallPassRate * 100.0) / 100.0);
+
         return data;
     }
 
-    private String formatPeriod(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private String formatPeriod(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             return "N/A";
         }

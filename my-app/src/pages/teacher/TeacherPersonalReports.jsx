@@ -33,7 +33,7 @@ const TeacherPersonalReports = () => {
         passRate: 0
     });
     const [loading, setLoading] = useState(false);
-    const [downloadingReports, setDownloadingReports] = useState(new Set());
+
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
     const [startDate, setStartDate] = useState('');
@@ -99,16 +99,35 @@ const TeacherPersonalReports = () => {
         setCurrentPage(1);
     };
 
-    const handleDownloadReport = async (reportId, format = 'pdf') => {
-        const downloadKey = `${reportId}-${format}`;
-        setDownloadingReports(prev => new Set(prev).add(downloadKey));
+    const generateFilename = (report, format) => {
+        const typeMap = {
+            QUARTER: 'Quy',
+            YEAR: 'Nam',
+            APTECH: 'Aptech',
+            TRIAL: 'Trial',
+            SUBJECT_ANALYSIS: 'SubjectAnalysis',
+            TEACHER_PERFORMANCE: 'TeacherPerformance',
+            PERSONAL_SUMMARY: 'PersonalSummary'
+        };
 
+        const reportType = typeMap[report.reportType] || report.reportType;
+        let filename = `BaoCao_${reportType}_${report.year}`;
+
+        if (report.quarter && ['QUARTER', 'APTECH', 'TRIAL'].includes(report.reportType)) {
+            filename += `_Q${report.quarter}`;
+        }
+
+        const extension = format === 'excel' ? '.xlsx' : '.docx';
+        return filename + extension;
+    };
+
+    const handleDownloadReport = async (report, format = 'pdf') => {
         try {
-            const blob = await downloadReport(reportId, format);
+            const blob = await downloadReport(report.id, format);
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `report-${reportId}.${format}`;
+            link.download = generateFilename(report, format);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -117,12 +136,6 @@ const TeacherPersonalReports = () => {
         } catch (error) {
             console.error('Error downloading report:', error);
             showToast('Lỗi', 'Không thể tải báo cáo', 'danger');
-        } finally {
-            setDownloadingReports(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(downloadKey);
-                return newSet;
-            });
         }
     };
 
@@ -333,6 +346,8 @@ const TeacherPersonalReports = () => {
                                 <option value="YEAR">Báo cáo Năm</option>
                                 <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
                                 <option value="TRIAL">Báo cáo Giảng thử</option>
+                                <option value="TEACHER_PERFORMANCE">Hiệu suất Giảng dạy</option>
+                                <option value="PERSONAL_SUMMARY">Tổng kết Cá nhân</option>
                             </select>
                         </div>
                         <div className="filter-group">
@@ -349,89 +364,64 @@ const TeacherPersonalReports = () => {
                     <div className="table-responsive">
                         <table className="table table-hover align-middle">
                             <thead>
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="20%">Loại báo cáo</th>
-                                    <th width="10%">Năm</th>
-                                    <th width="10%">Quý</th>
-                                    <th width="20%">Ngày tạo</th>
-                                    <th width="10%">Trạng thái</th>
-                                    <th width="25%" className="text-center">Thao tác</th>
-                                </tr>
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="20%">Loại báo cáo</th>
+                                <th width="10%">Năm</th>
+                                <th width="10%">Quý</th>
+                                <th width="20%">Ngày tạo</th>
+                                <th width="10%">Trạng thái</th>
+                                <th width="25%" className="text-center">Thao tác</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {pageReports.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="text-center">
-                                            <div className="empty-state">
-                                                <i className="bi bi-inbox"></i>
-                                                <p>Không tìm thấy báo cáo nào</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pageReports.map((report, index) => (
-                                        <tr key={report.id} className="fade-in">
-                                            <td>{startIndex + index + 1}</td>
-                                            <td>{getReportTypeLabel(report.reportType)}</td>
-                                            <td>{report.year || 'N/A'}</td>
-                                            <td>{report.quarter ? `Q${report.quarter}` : 'N/A'}</td>
-                                            <td>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</td>
-                                            <td>
+                            {pageReports.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center">
+                                        <div className="empty-state">
+                                            <i className="bi bi-inbox"></i>
+                                            <p>Không tìm thấy báo cáo nào</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                pageReports.map((report, index) => (
+                                    <tr key={report.id} className="fade-in">
+                                        <td>{startIndex + index + 1}</td>
+                                        <td>{getReportTypeLabel(report.reportType)}</td>
+                                        <td>{report.year || 'N/A'}</td>
+                                        <td>{report.quarter ? `Q${report.quarter}` : 'N/A'}</td>
+                                        <td>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                                        <td>
                                                 <span className={`badge badge-status ${report.status === 'GENERATED' ? 'success' : 'danger'}`}>
                                                     {report.status === 'GENERATED' ? 'Đã tạo' : 'Lỗi'}
                                                 </span>
-                                            </td>
-                                            <td className="text-center">
-                                                <div className="action-buttons">
-                                                    {['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(report.reportType) && (
+                                        </td>
+                                        <td className="text-center">
+                                            <div className="action-buttons">
+                                                {['QUARTER', 'YEAR', 'APTECH', 'TRIAL', 'TEACHER_PERFORMANCE', 'PERSONAL_SUMMARY'].includes(report.reportType) && (
+                                                    <>
                                                         <button
-                                                            className="btn btn-sm btn-success btn-action"
-                                                            onClick={() => handleDownloadReport(report.id, 'pdf')}
-                                                            disabled={downloadingReports.has(`${report.id}-pdf`)}
-                                                            title="Tải PDF"
+                                                            className="btn btn-sm btn-primary btn-action"
+                                                            onClick={() => handleDownloadReport(report, 'excel')}
+                                                            title="Tải Excel"
                                                         >
-                                                            {downloadingReports.has(`${report.id}-pdf`) ? (
-                                                                <Loading fullscreen={false} message="" />
-                                                            ) : (
-                                                                <i className="bi bi-file-pdf"></i>
-                                                            )}
+                                                            <i className="bi bi-file-excel"></i>
                                                         </button>
-                                                    )}
-
-                                                    {['TEACHER_PERFORMANCE', 'PERSONAL_SUMMARY'].includes(report.reportType) && (
-                                                        <>
-                                                            <button
-                                                                className="btn btn-sm btn-primary btn-action"
-                                                                onClick={() => handleDownloadReport(report.id, 'excel')}
-                                                                disabled={downloadingReports.has(`${report.id}-excel`)}
-                                                                title="Tải Excel"
-                                                            >
-                                                                {downloadingReports.has(`${report.id}-excel`) ? (
-                                                                    <Loading fullscreen={false} message="" />
-                                                                ) : (
-                                                                    <i className="bi bi-file-excel"></i>
-                                                                )}
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-sm btn-info btn-action"
-                                                                onClick={() => handleDownloadReport(report.id, 'word')}
-                                                                disabled={downloadingReports.has(`${report.id}-word`)}
-                                                                title="Tải Word"
-                                                            >
-                                                                {downloadingReports.has(`${report.id}-word`) ? (
-                                                                    <Loading fullscreen={false} message="" />
-                                                                ) : (
-                                                                    <i className="bi bi-file-word"></i>
-                                                                )}
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                                        <button
+                                                            className="btn btn-sm btn-info btn-action"
+                                                            onClick={() => handleDownloadReport(report, 'word')}
+                                                            title="Tải Word"
+                                                        >
+                                                            <i className="bi bi-file-word"></i>
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>

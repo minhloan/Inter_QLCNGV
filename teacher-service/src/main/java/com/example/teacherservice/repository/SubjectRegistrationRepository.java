@@ -52,5 +52,5 @@ public interface SubjectRegistrationRepository extends JpaRepository<SubjectRegi
     @EntityGraph(attributePaths = {"teacher", "subject"})
     List<SubjectRegistration> findAll();
 
-
+    List<SubjectRegistration> findByYear(Integer year);
 }

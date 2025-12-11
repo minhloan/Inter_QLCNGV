@@ -43,4 +43,6 @@ public interface TrialTeachingRepository extends JpaRepository<TrialTeaching, St
     @Query("SELECT tt FROM TrialTeaching tt WHERE YEAR(tt.teachingDate) = :year")
     List<TrialTeaching> findByYear(@Param("year") Integer year);
 
+    @Query("SELECT tt FROM TrialTeaching tt WHERE YEAR(tt.teachingDate) = :year AND QUARTER(tt.teachingDate) = :quarter")
+    List<TrialTeaching> findByYearAndQuarter(@Param("year") Integer year, @Param("quarter") Integer quarter);
 }

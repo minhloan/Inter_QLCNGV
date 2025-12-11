@@ -47,4 +47,29 @@ public class ScheduleClass extends BaseEntity {
             orphanRemoval = true
     )
     private List<ScheduleSlot> slots = new ArrayList<>();
+
+    public String getClassName() {
+        return classCode;
+    }
+
+
+    public java.time.LocalDate getStartDate() {
+        if (year == null || quarter == null) return null;
+        return switch (quarter) {
+            case QUY1 -> java.time.LocalDate.of(year, 1, 1);
+            case QUY2 -> java.time.LocalDate.of(year, 4, 1);
+            case QUY3 -> java.time.LocalDate.of(year, 7, 1);
+            case QUY4 -> java.time.LocalDate.of(year, 10, 1);
+        };
+    }
+
+    public java.time.LocalDate getEndDate() {
+        if (year == null || quarter == null) return null;
+        return switch (quarter) {
+            case QUY1 -> java.time.LocalDate.of(year, 3, 31);
+            case QUY2 -> java.time.LocalDate.of(year, 6, 30);
+            case QUY3 -> java.time.LocalDate.of(year, 9, 30);
+            case QUY4 -> java.time.LocalDate.of(year, 12, 31);
+        };
+    }
 }

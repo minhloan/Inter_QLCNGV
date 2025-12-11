@@ -350,7 +350,7 @@ const TeacherEvidence = () => {
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
               >
-                <option value="">-- Chọn môn học (không bắt buộc) --</option>
+                <option value="">-- Chọn môn học --</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.subjectName || subject.subjectCode}

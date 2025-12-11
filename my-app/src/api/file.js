@@ -1,22 +1,20 @@
 import createApiInstance from "./createApiInstance.js";
 
 const API_URL = "/v1/teacher/file";
-
 const api = createApiInstance(API_URL);
 
+// ===================================================================
+// LẤY FILE DƯỚI DẠNG BLOB → TRẢ VỀ BLOB URL
+// ===================================================================
 export const getFile = async (fileId) => {
   try {
     const response = await api.get(`/get/${fileId}`, {
       responseType: 'blob'
     });
 
-    // Axios trả về trực tiếp Blob với đúng content-type từ server,
-    // dùng luôn blob này để giữ nguyên metadata (image/jpeg, application/pdf, ...)
     const blob = response.data;
-    const blobUrl = URL.createObjectURL(blob);
-    return blobUrl;
+    return URL.createObjectURL(blob);
   } catch (error) {
-    // Only log non-404 errors (404 means file doesn't exist, which is fine)
     if (error.response?.status !== 404) {
       console.error('Error getting file:', error);
     }
@@ -24,6 +22,9 @@ export const getFile = async (fileId) => {
   }
 };
 
+// ===================================================================
+// LẤY FILE DƯỚI DẠNG DATA URL (Base64)
+// ===================================================================
 export const getFileAsDataUrl = async (fileId) => {
   try {
     const response = await api.get(`/get/${fileId}`, {
@@ -42,43 +43,90 @@ export const getFileAsDataUrl = async (fileId) => {
   }
 };
 
+// ===================================================================
+// DOWNLOAD TRIAL REPORT (.pdf, .docx hoặc format khác)
+// ===================================================================
 export const downloadTrialReport = async (fileId, trialId, format = 'pdf') => {
-    try {
-        const response = await api.get(`/download-trial-report/${fileId}`, {
-            params: { format },
-            responseType: 'blob'
-        });
+  try {
+    const response = await api.get(`/download-trial-report/${fileId}`, {
+      params: { format },
+      responseType: 'blob'
+    });
 
-        const blob = response.data;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
+    const blob = response.data;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
 
-        // Get filename from Content-Disposition header
-        const contentDisposition = response.headers['content-disposition'];
-        let filename = `trial_report_${trialId}.${format}`; // default with format
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
-            if (filenameMatch && filenameMatch[1]) {
-                let serverFilename = filenameMatch[1];
-                // Ensure the filename has the correct extension
-                if (!serverFilename.toLowerCase().endsWith(`.${format.toLowerCase()}`)) {
-                    // Remove any existing extension and add the correct one
-                    serverFilename = serverFilename.replace(/\.[^/.]+$/, "") + `.${format}`;
-                }
-                filename = serverFilename;
-            }
+    // Lấy filename từ header
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = `trial_report_${trialId}.${format}`;
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="([^"]+)"/);
+      if (match && match[1]) {
+        let serverFilename = match[1];
+        if (!serverFilename.toLowerCase().endsWith(`.${format.toLowerCase()}`)) {
+          serverFilename = serverFilename.replace(/\.[^/.]+$/, "") + `.${format}`;
         }
-
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
-        return filename;
-    } catch (error) {
-        console.error('Error downloading trial report:', error);
-        throw new Error('Download failed');
+        filename = serverFilename;
+      }
     }
+
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return filename;
+
+  } catch (error) {
+    console.error('Error downloading trial report:', error);
+    throw new Error('Download failed');
+  }
+};
+
+// ===================================================================
+// DOWNLOAD EVIDENCE FILE (ảnh hoặc PDF)
+// ===================================================================
+export const downloadEvidenceFile = async (fileId, evidenceId, filename) => {
+  try {
+    const response = await api.get(`/get/${fileId}`, {
+      responseType: 'blob'
+    });
+
+    const blob = response.data;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+
+    // Nếu không truyền filename → tự detect từ content-type
+    let downloadFilename = filename;
+
+    if (!downloadFilename) {
+      downloadFilename = `evidence_${evidenceId || fileId}`;
+      const contentType = response.headers['content-type'];
+
+      if (contentType) {
+        if (contentType.includes('pdf')) downloadFilename += '.pdf';
+        else if (contentType.includes('jpeg') || contentType.includes('jpg')) downloadFilename += '.jpg';
+        else if (contentType.includes('png')) downloadFilename += '.png';
+      }
+    }
+
+    a.download = downloadFilename;
+    document.body.appendChild(a);
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    return downloadFilename;
+
+  } catch (error) {
+    console.error('Error downloading evidence file:', error);
+    throw new Error('Download failed');
+  }
 };

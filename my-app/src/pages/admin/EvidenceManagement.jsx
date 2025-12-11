@@ -56,7 +56,7 @@ const EvidenceManagement = () => {
         ocr_status: evidence.ocrText ? 'verified' : 'pending',
         uploaded_date: evidence.submittedDate,
         verified_date: evidence.verifiedAt,
-        status: evidence.status?.toLowerCase() || 'pending',
+        status: evidence.status || 'PENDING',
         ocr_full_name: evidence.ocrFullName,
         ocr_evaluator: evidence.ocrEvaluator,
         ocr_result: evidence.ocrResult,
@@ -90,7 +90,7 @@ const EvidenceManagement = () => {
     }
 
     if (statusFilter) {
-      filtered = filtered.filter(evidence => evidence.status === statusFilter);
+      filtered = filtered.filter(evidence => evidence.status?.toLowerCase() === statusFilter.toLowerCase());
     }
 
     setFilteredEvidences(filtered);
@@ -140,7 +140,6 @@ const EvidenceManagement = () => {
       setLoading(true);
       await reprocessOCR(evidenceId);
       showToast('Thành công', 'Đang xử lý OCR lại...', 'success');
-      // Reload after a delay
       setTimeout(() => {
         loadEvidences();
       }, 2000);
