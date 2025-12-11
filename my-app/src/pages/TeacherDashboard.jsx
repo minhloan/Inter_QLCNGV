@@ -123,32 +123,6 @@ const TeacherDashboard = () => {
           <h1 className="page-title">Bảng điều khiển giáo viên</h1>
           <div className="text-muted">Tổng quan công việc, kỳ thi và thông báo dành cho bạn</div>
         </div>
-        <div className="mt-3">
-          <div className="dropdown">
-            <button
-              className="btn btn-outline-secondary dropdown-toggle"
-              type="button"
-              id="moduleDropdown"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              <i className="bi bi-grid-3x3-gap me-2"></i>
-              Chọn Module
-            </button>
-            <ul className="dropdown-menu" aria-labelledby="moduleDropdown">
-              <li>
-                <button
-                  className="dropdown-item"
-                  onClick={() => handleModuleSelect('admin')}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <i className="bi bi-shield-check me-2"></i>
-                  Quản lí giáo viên và môn học (Admin)
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
       </div>
 
       <div className="container mt-4">
@@ -239,7 +213,7 @@ const TeacherDashboard = () => {
                         <i className="bi bi-person-circle"></i>
                         Đến trang cá nhân
                       </button>
-                      <button className="btn btn-primary d-flex align-items-center gap-2" onClick={() => navigate('/teacher-aptech-exam')}>
+                      <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-aptech-exam')}>
                         <i className="bi bi-calendar-event-fill"></i>
                         Đến kỳ thi
                       </button>
@@ -247,7 +221,7 @@ const TeacherDashboard = () => {
                         <i className="bi bi-pencil-square"></i>
                         Đến đánh giá giảng dạy
                       </button>
-                      <button className="btn btn-outline-secondary d-flex align-items-center gap-2" onClick={() => navigate('/teacher-subject-registration')}>
+                      <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-subject-registration')}>
                         <i className="bi bi-book"></i>
                         Đến môn học
                       </button>
