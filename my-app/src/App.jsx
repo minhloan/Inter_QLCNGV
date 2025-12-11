@@ -63,6 +63,7 @@ import AdminAptechSessionList from "./pages/admin/AdminAptechSessionList.jsx";
 import AptechExamDetail from "./pages/teacher/AptechExamDetail.jsx";
 import TeacherRegisterNew from "./pages/teacher/TeacherRegisterNew.jsx";
 import AdminDashboard from './pages/AdminDashboard';
+import FAQ from './pages/FAQ';
 
 function AppRoutes() {
   const { isAuthenticated, user } = useAuth();
@@ -82,6 +83,10 @@ function AppRoutes() {
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to={user?.role === 'Manage-Leader' || user?.role === 'admin' ? '/module-selection' : '/module-selection'} replace /> : <Login />}
+      />
+      <Route
+        path="/faqs"
+        element={<FAQ />}
       />
       <Route
         path="/forgot-password"

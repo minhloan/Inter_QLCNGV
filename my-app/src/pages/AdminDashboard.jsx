@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Loading from '../components/Common/Loading';
 import { getAptechExamSessions, getAllAptechExams } from '../api/aptechExam';
 import { getAuditLogs } from '../api/auditLog';
+import { useAuth } from '../contexts/AuthContext';
+import '../assets/styles/AdminDashboard.css';
 
 const StatCard = ({ icon, title, value, color }) => (
   <div className="col-md-3 col-sm-6 mb-4">
@@ -34,6 +36,7 @@ const QuickLink = ({ icon, label, path, onClick }) => (
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [upcomingSessionsCount, setUpcomingSessionsCount] = useState(0);
   const [pendingRegistrationsCount, setPendingRegistrationsCount] = useState(0);
@@ -138,56 +141,91 @@ const AdminDashboard = () => {
   return (
     <MainLayout>
       <div className="content-header">
-        <div className="content-title">
-          <h1 className="page-title">Bảng điều khiển quản trị</h1>
-          <div className="text-muted">Tổng quan hệ thống và liên kết nhanh</div>
+        <div className="admin-header">
+          <div className="admin-greeting">
+            <div className="hi">Xin chào,</div>
+            <div className="name">{user?.userData?.full_name || user?.username || 'Quản trị viên'}</div>
+            <div className="text-muted">Tổng quan hệ thống và liên kết nhanh</div>
+          </div>
+          {/* settings button removed as requested */}
         </div>
       </div>
 
       <div className="container mt-4">
-        <div className="row">
-          {stats.map((s) => (
-            <StatCard key={s.title} {...s} />
-          ))}
-        </div>
-
-        <div className="row mt-4">
-          <div className="col-12">
-            <h5 className="mb-3">Liên kết nhanh</h5>
-          </div>
-          <QuickLink icon="bi-people-fill" label="Quản lý giáo viên" onClick={handleNavigate('/manage-teacher')} />
-          <QuickLink icon="bi-journal-text" label="Quản lý môn học" onClick={handleNavigate('/manage-subjects')} />
-          <QuickLink icon="bi-calendar-event" label="Quản lý kỳ thi Aptech" onClick={handleNavigate('/aptech-exam-management')} />
-          <QuickLink icon="bi-file-earmark-text" label="Báo cáo & Xuất" onClick={handleNavigate('/reporting-export')} />
-        </div>
-
-        <div className="row mt-4">
-          <div className="col-lg-12">
-            <div className="card shadow-sm mb-4">
-              <div className="card-body">
-                <h5 className="card-title">Hoạt động gần đây</h5>
-                {recentActivities.length > 0 ? (
-                  <div className="mt-3">
-                    <ul className="list-group list-group-flush">
-                      {recentActivities.map((activity) => {
-                        const timestamp = new Date(activity.timestamp);
-                        const dd = String(timestamp.getDate()).padStart(2, '0');
-                        const mm = String(timestamp.getMonth() + 1).padStart(2, '0');
-                        const yyyy = timestamp.getFullYear();
-                        const formattedDate = `${dd}/${mm}/${yyyy}`;
-                        const line = `- ${formattedDate}: Gv. ${activity.teacherName} ${activity.actionText}`;
-                        return (
-                          <li key={activity.id} className="list-group-item">
-                            <div className="fw-semibold">{line}</div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+        <div className="dashboard-grid">
+          <div className="cards-row">
+            {stats.map((s) => (
+              <div key={s.title} className="card-modern card-stat">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="label">{s.title}</div>
+                    <div className="value">{s.value}</div>
                   </div>
-                ) : (
-                  <div className="text-muted small mt-3">Chưa có hoạt động nào</div>
-                )}
+                  <div className={`rounded-circle bg-${s.color} d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>
+                    <i className={`${s.icon} fs-5 text-white`}></i>
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
+
+          <div className="card-modern" style={{ gridColumn: '1 / -1' }}>
+            <h5 className="card-title">Biểu đồ nhanh</h5>
+            <div className="charts-row">
+              <div className="chart-card card-modern">
+                <svg width="180" height="180" viewBox="0 0 42 42" className="donut">
+                  {/* create donut from stats values */}
+                  {(() => {
+                    const vals = stats.map(s => Number(s.value) || 0);
+                    const total = vals.reduce((a,b) => a+b, 0) || 1;
+                    const colors = ['#2563eb','#10b981','#f59e0b','#ef4444'];
+                    let acc = 0;
+                    return vals.map((v, i) => {
+                      const start = (acc / total) * 100;
+                      acc += v;
+                      const end = (acc / total) * 100;
+                      return (
+                        <circle key={i} r="15.91549431" cx="21" cy="21" fill="transparent" stroke={colors[i%colors.length]} strokeWidth="6" strokeDasharray={`${end - start} ${100 - (end - start)}`} strokeDashoffset={-start} transform="rotate(-90 21 21)" />
+                      );
+                    });
+                  })()}
+                </svg>
+                <div className="legend">
+                  {stats.map((s, i) => (
+                    <div className="item" key={s.title}><span className="swatch" style={{ background: ['#2563eb','#10b981','#f59e0b','#ef4444'][i%4] }}></span>{s.title}: <strong style={{marginLeft:6}}>{s.value}</strong></div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="chart-card card-modern">
+                <h6 className="card-title">So sánh chỉ số</h6>
+                <div style={{display:'flex', flexDirection:'column', gap:10, width:'100%'}}>
+                  {(() => {
+                    const vals = stats.map(s => Number(s.value) || 0);
+                    const max = Math.max(...vals, 1);
+                    const colors = ['#2563eb','#10b981','#f59e0b','#ef4444'];
+                    return stats.map((s, i) => (
+                      <div key={s.title} style={{display:'flex', alignItems:'center', gap:12}}>
+                        <div style={{width:160, color:'var(--muted)'}}>{s.title}</div>
+                        <div style={{flex:1, background:'#eef2f6', height:14, borderRadius:8, position:'relative'}}>
+                          <div style={{width:`${(Number(s.value)||0)/max*100}%`, height:'100%', background:colors[i%colors.length], borderRadius:8}} title={`${s.value}`}></div>
+                        </div>
+                        <div style={{width:64, textAlign:'right', fontWeight:700}}>{s.value}</div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ gridColumn: '1 / -1' }}>
+            <h5 className="mb-3">Liên kết nhanh</h5>
+            <div className="quick-links">
+              <div className="link" onClick={handleNavigate('/manage-teacher')}><i className="bi-people-fill"></i><div>Quản lý giáo viên</div></div>
+              <div className="link" onClick={handleNavigate('/manage-subjects')}><i className="bi-journal-text"></i><div>Quản lý môn học</div></div>
+              <div className="link" onClick={handleNavigate('/aptech-exam-management')}><i className="bi-calendar-event"></i><div>Quản lý kỳ thi Aptech</div></div>
+              <div className="link" onClick={handleNavigate('/reporting-export')}><i className="bi-file-earmark-text"></i><div>Báo cáo & Xuất</div></div>
             </div>
           </div>
         </div>

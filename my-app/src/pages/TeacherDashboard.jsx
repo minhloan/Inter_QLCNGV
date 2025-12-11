@@ -6,6 +6,8 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { getTeacherAptechExams } from '../api/aptechExam';
 import { getMyTrials } from '../api/trial';
 import { listAllSubjectRegistrations } from '../api/subjectRegistrationApi';
+import { useAuth } from '../contexts/AuthContext';
+import '../assets/styles/TeacherDashboard.css';
 
 const Stat = ({ label, value }) => (
   <div className="col-md-3 col-sm-6 mb-3">
@@ -21,6 +23,7 @@ const Stat = ({ label, value }) => (
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { notifications } = useNotifications();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [upcomingExams, setUpcomingExams] = useState([]);
   const [completedExamsCount, setCompletedExamsCount] = useState(0);
@@ -119,125 +122,128 @@ const TeacherDashboard = () => {
   return (
     <MainLayout>
       <div className="content-header">
-        <div className="content-title">
-          <h1 className="page-title">Bảng điều khiển giáo viên</h1>
-          <div className="text-muted">Tổng quan công việc, kỳ thi và thông báo dành cho bạn</div>
+        <div className="teacher-header">
+          <div className="teacher-greeting">
+            <div className="hi">Xin chào,</div>
+            <div className="name">{user?.userData?.full_name || user?.username || localStorage.getItem('full_name') || 'Giáo viên'}</div>
+            <div className="sub">Tổng quan công việc, kỳ thi và thông báo dành cho bạn</div>
+          </div>
+          <div>
+            {/* reserved for future CTA */}
+          </div>
         </div>
       </div>
 
       <div className="container mt-4">
         <div className="row">
-            <div className="row g-3">
-              <div className="col-lg-3 col-md-6">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <div>
-                        <div className="text-uppercase text-muted small">Kỳ thi sắp tới</div>
-                        <div className="fs-4 fw-bold">{upcomingExams.length}</div>
-                      </div>
-                      <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center" style={{ width: 56, height: 56 }}>
-                        <i className="bi bi-calendar-event text-white fs-4"></i>
-                      </div>
-                    </div>
+          <div className="dashboard-cards cards-grid">
+            <div className="stat-col">
+              <div className="card-modern h-100">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="small-label">Kỳ thi sắp tới</div>
+                    <div className="big-value">{upcomingExams.length}</div>
                   </div>
-                </div>
-              </div>
-
-              <div className="col-lg-3 col-md-6">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <div>
-                        <div className="text-uppercase text-muted small">Môn đã thi</div>
-                        <div className="fs-4 fw-bold">{completedExamsCount}</div>
-                      </div>
-                      <div className="rounded-circle bg-success d-flex align-items-center justify-content-center" style={{ width: 56, height: 56 }}>
-                        <i className="bi bi-check2-circle text-white fs-4"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-3 col-md-6">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <div>
-                        <div className="text-uppercase text-muted small">Buổi giảng thử sắp tới</div>
-                        <div className="fs-4 fw-bold">{upcomingTrialsCount}</div>
-                      </div>
-                      <div className="rounded-circle bg-warning d-flex align-items-center justify-content-center" style={{ width: 56, height: 56 }}>
-                        <i className="bi bi-people text-white fs-4"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-3 col-md-6">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center justify-content-between">
-                      <div>
-                        <div className="text-uppercase text-muted small">Tổng số buổi giảng thử</div>
-                        <div className="fs-4 fw-bold">{totalTrialsCount}</div>
-                      </div>
-                      <div className="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style={{ width: 56, height: 56 }}>
-                        <i className="bi bi-collection text-white fs-4"></i>
-                      </div>
-                    </div>
+                  <div className="icon-circle" style={{background:'#2563eb'}}>
+                    <i className="bi bi-calendar-event fs-5 text-white"></i>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="row mt-3">
-              <div className="col-lg-3 col-md-6 mb-3">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <div className="text-uppercase text-muted small">Số môn đã đăng ký</div>
-                    <div className="fs-4 fw-bold">{registeredSubjectsCount}</div>
-                    <div className="text-muted small mt-2">Tổng số môn bạn đã đăng ký tham gia</div>
+            <div className="stat-col">
+              <div className="card-modern h-100">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="small-label">Môn đã thi</div>
+                    <div className="big-value">{completedExamsCount}</div>
                   </div>
-                </div>
-              </div>
-
-              <div className="col-lg-9 col-md-6">
-                <div className="card shadow-sm h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">Tác vụ nhanh</h5>
-                    <div className="d-flex flex-wrap gap-2 mt-2">
-                      <button className="btn btn-outline-primary d-flex align-items-center gap-2" onClick={() => navigate('/edit-profile')}>
-                        <i className="bi bi-person-circle"></i>
-                        Đến trang cá nhân
-                      </button>
-                      <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-aptech-exam')}>
-                        <i className="bi bi-calendar-event-fill"></i>
-                        Đến kỳ thi
-                      </button>
-                      <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-trial-teaching')}>
-                        <i className="bi bi-pencil-square"></i>
-                        Đến đánh giá giảng dạy
-                      </button>
-                      <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-subject-registration')}>
-                        <i className="bi bi-book"></i>
-                        Đến môn học
-                      </button>
-                    </div>
+                  <div className="icon-circle" style={{background:'#10b981'}}>
+                    <i className="bi bi-check2-circle fs-5 text-white"></i>
                   </div>
                 </div>
               </div>
             </div>
+
+            <div className="stat-col">
+              <div className="card-modern h-100">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="small-label">Buổi giảng thử sắp tới</div>
+                    <div className="big-value">{upcomingTrialsCount}</div>
+                  </div>
+                  <div className="icon-circle" style={{background:'#f59e0b'}}>
+                    <i className="bi bi-people fs-5 text-white"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stat-col">
+              <div className="card-modern h-100">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div className="small-label">Tổng số buổi giảng thử</div>
+                    <div className="big-value">{totalTrialsCount}</div>
+                  </div>
+                  <div className="icon-circle" style={{background:'#6b7280'}}>
+                    <i className="bi bi-collection fs-5 text-white"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="row mt-3">
+          <div className="col-lg-4 col-md-6 mb-3">
+            <div className="card-modern h-100">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="small-label">Số môn đã đăng ký</div>
+                  <div className="big-value">{registeredSubjectsCount}</div>
+                  <div className="text-muted small mt-2">Tổng số môn bạn đã đăng ký tham gia</div>
+                </div>
+                <div className="icon-circle" style={{ background: '#7c3aed' }}>
+                  <i className="bi bi-journal-bookmark fs-5 text-white"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-8 col-md-6">
+            <div className="card-modern h-100">
+              <div>
+                <h5 className="card-title">Tác vụ nhanh</h5>
+                <div className="d-flex flex-wrap gap-2 mt-2 quick-actions">
+                  <button className="btn btn-outline-primary d-flex align-items-center gap-2" onClick={() => navigate('/edit-profile')}>
+                    <i className="bi bi-person-circle"></i>
+                    Đến trang cá nhân
+                  </button>
+                  <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-aptech-exam')}>
+                    <i className="bi bi-calendar-event-fill"></i>
+                    Đến kỳ thi
+                  </button>
+                  <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-trial-teaching')}>
+                    <i className="bi bi-pencil-square"></i>
+                    Đến đánh giá giảng dạy
+                  </button>
+                  <button className="btn btn-outline-success d-flex align-items-center gap-2" onClick={() => navigate('/teacher-subject-registration')}>
+                    <i className="bi bi-book"></i>
+                    Đến môn học
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="row mt-4">
           <div className="col-lg-6">
-            <div className="card shadow-sm mb-4">
+            <div className="card-modern mb-4">
               <div className="card-body">
                 <h5 className="card-title">Kỳ thi & Sự kiện sắp tới</h5>
-                <ul className="list-group list-group-flush">
+                <ul className="list-group list-group-flush upcoming-list">
                   {upcoming.map(u => (
                     <li key={u.id} className="list-group-item d-flex justify-content-between align-items-center">
                       <div>
@@ -253,10 +259,10 @@ const TeacherDashboard = () => {
           </div>
 
           <div className="col-lg-6">
-            <div className="card shadow-sm mb-4">
+            <div className="card-modern mb-4">
               <div className="card-body">
                 <h5 className="card-title">Thông báo gần đây</h5>
-                <ul className="list-group list-group-flush">
+                <ul className="list-group list-group-flush upcoming-list">
                   {notifications.slice(0,5).map(n => (
                     <li key={n.id} className="list-group-item">
                       <div className="fw-semibold">{n.title}</div>

@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleException(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
         Map<String, String> body = new HashMap<>();
-        body.put("message", "Internal server error");
+        body.put("message", "Wrong email or password");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
