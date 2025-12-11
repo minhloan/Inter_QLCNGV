@@ -7,7 +7,6 @@ export const getMenuItems = (role, pathname) => {
     { path: '/trial-teaching-management', icon: 'bi-mortarboard', label: 'Đánh giá giảng dạy' },
     { path: '/evidence-management', icon: 'bi-file-check', label: 'Minh chứng & OCR' },
     { path: '/reporting-export', icon: 'bi-graph-up', label: 'Báo cáo & Xuất dữ liệu' },
-    { path: '/audit-log-management', icon: 'bi-journal-text', label: 'Nhật ký Hoạt động' },
   ];
 
   const teacherMenuItems = [
