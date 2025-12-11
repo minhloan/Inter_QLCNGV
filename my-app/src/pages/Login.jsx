@@ -7,6 +7,7 @@ import Loading from '../components/Common/Loading';
 import '../assets/styles/Login.css';
 import '../assets/styles/Common.css';
 import logo2 from '../assets/images/logo2.jpg';
+import FaqModal from '../components/Common/FaqModal';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const { login, isAuthenticated, user } = useAuth();
+  const [showFaqModal, setShowFaqModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -385,11 +387,12 @@ const Login = () => {
             </div>
 
             <div className="text-center">
-              <a href="#" className="faqs-link">FAQs</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); setShowFaqModal(true); }} className="faqs-link">FAQs</a>
             </div>
           </form>
         </div>
       </div>
+      {showFaqModal && <FaqModal show={showFaqModal} onClose={() => setShowFaqModal(false)} />}
     </div>
   );
 };

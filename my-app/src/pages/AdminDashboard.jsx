@@ -1,6 +1,7 @@
 import MainLayout from '../components/Layout/MainLayout';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import Loading from '../components/Common/Loading';
 import { getAptechExamSessions, getAllAptechExams } from '../api/aptechExam';
 import { getAuditLogs } from '../api/auditLog';
@@ -46,6 +47,8 @@ const AdminDashboard = () => {
   ]);
 
   const handleNavigate = (path) => () => navigate(path);
+
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadData = async () => {
@@ -141,6 +144,11 @@ const AdminDashboard = () => {
         <div className="content-title">
           <h1 className="page-title">Bảng điều khiển quản trị</h1>
           <div className="text-muted">Tổng quan hệ thống và liên kết nhanh</div>
+          {/* Greeting shown after login */}
+          <div className="dashboard-greeting mt-2">
+            <div className="fw-semibold">Chào, {user?.userData?.full_name || user?.username || 'Bạn'}!</div>
+            <div className="text-muted small">Chúc bạn một ngày làm việc hiệu quả.</div>
+          </div>
         </div>
       </div>
 
