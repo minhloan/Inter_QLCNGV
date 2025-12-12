@@ -59,10 +59,13 @@ const ReportingExport = () => {
     useEffect(() => {
         if (['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(reportType)) {
             setYearFilter((currentYear - 1).toString());
+        } else if (reportType === 'SUBJECT_ANALYSIS') {
+            // For SUBJECT_ANALYSIS, don't set yearFilter automatically as it uses date range
+            setYearFilter('');
         }
         if (reportType === 'QUARTER') {
             setQuarterFilter('1');
-        } else if (['APTECH', 'TRIAL', 'YEAR'].includes(reportType)) {
+        } else if (['APTECH', 'TRIAL', 'YEAR', 'SUBJECT_ANALYSIS'].includes(reportType)) {
             setQuarterFilter('');
         }
     }, [reportType]);
@@ -107,7 +110,21 @@ const ReportingExport = () => {
         }
 
         if (yearFilter) {
-            filtered = filtered.filter(report => report.year === parseInt(yearFilter));
+            filtered = filtered.filter(report => {
+                // For SUBJECT_ANALYSIS reports, use the year from startDate
+                if (report.reportType === 'SUBJECT_ANALYSIS' && report.paramsJson) {
+                    try {
+                        const params = JSON.parse(report.paramsJson);
+                        if (params.startDate) {
+                            return new Date(params.startDate).getFullYear() === parseInt(yearFilter);
+                        }
+                    } catch (e) {
+                        // Ignore parsing errors
+                    }
+                }
+                // For other reports, use the stored year
+                return report.year === parseInt(yearFilter);
+            });
         }
 
         if (quarterFilter) {
@@ -121,18 +138,83 @@ const ReportingExport = () => {
     const generateReport = async (type, year, quarter = null) => {
         try {
             setLoading(true);
+            let startDateValue = null;
+            let endDateValue = null;
+
+            if (['SUBJECT_ANALYSIS'].includes(type)) {
+                startDateValue = startDate;
+                endDateValue = endDate;
+            }
+
             const reportRequest = {
                 reportType: type,
                 year: year,
                 quarter: quarter,
                 teacherId: user?.userId, // Use current user's userId
-                startDate: startDate || null,
-                endDate: endDate || null,
+                startDate: startDateValue || null,
+                endDate: endDateValue || null,
                 subjectId: subjectId || null
             };
 
             const response = await apiGenerateReport(reportRequest);
-            await loadReports(); // Reload reports to show the new report with creation date immediately
+
+            // Ensure the response has createdAt set to current time
+            response.createdAt = new Date().toISOString();
+
+            // For SUBJECT_ANALYSIS, ensure paramsJson is set for proper filtering
+            if (type === 'SUBJECT_ANALYSIS') {
+                response.paramsJson = JSON.stringify({
+                    startDate: startDateValue,
+                    endDate: endDateValue,
+                    subjectId: subjectId
+                });
+            }
+
+            // Add the new report to the existing reports list immediately
+            setReports(prevReports => [response, ...prevReports]);
+
+            // Reapply filters to include the new report if it matches current filters
+            setFilteredReports(prevFiltered => {
+                // Filter the existing reports with current filters
+                let filteredExisting = prevFiltered.filter(r => {
+                    if (reportType && r.reportType !== reportType) return false;
+                    if (yearFilter) {
+                        if (r.reportType === 'SUBJECT_ANALYSIS' && r.paramsJson) {
+                            try {
+                                const params = JSON.parse(r.paramsJson);
+                                if (params.startDate) {
+                                    return new Date(params.startDate).getFullYear() === parseInt(yearFilter);
+                                }
+                            } catch (e) {
+                                return false;
+                            }
+                        }
+                        return r.year === parseInt(yearFilter);
+                    }
+                    if (quarterFilter && r.quarter !== parseInt(quarterFilter)) return false;
+                    return true;
+                });
+
+                // Check if the new report matches the current filters
+                let includeNew = true;
+                if (reportType && response.reportType !== reportType) includeNew = false;
+                if (yearFilter && includeNew) {
+                    if (response.reportType === 'SUBJECT_ANALYSIS' && response.paramsJson) {
+                        try {
+                            const params = JSON.parse(response.paramsJson);
+                            if (params.startDate) {
+                                if (new Date(params.startDate).getFullYear() !== parseInt(yearFilter)) includeNew = false;
+                            }
+                        } catch (e) {
+                            includeNew = false;
+                        }
+                    } else if (response.year !== parseInt(yearFilter)) includeNew = false;
+                }
+                if (quarterFilter && response.quarter !== parseInt(quarterFilter)) includeNew = false;
+
+                // Include the new report only if it matches the filters
+                return includeNew ? [response, ...filteredExisting] : filteredExisting;
+            });
             showToast('Thành công', 'Tạo báo cáo thành công', 'success');
         } catch (error) {
             console.error('Error generating report:', error);
@@ -341,13 +423,12 @@ const ReportingExport = () => {
                     <div className="filter-group">
                         <button
                             className="btn btn-primary"
-                            onClick={() => generateReport(reportType, parseInt(yearFilter), quarterFilter ? parseInt(quarterFilter) : null)}
+                            onClick={() => generateReport(reportType, ['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(reportType) ? parseInt(yearFilter) : null, quarterFilter ? parseInt(quarterFilter) : null)}
                             disabled={
                                 !reportType ||
                                 loading ||
                                 (['QUARTER', 'YEAR', 'APTECH', 'TRIAL'].includes(reportType) && !yearFilter) ||
-                                (['SUBJECT_ANALYSIS'].includes(reportType) && (!startDate || !endDate)) ||
-                                (reportType === 'SUBJECT_ANALYSIS' && !subjectId)
+                                (reportType === 'SUBJECT_ANALYSIS' && (!startDate || !endDate || !subjectId))
                             }
                             style={{ width: '100%', marginTop: '25px' }}
                         >
@@ -455,43 +536,58 @@ const ReportingExport = () => {
                                     </td>
                                 </tr>
                             ) : (
-                                pageReports.map((report, index) => (
-                                    <tr key={report.id} className="fade-in">
-                                        <td>{startIndex + index + 1}</td>
-                                        <td>{getReportTypeLabel(report.reportType)}</td>
-                                        <td>{report.teacherName || 'Tất cả'}</td>
-                                        <td>{report.year || 'N/A'}</td>
-                                        <td>{report.quarter ? `Q${report.quarter}` : 'N/A'}</td>
-                                        <td>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</td>
-                                        <td>
+                                pageReports.map((report, index) => {
+                                    // Calculate display year for SUBJECT_ANALYSIS reports
+                                    let displayYear = report.year;
+                                    if (report.reportType === 'SUBJECT_ANALYSIS' && report.paramsJson) {
+                                        try {
+                                            const params = JSON.parse(report.paramsJson);
+                                            if (params.startDate) {
+                                                displayYear = new Date(params.startDate).getFullYear();
+                                            }
+                                        } catch (e) {
+                                            // Ignore parsing errors
+                                        }
+                                    }
+
+                                    return (
+                                        <tr key={report.id} className="fade-in">
+                                            <td>{startIndex + index + 1}</td>
+                                            <td>{getReportTypeLabel(report.reportType)}</td>
+                                            <td>{report.teacherName || 'Tất cả'}</td>
+                                            <td>{displayYear || 'N/A'}</td>
+                                            <td>{report.quarter ? `Q${report.quarter}` : 'N/A'}</td>
+                                            <td>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</td>
+                                            <td>
                                                 <span className={`badge badge-status ${report.status === 'GENERATED' ? 'success' : 'danger'}`}>
                                                     {report.status === 'GENERATED' ? 'Đã tạo' : 'Lỗi'}
                                                 </span>
-                                        </td>
-                                        <td className="text-center">
-                                            <div className="action-buttons">
-                                                {['QUARTER', 'YEAR', 'APTECH', 'TRIAL', 'SUBJECT_ANALYSIS', 'TEACHER_PERFORMANCE', 'PERSONAL_SUMMARY'].includes(report.reportType) && (
-                                                    <>
-                                                        <button
-                                                            className="btn btn-sm btn-primary btn-action"
-                                                            onClick={() => exportReport(report, 'excel')}
-                                                            title="Xuất Excel"
-                                                        >
-                                                            <i className="bi bi-file-excel"></i>
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-sm btn-info btn-action"
-                                                            onClick={() => exportReport(report, 'word')}
-                                                            title="Xuất Word"
-                                                        >
-                                                            <i className="bi bi-file-word"></i>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                            </td>
+                                            <td className="text-center">
+                                                <div className="action-buttons">
+                                                    {['QUARTER', 'YEAR', 'APTECH', 'TRIAL', 'SUBJECT_ANALYSIS', 'TEACHER_PERFORMANCE', 'PERSONAL_SUMMARY'].includes(report.reportType) && (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-primary btn-action"
+                                                                onClick={() => exportReport(report, 'excel')}
+                                                                title="Xuất Excel"
+                                                            >
+                                                                <i className="bi bi-file-excel"></i>
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-info btn-action"
+                                                                onClick={() => exportReport(report, 'word')}
+                                                                title="Xuất Word"
+                                                            >
+                                                                <i className="bi bi-file-word"></i>
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                             </tbody>
                         </table>

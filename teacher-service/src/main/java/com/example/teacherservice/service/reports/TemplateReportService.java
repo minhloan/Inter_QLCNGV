@@ -154,7 +154,7 @@ public class TemplateReportService {
         // Section 1: Teacher Info
         createSectionHeader(sheet, currentRow++, "I. THÔNG TIN GIÁO VIÊN");
         currentRow = createInfoRow(sheet, currentRow, "Họ tên:", data.get("teacherName"));
-        currentRow = createInfoRow(sheet, currentRow, "Trình độ:", data.get("qualification"));
+        currentRow = createInfoRow(sheet, currentRow, "Trình độ:", translateQualification((String) data.get("qualification")));
         currentRow = createInfoRow(sheet, currentRow, "Email:", data.get("email"));
         currentRow++; // Blank row
 
@@ -270,7 +270,7 @@ public class TemplateReportService {
                 cell2.setCellValue((String) teacher.get("teacherName"));
                 cell2.setCellStyle(dataStyle);
                 Cell cell3 = row.createCell(3);
-                cell3.setCellValue((String) teacher.get("qualification"));
+                cell3.setCellValue(translateQualification((String) teacher.get("qualification")));
                 cell3.setCellStyle(dataStyle);
                 Cell cell4 = row.createCell(4);
                 cell4.setCellValue(formatDate(teacher.get("registeredDate")));
@@ -371,7 +371,7 @@ public class TemplateReportService {
         @SuppressWarnings("unchecked")
         Map<String, Object> profile = (Map<String, Object>) data.get("profile");
         currentRow = createInfoRow(sheet, currentRow, "Họ tên:", profile.get("fullName"));
-        currentRow = createInfoRow(sheet, currentRow, "Trình độ:", data.get("qualification"));
+        currentRow = createInfoRow(sheet, currentRow, "Trình độ:", translateQualification((String) data.get("qualification")));
         currentRow = createInfoRow(sheet, currentRow, "Email:", profile.get("email"));
         currentRow++;
 
@@ -650,7 +650,7 @@ public class TemplateReportService {
         // Add content sections
         addParagraph(document, "I. THÔNG TIN GIÁO VIÊN", true, 12);
         addParagraph(document, "Họ tên: " + data.get("teacherName"), false, 11);
-        addParagraph(document, "Trình độ: " + data.get("qualification"), false, 11);
+        addParagraph(document, "Trình độ: " + translateQualification((String) data.get("qualification")), false, 11);
         addParagraph(document, "Email: " + data.get("email"), false, 11);
         addParagraph(document, "", false, 11); // Blank line
 
@@ -726,7 +726,7 @@ public class TemplateReportService {
         @SuppressWarnings("unchecked")
         Map<String, Object> profile = (Map<String, Object>) data.get("profile");
         addParagraph(document, "Họ tên: " + profile.get("fullName"), false, 11);
-        addParagraph(document, "Trình độ: " + data.get("qualification"), false, 11);
+        addParagraph(document, "Trình độ: " + translateQualification((String) data.get("qualification")), false, 11);
         addParagraph(document, "Email: " + profile.get("email"), false, 11);
         addParagraph(document, "", false, 11); // Blank line
 
@@ -866,6 +866,8 @@ public class TemplateReportService {
                     String textValue;
                     if (key.equals("index")) {
                         textValue = String.valueOf(rowIndex);
+                    } else if (key.equals("qualification")) {
+                        textValue = translateQualification(value != null ? (String) value : "N/A");
                     } else {
                         textValue = value != null ? value.toString() : "N/A";
                         if (key.equals("registeredDate") || key.equals("examDate") || key.equals("teachingDate") ||
@@ -916,5 +918,27 @@ public class TemplateReportService {
             period.append(" | Quý: Q").append(data.get("quarter"));
         }
         return period.toString();
+    }
+
+    private String translateQualification(String qualification) {
+        if (qualification == null) return "N/A";
+        switch (qualification.toLowerCase()) {
+            case "bachelor":
+                return "Cử nhân";
+            case "master":
+                return "Thạc sĩ";
+            case "phd":
+                return "Tiến sĩ";
+            case "assistant_professor":
+                return "Phó giáo sư";
+            case "professor":
+                return "Giáo sư";
+            case "specialist":
+                return "Chuyên viên";
+            case "other":
+                return "Khác";
+            default:
+                return qualification;
+        }
     }
 }

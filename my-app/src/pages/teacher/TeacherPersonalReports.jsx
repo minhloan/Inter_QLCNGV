@@ -36,9 +36,6 @@ const TeacherPersonalReports = () => {
 
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-
     useEffect(() => {
         loadReports();
         loadStats();
@@ -142,12 +139,15 @@ const TeacherPersonalReports = () => {
     const generateReport = async () => {
         try {
             setLoading(true);
+            let startDateValue = null;
+            let endDateValue = null;
+
             const reportRequest = {
                 reportType,
                 year: parseInt(year),
                 quarter: reportType === 'QUARTER' ? parseInt(quarter) : null,
-                startDate: startDate || null,
-                endDate: endDate || null
+                startDate: startDateValue,
+                endDate: endDateValue
             };
 
             const response = await generatePersonalReport(reportRequest);
@@ -176,9 +176,7 @@ const TeacherPersonalReports = () => {
             QUARTER: 'Báo cáo Quý',
             YEAR: 'Báo cáo Năm',
             APTECH: 'Báo cáo Kỳ thi Aptech',
-            TRIAL: 'Báo cáo Giảng thử',
-            TEACHER_PERFORMANCE: 'Hiệu suất Giảng dạy',
-            PERSONAL_SUMMARY: 'Tổng kết Cá nhân'
+            TRIAL: 'Báo cáo Giảng thử'
         };
         return typeMap[type] || type;
     };
@@ -247,8 +245,6 @@ const TeacherPersonalReports = () => {
                             <option value="YEAR">Báo cáo Năm</option>
                             <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
                             <option value="TRIAL">Báo cáo Giảng thử</option>
-                            <option value="TEACHER_PERFORMANCE">Hiệu suất Giảng dạy</option>
-                            <option value="PERSONAL_SUMMARY">Tổng kết Cá nhân</option>
                         </select>
                     </div>
 
@@ -267,6 +263,8 @@ const TeacherPersonalReports = () => {
                         </div>
                     )}
 
+
+
                     {reportType === 'QUARTER' && (
                         <div className="filter-group">
                             <label className="filter-label">Quý</label>
@@ -284,28 +282,7 @@ const TeacherPersonalReports = () => {
                         </div>
                     )}
 
-                    {reportType === 'TEACHER_PERFORMANCE' && (
-                        <>
-                            <div className="filter-group">
-                                <label className="filter-label">Từ ngày</label>
-                                <input
-                                    type="date"
-                                    className="filter-input"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                />
-                            </div>
-                            <div className="filter-group">
-                                <label className="filter-label">Đến ngày</label>
-                                <input
-                                    type="date"
-                                    className="filter-input"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                />
-                            </div>
-                        </>
-                    )}
+
 
                     <div className="filter-group">
                         <button
@@ -341,19 +318,17 @@ const TeacherPersonalReports = () => {
                     <div className="filter-row">
                         <div className="filter-group">
                             <label className="filter-label">Loại báo cáo</label>
-                            <select
-                                className="filter-select"
-                                value={reportType}
-                                onChange={(e) => setReportType(e.target.value)}
-                            >
-                                <option value="">Tất cả</option>
-                                <option value="QUARTER">Báo cáo Quý</option>
-                                <option value="YEAR">Báo cáo Năm</option>
-                                <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
-                                <option value="TRIAL">Báo cáo Giảng thử</option>
-                                <option value="TEACHER_PERFORMANCE">Hiệu suất Giảng dạy</option>
-                                <option value="PERSONAL_SUMMARY">Tổng kết Cá nhân</option>
-                            </select>
+                        <select
+                            className="filter-select"
+                            value={reportType}
+                            onChange={(e) => setReportType(e.target.value)}
+                        >
+                            <option value="">Tất cả</option>
+                            <option value="QUARTER">Báo cáo Quý</option>
+                            <option value="YEAR">Báo cáo Năm</option>
+                            <option value="APTECH">Báo cáo Kỳ thi Aptech</option>
+                            <option value="TRIAL">Báo cáo Giảng thử</option>
+                        </select>
                         </div>
                         <div className="filter-group">
                             <button className="btn btn-secondary" onClick={() => setReportType('')} style={{ width: '100%' }}>
@@ -404,7 +379,7 @@ const TeacherPersonalReports = () => {
                                         </td>
                                         <td className="text-center">
                                             <div className="action-buttons">
-                                                {['QUARTER', 'YEAR', 'APTECH', 'TRIAL', 'TEACHER_PERFORMANCE', 'PERSONAL_SUMMARY'].includes(report.reportType) && (
+                                                {['QUARTER', 'YEAR', 'APTECH', 'TRIAL', 'TEACHER_PERFORMANCE'].includes(report.reportType) && (
                                                     <>
                                                         <button
                                                             className="btn btn-sm btn-primary btn-action"

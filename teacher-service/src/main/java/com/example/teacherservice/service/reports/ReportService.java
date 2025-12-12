@@ -295,14 +295,14 @@ public class ReportService {
         // Group by SubjectSystem (program)
         Map<String, List<Map<String, Object>>> programsMap = registrations.stream()
                 .collect(Collectors.groupingBy(reg -> {
-                    SubjectSystem system = reg.getSubject().getSystem();
+                    SubjectSystem system = reg.getSubject() != null ? reg.getSubject().getSystem() : null;
                     return system != null ? system.getSystemName() : "Khác";
                 }, Collectors.mapping(reg -> {
                     Map<String, Object> subjectData = new HashMap<>();
-                    subjectData.put("subjectName", reg.getSubject().getSubjectName());
-                    subjectData.put("subjectCode", reg.getSubject().getSkillCode());
+                    subjectData.put("subjectName", reg.getSubject() != null ? reg.getSubject().getSubjectName() : "N/A");
+                    subjectData.put("subjectCode", reg.getSubject() != null ? reg.getSubject().getSkillCode() : "N/A");
                     // Removed mock class name from sample data
-                    Integer credit = reg.getSubject().getCredit();
+                    Integer credit = reg.getSubject() != null ? reg.getSubject().getCredit() : null;
                     int totalHours = (credit != null ? credit : 0) * 15; // Safe calculation
                     subjectData.put("totalHours", totalHours); // Real hours based on credit
                     subjectData.put("status", reg.getStatus().toString());
@@ -1134,7 +1134,8 @@ public class ReportService {
 
         // Get teacher count from actual distinct participating teachers
         long totalTeachers = exams.stream()
-                .map(e -> e.getTeacher().getId())
+                .map(e -> e.getTeacher() != null ? e.getTeacher().getId() : null)
+                .filter(Objects::nonNull)
                 .distinct()
                 .count();
 
@@ -1323,19 +1324,42 @@ public class ReportService {
     public Map<String, Object> aggregateSubjectAnalysisData(String subjectId, LocalDate startDate, LocalDate endDate) {
         Map<String, Object> data = new HashMap<>();
 
-        // Get subject info
-        Subject subject = subjectRepository.findBySkill_SkillCode(subjectId)
-            .orElseThrow(() -> new RuntimeException("Subject not found: " + subjectId));
+        // Get subject info - handle multiple subjects with same skill code
+        List<Subject> subjects = subjectRepository.findAll().stream()
+            .filter(s -> s.getSkill() != null && s.getSkill().getSkillCode().equals(subjectId))
+            .collect(Collectors.toList());
+
+        if (subjects.isEmpty()) {
+            throw new RuntimeException("Subject not found: " + subjectId);
+        }
+
+        Subject subject = subjects.get(0); // Take first one
+        if (subjects.size() > 1) {
+            log.warn("Multiple subjects found for skill code {}, using first one", subjectId);
+        }
+
         data.put("subjectCode", subject.getSkillCode());
         data.put("subjectName", subject.getSubjectName());
         data.put("systemName", subject.getSystem() != null ? subject.getSystem().getSystemName() : "N/A");
-        
-        // Get registrations by querying all and filtering
-        List<SubjectRegistration> registrations = subjectRegistrationRepository.findAll().stream()
-            .filter(r -> r.getSubject().getSkillCode().equals(subjectId))
+
+        // Get registrations by querying all and filtering by subject and date range
+        List<SubjectRegistration> allRegistrations = subjectRegistrationRepository.findAll().stream()
+            .filter(r -> r.getSubject() != null && r.getSubject().getSkill() != null && r.getSubject().getSkillCode().equals(subjectId))
             .collect(Collectors.toList());
+
+        // Filter registrations by date range if provided
+        List<SubjectRegistration> registrations = allRegistrations.stream()
+            .filter(reg -> {
+                if (startDate == null && endDate == null) return true;
+                LocalDate regDate = reg.getCreationTimestamp().toLocalDate();
+                boolean afterStart = startDate == null || !regDate.isBefore(startDate);
+                boolean beforeEnd = endDate == null || !regDate.isAfter(endDate);
+                return afterStart && beforeEnd;
+            })
+            .collect(Collectors.toList());
+
         data.put("totalTeachersRegistered", registrations.size());
-        
+
         // Map teachers
         List<Map<String, Object>> teachers = registrations.stream()
             .map(reg -> {
@@ -1343,24 +1367,42 @@ public class ReportService {
                 User user = reg.getTeacher();
                 teacher.put("teacherId", user.getTeacherCode());
                 teacher.put("teacherName", user.getUsername());
-                teacher.put("qualification", user.getAcademicRank() != null ? user.getAcademicRank() : "N/A");
+                teacher.put("qualification", user.getUserDetails().getQualification() != null ? user.getUserDetails().getQualification() : "N/A");
                 teacher.put("registeredDate", reg.getCreationTimestamp());
                 return teacher;
             })
             .collect(Collectors.toList());
         data.put("registeredTeachers", teachers);
-        
-        // Get assignments for this subject
-        long activeAssignments = teachingAssignmentRepository.findAll().stream()
+
+        // Get assignments for this subject, filtered by date range
+        List<TeachingAssignment> allAssignments = teachingAssignmentRepository.findAll().stream()
             .filter(a -> a.getScheduleClass().getSubject().getSkillCode().equals(subjectId))
+            .collect(Collectors.toList());
+
+        // Filter assignments by date range if provided (using assigned date or class dates)
+        List<TeachingAssignment> filteredAssignments = allAssignments.stream()
+            .filter(a -> {
+                if (startDate == null && endDate == null) return true;
+                // Use assigned date if available, otherwise use class start date
+                LocalDate assignmentDate = a.getAssignedAt() != null ?
+                    a.getAssignedAt().toLocalDate() :
+                    (a.getScheduleClass().getStartDate() != null ? a.getScheduleClass().getStartDate() : null);
+                if (assignmentDate == null) return true; // Include if no date available
+                boolean afterStart = startDate == null || !assignmentDate.isBefore(startDate);
+                boolean beforeEnd = endDate == null || !assignmentDate.isAfter(endDate);
+                return afterStart && beforeEnd;
+            })
+            .collect(Collectors.toList());
+
+        long activeAssignments = filteredAssignments.stream()
             .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
             .count();
         data.put("totalActiveAssignments", activeAssignments);
-        
+
         // Analysis
         boolean hasEnoughTeachers = registrations.size() >= 2;
         data.put("hasEnoughTeachers", hasEnoughTeachers);
-        
+
         // Recommendations
         List<String> recommendations = new ArrayList<>();
         if (!hasEnoughTeachers) {
@@ -1370,9 +1412,9 @@ public class ReportService {
             recommendations.add("Số lớp phân công quá nhiều so với số giáo viên");
         }
         data.put("recommendations", recommendations);
-        
+
         data.put("period", formatPeriod(startDate, endDate));
-        
+
         return data;
     }
 
