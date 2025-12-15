@@ -83,7 +83,7 @@ const TeacherSubjectRegistration = () => {
             const payload = {
                 targetYear: parseInt(carryYear),
                 quarter: `QUY${carryQuarter}`,
-                reasonForCarryOver: carryReason,
+                reasonForCarryOver2: carryReason,
             };
 
             await carryOverSubject(carryTarget.id, payload);
@@ -623,73 +623,97 @@ const TeacherSubjectRegistration = () => {
                 )}
 
 
-
-
-                {/* ============== MODAL DỜI MÔN ============== */}
                 {showCarryModal && (
                     <div className="modal-overlay">
                         <div className="modal-content">
-                            <h3>Dời môn sang năm khác</h3>
 
-                            <p>
-                                <b>Môn:</b> {carryTarget?.subject_name} <br />
-                                <b>Mã môn:</b> {carryTarget?.subject_code}
-                            </p>
-
-                            <div className="form-group">
-                                <label>Năm mới</label>
-                                <select
-                                    className="form-control"
-                                    value={carryYear}
-                                    onChange={(e) => setCarryYear(e.target.value)}
-                                >
-                                    {[currentYear, currentYear + 1, currentYear + 2].map((y) => (
-                                        <option key={y} value={y}>
-                                            {y}
-                                        </option>
-                                    ))}
-                                </select>
+                            {/* HEADER – giống ExportImportModal */}
+                            <div className="modal-header d-flex justify-content-between align-items-center">
+                                <h3 className="modal-title mb-0">
+                                    Dời môn sang năm khác
+                                </h3>
+                                <button
+                                    className="btn-close"
+                                    onClick={() => setShowCarryModal(false)}
+                                />
                             </div>
 
-                            <div className="form-group mt-3">
-                                <label>Quý mới</label>
-                                <select
-                                    className="form-control"
-                                    value={carryQuarter}
-                                    onChange={(e) => setCarryQuarter(e.target.value)}
-                                >
-                                    <option value="">-- Chọn quý --</option>
-                                    <option value="0">Quý 1</option>
-                                    <option value="1">Quý 2</option>
-                                    <option value="2">Quý 3</option>
-                                    <option value="3">Quý 4</option>
-                                </select>
+                            {/* BODY */}
+                            <div className="modal-body">
+
+                                <div className="mb-3">
+                                    <p className="mb-1">
+                                        <b>Môn:</b> {carryTarget?.subject_name}
+                                    </p>
+                                    <p className="mb-0">
+                                        <b>Mã môn:</b> {carryTarget?.subject_code}
+                                    </p>
+                                </div>
+
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Năm mới</label>
+                                    <select
+                                        className="form-control"
+                                        value={carryYear}
+                                        onChange={(e) => setCarryYear(e.target.value)}
+                                    >
+                                        {[currentYear, currentYear + 1, currentYear + 2].map((y) => (
+                                            <option key={y} value={y}>
+                                                {y}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Quý mới</label>
+                                    <select
+                                        className="form-control"
+                                        value={carryQuarter}
+                                        onChange={(e) => setCarryQuarter(e.target.value)}
+                                    >
+                                        <option value="">-- Chọn quý --</option>
+                                        <option value="1">Quý 1</option>
+                                        <option value="2">Quý 2</option>
+                                        <option value="3">Quý 3</option>
+                                        <option value="4">Quý 4</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Lý do dời môn</label>
+                                    <textarea
+                                        className="form-control"
+                                        rows={3}
+                                        value={carryReason}
+                                        onChange={(e) => setCarryReason(e.target.value)}
+                                        placeholder="Nhập lý do..."
+                                    />
+                                </div>
                             </div>
 
-                            <div className="form-group mt-3">
-                                <label>Lý do dời môn</label>
-                                <textarea
-                                    className="form-control"
-                                    value={carryReason}
-                                    onChange={(e) => setCarryReason(e.target.value)}
-                                    placeholder="Nhập lý do..."
-                                ></textarea>
-                            </div>
-
-                            <div className="mt-4 d-flex justify-content-end">
+                            {/* FOOTER */}
+                            <div className="modal-footer d-flex justify-content-end">
                                 <button
                                     className="btn btn-secondary me-2"
                                     onClick={() => setShowCarryModal(false)}
                                 >
                                     Hủy
                                 </button>
-                                <button className="btn btn-primary" onClick={handleCarryOver}>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleCarryOver}
+                                >
                                     Xác nhận
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 )}
+
+
+
 
                 {/* ============== MODAL IMPORT KẾ HOẠCH NĂM ============== */}
                 {showImportModal && (
