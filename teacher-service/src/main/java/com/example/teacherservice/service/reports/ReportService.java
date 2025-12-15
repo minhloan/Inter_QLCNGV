@@ -219,7 +219,7 @@ public class ReportService {
                     .build();
 
             report = reportRepository.save(report);
-            
+
             return convertToDTO(report);
         } catch (Exception e) {
             log.error("Error generating report", e);
@@ -434,7 +434,7 @@ public class ReportService {
                     examInfo.put("subjectCode", exam.getSubject().getSkillCode());
                     examInfo.put("examDate", exam.getExamDate());
                     examInfo.put("score", exam.getScore());
-                    examInfo.put("result", exam.getResult().toString());
+                    examInfo.put("result", exam.getResult() != null ? exam.getResult().toString() : "N/A");
                     examInfo.put("attempt", exam.getAttempt());
                     return examInfo;
                 })
@@ -564,7 +564,7 @@ public class ReportService {
     private byte[] generateFileContent(ReportRequestDTO request, Map<String, Object> reportData, User teacher) throws IOException, InvalidFormatException {
         // Generate actual file content based on format (PDF, Excel, Word)
         String format = request.getParamsJson() != null && request.getParamsJson().contains("format") ?
-            extractFormatFromParams(request.getParamsJson()) : "PDF";
+                extractFormatFromParams(request.getParamsJson()) : "PDF";
 
         // Choose report generator service based on whether it's a manager report (teacherId="all")
         boolean isManagerReport = "all".equals(request.getTeacherId());
@@ -614,7 +614,7 @@ public class ReportService {
         String quarter = request.getQuarter() != null ? "_q" + request.getQuarter() : "";
 
         String format = request.getParamsJson() != null && request.getParamsJson().contains("format") ?
-            extractFormatFromParams(request.getParamsJson()) : "PDF";
+                extractFormatFromParams(request.getParamsJson()) : "PDF";
 
         String extension = switch (format.toUpperCase()) {
             case "EXCEL", "XLSX" -> ".xlsx";
@@ -676,7 +676,7 @@ public class ReportService {
                     examData.put("subjectCode", exam.getSubject().getSkillCode());
                     examData.put("examDate", exam.getExamDate());
                     examData.put("score", exam.getScore());
-                    examData.put("result", exam.getResult().toString());
+                    examData.put("result", exam.getResult() != null ? exam.getResult().toString() : "N/A");
                     examData.put("attempt", exam.getAttempt());
                     return examData;
                 })
@@ -1151,7 +1151,7 @@ public class ReportService {
                     examInfo.put("examDate", examDate);
                     examInfo.put("examTime", exam.getSession() != null ? exam.getSession().getExamTime() : null);
                     examInfo.put("score", exam.getScore());
-                    examInfo.put("result", exam.getResult().toString());
+                    examInfo.put("result", exam.getResult() != null ? exam.getResult().toString() : "N/A");
                     examInfo.put("attempt", exam.getAttempt());
                     return examInfo;
                 })
@@ -1255,79 +1255,79 @@ public class ReportService {
     /**
      * NEW DATA AGGREGATION METHODS FOR TEMPLATE REPORTS
      */
-    
+
     @Transactional(readOnly = true)
     public Map<String, Object> aggregateTeacherPerformanceData(String teacherId, LocalDate startDate, LocalDate endDate) {
         Map<String, Object> data = new HashMap<>();
 
         // Get teacher info
         User teacher = userRepository.findById(teacherId)
-            .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
+                .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
         data.put("teacherName", teacher.getUsername());
         data.put("qualification", teacher.getAcademicRank() != null ? teacher.getAcademicRank() : "N/A");
         data.put("email", teacher.getEmail());
-        
+
         // Get all registrations
         List<SubjectRegistration> registrations = subjectRegistrationRepository.findByTeacherId(teacherId);
         data.put("totalSubjectsRegistered", registrations.size());
-        
+
         // Map subjects to DTOs
         List<Map<String, Object>> subjects = registrations.stream()
-            .map(reg -> {
-                Map<String, Object> subject = new HashMap<>();
-                subject.put("code", reg.getSubject().getSkillCode());
-                subject.put("name", reg.getSubject().getSubjectName());
-                subject.put("system", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
-                subject.put("registeredDate", reg.getCreationTimestamp());
-                return subject;
-            })
-            .collect(Collectors.toList());
+                .map(reg -> {
+                    Map<String, Object> subject = new HashMap<>();
+                    subject.put("code", reg.getSubject().getSkillCode());
+                    subject.put("name", reg.getSubject().getSubjectName());
+                    subject.put("system", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
+                    subject.put("registeredDate", reg.getCreationTimestamp());
+                    return subject;
+                })
+                .collect(Collectors.toList());
         data.put("registeredSubjects", subjects);
-        
+
         // Get assignments
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByTeacherId(teacherId);
         data.put("totalAssignments", assignments.size());
-        
+
         // Get trials
         List<TrialTeaching> trials = trialTeachingRepository.findByTeacherId(teacherId);
         data.put("totalTrials", trials.size());
-        
+
         // Get exams
         List<AptechExam> exams = aptechExamRepository.findByTeacherId(teacherId);
         data.put("totalExams", exams.size());
-        
+
         // Map exams to DTOs
         List<Map<String, Object>> examList = exams.stream()
-            .map(exam -> {
-                Map<String, Object> examData = new HashMap<>();
-                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
-                examData.put("examDate", exam.getExamDate());
-                examData.put("subjectName", exam.getSubject().getSubjectName());
-                examData.put("score", exam.getScore());
-                examData.put("passed", exam.getResult() == ExamResult.PASS);
-                return examData;
-            })
-            .collect(Collectors.toList());
+                .map(exam -> {
+                    Map<String, Object> examData = new HashMap<>();
+                    examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
+                    examData.put("examDate", exam.getExamDate());
+                    examData.put("subjectName", exam.getSubject().getSubjectName());
+                    examData.put("score", exam.getScore());
+                    examData.put("passed", exam.getResult() == ExamResult.PASS);
+                    return examData;
+                })
+                .collect(Collectors.toList());
         data.put("exams", examList);
-        
+
         // Calculate pass rate
         long passedExams = exams.stream().filter(e -> e.getResult() == ExamResult.PASS).count();
         double passRate = exams.isEmpty() ? 0 : (passedExams * 100.0 / exams.size());
         data.put("passRate", Math.round(passRate * 10) / 10.0);
-        
+
         data.put("period", formatPeriod(startDate, endDate));
-        
+
         return data;
     }
-    
+
     @Transactional(readOnly = true)
     public Map<String, Object> aggregateSubjectAnalysisData(String subjectId, LocalDate startDate, LocalDate endDate) {
         Map<String, Object> data = new HashMap<>();
 
         // Get subject info - handle multiple subjects with same skill code
         List<Subject> subjects = subjectRepository.findAll().stream()
-            .filter(s -> s.getSkill() != null && s.getSkill().getSkillCode().equals(subjectId))
-            .collect(Collectors.toList());
+                .filter(s -> s.getSkill() != null && s.getSkill().getSkillCode().equals(subjectId))
+                .collect(Collectors.toList());
 
         if (subjects.isEmpty()) {
             throw new RuntimeException("Subject not found: " + subjectId);
@@ -1344,59 +1344,59 @@ public class ReportService {
 
         // Get registrations by querying all and filtering by subject and date range
         List<SubjectRegistration> allRegistrations = subjectRegistrationRepository.findAll().stream()
-            .filter(r -> r.getSubject() != null && r.getSubject().getSkill() != null && r.getSubject().getSkillCode().equals(subjectId))
-            .collect(Collectors.toList());
+                .filter(r -> r.getSubject() != null && r.getSubject().getSkill() != null && r.getSubject().getSkillCode().equals(subjectId))
+                .collect(Collectors.toList());
 
         // Filter registrations by date range if provided
         List<SubjectRegistration> registrations = allRegistrations.stream()
-            .filter(reg -> {
-                if (startDate == null && endDate == null) return true;
-                LocalDate regDate = reg.getCreationTimestamp().toLocalDate();
-                boolean afterStart = startDate == null || !regDate.isBefore(startDate);
-                boolean beforeEnd = endDate == null || !regDate.isAfter(endDate);
-                return afterStart && beforeEnd;
-            })
-            .collect(Collectors.toList());
+                .filter(reg -> {
+                    if (startDate == null && endDate == null) return true;
+                    LocalDate regDate = reg.getCreationTimestamp().toLocalDate();
+                    boolean afterStart = startDate == null || !regDate.isBefore(startDate);
+                    boolean beforeEnd = endDate == null || !regDate.isAfter(endDate);
+                    return afterStart && beforeEnd;
+                })
+                .collect(Collectors.toList());
 
         data.put("totalTeachersRegistered", registrations.size());
 
         // Map teachers
         List<Map<String, Object>> teachers = registrations.stream()
-            .map(reg -> {
-                Map<String, Object> teacher = new HashMap<>();
-                User user = reg.getTeacher();
-                teacher.put("teacherId", user.getTeacherCode());
-                teacher.put("teacherName", user.getUsername());
-                teacher.put("qualification", user.getUserDetails().getQualification() != null ? user.getUserDetails().getQualification() : "N/A");
-                teacher.put("registeredDate", reg.getCreationTimestamp());
-                return teacher;
-            })
-            .collect(Collectors.toList());
+                .map(reg -> {
+                    Map<String, Object> teacher = new HashMap<>();
+                    User user = reg.getTeacher();
+                    teacher.put("teacherId", user.getTeacherCode());
+                    teacher.put("teacherName", user.getUsername());
+                    teacher.put("qualification", user.getUserDetails().getQualification() != null ? user.getUserDetails().getQualification() : "N/A");
+                    teacher.put("registeredDate", reg.getCreationTimestamp());
+                    return teacher;
+                })
+                .collect(Collectors.toList());
         data.put("registeredTeachers", teachers);
 
         // Get assignments for this subject, filtered by date range
         List<TeachingAssignment> allAssignments = teachingAssignmentRepository.findAll().stream()
-            .filter(a -> a.getScheduleClass().getSubject().getSkillCode().equals(subjectId))
-            .collect(Collectors.toList());
+                .filter(a -> a.getScheduleClass().getSubject().getSkillCode().equals(subjectId))
+                .collect(Collectors.toList());
 
         // Filter assignments by date range if provided (using assigned date or class dates)
         List<TeachingAssignment> filteredAssignments = allAssignments.stream()
-            .filter(a -> {
-                if (startDate == null && endDate == null) return true;
-                // Use assigned date if available, otherwise use class start date
-                LocalDate assignmentDate = a.getAssignedAt() != null ?
-                    a.getAssignedAt().toLocalDate() :
-                    (a.getScheduleClass().getStartDate() != null ? a.getScheduleClass().getStartDate() : null);
-                if (assignmentDate == null) return true; // Include if no date available
-                boolean afterStart = startDate == null || !assignmentDate.isBefore(startDate);
-                boolean beforeEnd = endDate == null || !assignmentDate.isAfter(endDate);
-                return afterStart && beforeEnd;
-            })
-            .collect(Collectors.toList());
+                .filter(a -> {
+                    if (startDate == null && endDate == null) return true;
+                    // Use assigned date if available, otherwise use class start date
+                    LocalDate assignmentDate = a.getAssignedAt() != null ?
+                            a.getAssignedAt().toLocalDate() :
+                            (a.getScheduleClass().getStartDate() != null ? a.getScheduleClass().getStartDate() : null);
+                    if (assignmentDate == null) return true; // Include if no date available
+                    boolean afterStart = startDate == null || !assignmentDate.isBefore(startDate);
+                    boolean beforeEnd = endDate == null || !assignmentDate.isAfter(endDate);
+                    return afterStart && beforeEnd;
+                })
+                .collect(Collectors.toList());
 
         long activeAssignments = filteredAssignments.stream()
-            .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
-            .count();
+                .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
+                .count();
         data.put("totalActiveAssignments", activeAssignments);
 
         // Analysis
@@ -1424,31 +1424,31 @@ public class ReportService {
 
         // Get all exams in period
         List<AptechExam> exams = aptechExamRepository.findAll().stream()
-            .filter(e -> {
-                if (e.getExamDate() == null) return false;
-                boolean afterStart = startDate == null || !e.getExamDate().isBefore(startDate);
-                boolean beforeEnd = endDate == null || !e.getExamDate().isAfter(endDate);
-                return afterStart && beforeEnd;
-            })
-            .collect(Collectors.toList());
+                .filter(e -> {
+                    if (e.getExamDate() == null) return false;
+                    boolean afterStart = startDate == null || !e.getExamDate().isBefore(startDate);
+                    boolean beforeEnd = endDate == null || !e.getExamDate().isAfter(endDate);
+                    return afterStart && beforeEnd;
+                })
+                .collect(Collectors.toList());
 
         data.put("totalExams", exams.size());
 
         // Map to DTOs matching template expectations
         List<Map<String, Object>> examDetails = exams.stream()
-            .map(exam -> {
-                Map<String, Object> examData = new HashMap<>();
-                examData.put("teacherCode", exam.getTeacher() != null ? exam.getTeacher().getTeacherCode() : "N/A");
-                examData.put("teacherName", exam.getTeacher() != null ? exam.getTeacher().getUsername() : "N/A");
-                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
-                examData.put("subjectName", exam.getSubject().getSubjectName());
-                examData.put("examDate", exam.getExamDate());
-                examData.put("score", exam.getScore());
-                examData.put("passed", exam.getResult() == ExamResult.PASS);
-                examData.put("certificateUrl", null); // Not implemented yet
-                return examData;
-            })
-            .collect(Collectors.toList());
+                .map(exam -> {
+                    Map<String, Object> examData = new HashMap<>();
+                    examData.put("teacherCode", exam.getTeacher() != null ? exam.getTeacher().getTeacherCode() : "N/A");
+                    examData.put("teacherName", exam.getTeacher() != null ? exam.getTeacher().getUsername() : "N/A");
+                    examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
+                    examData.put("subjectName", exam.getSubject().getSubjectName());
+                    examData.put("examDate", exam.getExamDate());
+                    examData.put("score", exam.getScore());
+                    examData.put("passed", exam.getResult() == ExamResult.PASS);
+                    examData.put("certificateUrl", null); // Not implemented yet
+                    return examData;
+                })
+                .collect(Collectors.toList());
         data.put("examDetails", examDetails);
 
         // Stats
@@ -1466,38 +1466,38 @@ public class ReportService {
     @Transactional(readOnly = true)
     public Map<String, Object> aggregateTrialDetailsData(LocalDate startDate, LocalDate endDate) {
         Map<String, Object> data = new HashMap<>();
-        
+
         // Get all trials in period
         List<TrialTeaching> trials = trialTeachingRepository.findAll().stream()
-            .filter(t -> {
-                if (t.getTeachingDate() == null) return false;
-                boolean afterStart = startDate == null || !t.getTeachingDate().isBefore(startDate);
-                boolean beforeEnd = endDate == null || !t.getTeachingDate().isAfter(endDate);
-                return afterStart && beforeEnd;
-            })
-            .collect(Collectors.toList());
-            
+                .filter(t -> {
+                    if (t.getTeachingDate() == null) return false;
+                    boolean afterStart = startDate == null || !t.getTeachingDate().isBefore(startDate);
+                    boolean beforeEnd = endDate == null || !t.getTeachingDate().isAfter(endDate);
+                    return afterStart && beforeEnd;
+                })
+                .collect(Collectors.toList());
+
         data.put("totalTrials", trials.size());
-        
+
         // Map to DTOs
         List<Map<String, Object>> trialList = trials.stream()
-            .map(trial -> {
-                Map<String, Object> trialData = new HashMap<>();
-                trialData.put("teacherName", trial.getTeacher() != null && trial.getTeacher().getUserDetails() != null ? 
-                    trial.getTeacher().getUserDetails().getFirstName() + " " + trial.getTeacher().getUserDetails().getLastName() : "N/A");
-                trialData.put("subjectCode", trial.getSubject().getSkillCode());
-                trialData.put("subjectName", trial.getSubject().getSubjectName());
-                trialData.put("teachingDate", trial.getTeachingDate());
-                
-                TrialEvaluation eval = getFirstEvaluation(trial);
-                trialData.put("score", eval != null ? eval.getScore() : "N/A");
-                trialData.put("result", eval != null ? eval.getConclusion().toString() : "PENDING");
-                
-                return trialData;
-            })
-            .collect(Collectors.toList());
+                .map(trial -> {
+                    Map<String, Object> trialData = new HashMap<>();
+                    trialData.put("teacherName", trial.getTeacher() != null && trial.getTeacher().getUserDetails() != null ?
+                            trial.getTeacher().getUserDetails().getFirstName() + " " + trial.getTeacher().getUserDetails().getLastName() : "N/A");
+                    trialData.put("subjectCode", trial.getSubject().getSkillCode());
+                    trialData.put("subjectName", trial.getSubject().getSubjectName());
+                    trialData.put("teachingDate", trial.getTeachingDate());
+
+                    TrialEvaluation eval = getFirstEvaluation(trial);
+                    trialData.put("score", eval != null ? eval.getScore() : "N/A");
+                    trialData.put("result", eval != null ? eval.getConclusion().toString() : "PENDING");
+
+                    return trialData;
+                })
+                .collect(Collectors.toList());
         data.put("trials", trialList);
-        
+
         // Stats
         long passed = trials.stream().filter(t -> {
             TrialEvaluation eval = getFirstEvaluation(t);
@@ -1507,9 +1507,9 @@ public class ReportService {
         data.put("failedTrials", trials.size() - passed);
         double passRate = trials.isEmpty() ? 0 : (passed * 100.0 / trials.size());
         data.put("passRate", Math.round(passRate * 100.0) / 100.0);
-        
+
         data.put("period", formatPeriod(startDate, endDate));
-        
+
         return data;
     }
 
@@ -1519,7 +1519,7 @@ public class ReportService {
 
         // Get teacher info
         User teacher = userRepository.findById(teacherId)
-            .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
+                .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
 
         // Profile section
         Map<String, Object> profile = new HashMap<>();
@@ -1532,66 +1532,66 @@ public class ReportService {
         // Registered subjects
         List<SubjectRegistration> registrations = subjectRegistrationRepository.findByTeacherId(teacherId);
         List<Map<String, Object>> registeredSubjects = registrations.stream()
-            .map(reg -> {
-                Map<String, Object> subject = new HashMap<>();
-                subject.put("code", reg.getSubject().getSkillCode());
-                subject.put("name", reg.getSubject().getSubjectName());
-                subject.put("system", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
-                subject.put("registeredDate", reg.getCreationTimestamp());
-                return subject;
-            })
-            .collect(Collectors.toList());
+                .map(reg -> {
+                    Map<String, Object> subject = new HashMap<>();
+                    subject.put("code", reg.getSubject().getSkillCode());
+                    subject.put("name", reg.getSubject().getSubjectName());
+                    subject.put("system", reg.getSubject().getSystem() != null ? reg.getSubject().getSystem().getSystemName() : "N/A");
+                    subject.put("registeredDate", reg.getCreationTimestamp());
+                    return subject;
+                })
+                .collect(Collectors.toList());
         data.put("registeredSubjects", registeredSubjects);
 
         // Current assignments (assigned but not completed)
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByTeacherId(teacherId);
         List<Map<String, Object>> currentAssignments = assignments.stream()
-            .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
-            .map(a -> {
-                Map<String, Object> assign = new HashMap<>();
-                assign.put("subjectName", a.getScheduleClass().getSubject().getSubjectName());
-                assign.put("className", a.getScheduleClass().getClassName());
-                assign.put("startDate", a.getScheduleClass().getStartDate());
-                assign.put("endDate", a.getScheduleClass().getEndDate());
-                return assign;
-            })
-            .collect(Collectors.toList());
+                .filter(a -> a.getStatus() == AssignmentStatus.ASSIGNED)
+                .map(a -> {
+                    Map<String, Object> assign = new HashMap<>();
+                    assign.put("subjectName", a.getScheduleClass().getSubject().getSubjectName());
+                    assign.put("className", a.getScheduleClass().getClassName());
+                    assign.put("startDate", a.getScheduleClass().getStartDate());
+                    assign.put("endDate", a.getScheduleClass().getEndDate());
+                    return assign;
+                })
+                .collect(Collectors.toList());
         data.put("currentAssignments", currentAssignments);
 
         // Past assignments (completed)
         List<Map<String, Object>> pastAssignments = assignments.stream()
-            .filter(a -> a.getStatus() == AssignmentStatus.COMPLETED)
-            .map(a -> {
-                Map<String, Object> assign = new HashMap<>();
-                assign.put("subjectName", a.getScheduleClass().getSubject().getSubjectName());
-                assign.put("className", a.getScheduleClass().getClassName());
-                assign.put("startDate", a.getScheduleClass().getStartDate());
-                assign.put("endDate", a.getScheduleClass().getEndDate());
-                return assign;
-            })
-            .collect(Collectors.toList());
+                .filter(a -> a.getStatus() == AssignmentStatus.COMPLETED)
+                .map(a -> {
+                    Map<String, Object> assign = new HashMap<>();
+                    assign.put("subjectName", a.getScheduleClass().getSubject().getSubjectName());
+                    assign.put("className", a.getScheduleClass().getClassName());
+                    assign.put("startDate", a.getScheduleClass().getStartDate());
+                    assign.put("endDate", a.getScheduleClass().getEndDate());
+                    return assign;
+                })
+                .collect(Collectors.toList());
         data.put("pastAssignments", pastAssignments);
 
         // Exam history
         List<AptechExam> exams = aptechExamRepository.findByTeacherId(teacherId);
         List<Map<String, Object>> examHistory = exams.stream()
-            .map(exam -> {
-                Map<String, Object> examData = new HashMap<>();
-                examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
-                examData.put("examDate", exam.getExamDate());
-                examData.put("subjectName", exam.getSubject().getSubjectName());
-                examData.put("score", exam.getScore());
-                examData.put("passed", exam.getResult() == ExamResult.PASS);
-                return examData;
-            })
-            .collect(Collectors.toList());
+                .map(exam -> {
+                    Map<String, Object> examData = new HashMap<>();
+                    examData.put("sessionName", exam.getSession() != null ? exam.getSession().getNote().toString() : "N/A");
+                    examData.put("examDate", exam.getExamDate());
+                    examData.put("subjectName", exam.getSubject().getSubjectName());
+                    examData.put("score", exam.getScore());
+                    examData.put("passed", exam.getResult() == ExamResult.PASS);
+                    return examData;
+                })
+                .collect(Collectors.toList());
         data.put("examHistory", examHistory);
 
         // Overall pass rate calculation
         long totalActivities = registrations.size() + exams.size() + assignments.size();
         long passedActivities = registrations.stream().filter(r -> r.getStatus() == RegistrationStatus.COMPLETED).count() +
-                               exams.stream().filter(e -> e.getResult() == ExamResult.PASS).count() +
-                               assignments.stream().filter(a -> a.getStatus() == AssignmentStatus.COMPLETED).count();
+                exams.stream().filter(e -> e.getResult() == ExamResult.PASS).count() +
+                assignments.stream().filter(a -> a.getStatus() == AssignmentStatus.COMPLETED).count();
         double overallPassRate = totalActivities > 0 ? (passedActivities * 100.0 / totalActivities) : 0;
         data.put("overallPassRate", Math.round(overallPassRate * 100.0) / 100.0);
 
