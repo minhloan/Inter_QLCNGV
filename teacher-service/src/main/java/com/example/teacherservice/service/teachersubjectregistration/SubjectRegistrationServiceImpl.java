@@ -181,8 +181,12 @@ public class SubjectRegistrationServiceImpl implements SubjectRegistrationServic
 
         reg.setYear(request.getTargetYear());
         reg.setQuarter(request.getQuarter());
-        reg.setReasonForCarryOver(request.getReasonForCarryOver());
+
+
+        reg.setReasonForCarryOver2(request.getReasonForCarryOver2());
+
         reg.setStatus(RegistrationStatus.CARRYOVER);
+
 
         SubjectRegistration saved = subjectRegistrationRepository.save(reg);
         return toDto(saved);
