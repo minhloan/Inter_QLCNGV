@@ -9,5 +9,5 @@ import lombok.Setter;
 public class CarryOverRequest {
     private Integer targetYear;
     private Quarter quarter;
-    private String reasonForCarryOver;
+    private String reasonForCarryOver2;
 }
