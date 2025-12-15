@@ -211,15 +211,17 @@ public class SubjectServiceImpl implements SubjectService {
     @Override
     public List<SubjectDto> getAllSubjectsByTrial() {
         return subjectRepository.findAll().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+            .filter(s -> Boolean.TRUE.equals(s.getIsActive())) // only active subjects for trial creation
+            .map(this::toDto)
+            .collect(Collectors.toList());
     }
 
     @Override
     public List<SubjectDto> searchSubjects(String keyword) {
         return subjectRepository.findBySubjectNameContainingIgnoreCase(keyword).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+            .filter(s -> Boolean.TRUE.equals(s.getIsActive())) // only active subjects when searching for trial
+            .map(this::toDto)
+            .collect(Collectors.toList());
     }
 
 
