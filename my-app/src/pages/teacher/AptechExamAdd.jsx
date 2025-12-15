@@ -25,6 +25,8 @@ const AptechExamAdd = () => {
     const [selectedSubject, setSelectedSubject] = useState('');
     const [attempt, setAttempt] = useState(1);
     const [retakeReason, setRetakeReason] = useState('');
+    const [subjectSearch, setSubjectSearch] = useState('');
+    const [filteredSubjects, setFilteredSubjects] = useState([]);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
@@ -37,6 +39,16 @@ const AptechExamAdd = () => {
             calculateAttempt();
         }
     }, [selectedSubject, previousExams]);
+
+    useEffect(() => {
+        if (subjectSearch.trim() === '') {
+            setFilteredSubjects(subjects);
+        } else {
+            setFilteredSubjects(subjects.filter(sub =>
+                sub.subjectName.toLowerCase().includes(subjectSearch.toLowerCase())
+            ));
+        }
+    }, [subjectSearch, subjects]);
 
     const loadData = async () => {
         try {
@@ -64,6 +76,7 @@ const AptechExamAdd = () => {
             
             setSessions(upcomingSessions);
             setSubjects(subjectsData);
+            setFilteredSubjects(subjectsData);
             setPreviousExams(examsData);
         } catch (error) {
             showToast('Lỗi', 'Không thể tải dữ liệu', 'danger');
@@ -262,6 +275,13 @@ const AptechExamAdd = () => {
 
                                 <div className="form-group">
                                     <label className="form-label">Môn thi *</label>
+                                    <input
+                                        type="text"
+                                        className="form-control mb-2"
+                                        placeholder="Tìm kiếm môn học..."
+                                        value={subjectSearch}
+                                        onChange={e => setSubjectSearch(e.target.value)}
+                                    />
                                     <select
                                         className="form-select"
                                         value={selectedSubject}
@@ -269,7 +289,7 @@ const AptechExamAdd = () => {
                                         required
                                     >
                                         <option value="">Chọn môn thi</option>
-                                        {subjects.map(subject => (
+                                        {filteredSubjects.map(subject => (
                                             <option key={subject.id} value={subject.id}>
                                                 {subject.subjectName}
                                             </option>
