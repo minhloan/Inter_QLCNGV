@@ -255,9 +255,9 @@ const AdminManageSubject = () => {
                                     <button className="dropdown-item" onClick={handleGoToSystems}>
                                         <i className="bi bi-diagram-3 me-2"></i> Trang Hệ Đào Tạo
                                     </button>
-                                    <button className="dropdown-item" onClick={handleExport}>
+                                    {/* <button className="dropdown-item" onClick={handleExport}>
                                         <i className="bi bi-download me-2"></i> Xuất Excel
-                                    </button>
+                                    </button> */}
                                     <button className="dropdown-item" onClick={handleExportAllSkill}>
                                         <i className="bi bi-cloud-download me-2"></i> Xuất All Skill
                                     </button>
