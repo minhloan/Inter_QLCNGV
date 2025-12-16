@@ -183,6 +183,21 @@ public class UserServiceImpl implements UserService {
         toDelete.setActive(Active.INACTIVE);
         userRepository.save(toDelete);
     }
+    //Mới thêm xoá cứng nhưng lỗi
+    @Override
+    public void hardDeleteUserById(String id) {
+        User user = findUserById(id);
+
+        // Chỉ cho xoá cứng khi đã INACTIVE
+        if (user.getActive() == Active.ACTIVE) {
+            throw new ValidationException(
+                    Map.of("user", "Phải ngừng hoạt động trước khi xoá vĩnh viễn")
+            );
+        }
+
+        userRepository.delete(user);
+    }
+
 
     @Override
     public User findUserById(String id) {

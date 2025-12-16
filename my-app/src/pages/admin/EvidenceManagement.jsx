@@ -301,15 +301,6 @@ const EvidenceManagement = () => {
                         <td>{getStatusBadge(evidence.status)}</td>
                         <td className="text-center">
                           <div className="action-buttons">
-                            {(!evidence.ocr_text || evidence.status === 'PENDING' || evidence.status === 'pending') && (
-                              <button
-                                className="btn btn-sm btn-warning btn-action"
-                                onClick={() => handleReprocessOCR(evidence.id)}
-                                title="Xử lý OCR lại"
-                              >
-                                <i className="bi bi-arrow-clockwise"></i>
-                              </button>
-                            )}
                             {(evidence.status === 'PENDING' || evidence.status === 'pending') && (
                               <>
                                 <button

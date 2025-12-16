@@ -11,7 +11,8 @@ import {
     getAptechExamSessions,
     exportSummary,
     exportList,
-    exportStats
+    exportStats,
+    adminUpdateExamScore
 } from '../../api/aptechExam.js';
 
 const AptechExamManagement = () => {
@@ -139,6 +140,9 @@ const AptechExamManagement = () => {
     };
 
     const getStatusBadge = (exam) => {
+        // If exam is rejected, always show "Không đạt"
+        if (exam?.aptechStatus === 'REJECTED') return <span className={`badge badge-status danger`}>Không đạt</span>;
+        
         const s = exam && (exam.score !== null && exam.score !== undefined) ? Number(exam.score) : null;
         if (s === null) return <span className={`badge badge-status warning`}>Chờ thi</span>;
         if (s >= 80) return <span className={`badge badge-status success`}>Đạt</span>;
@@ -388,7 +392,9 @@ const AptechExamManagement = () => {
                                                 <td>{exam.examTime}</td>
 
                                                 <td>
-                                                    {exam.score != null ? (
+                                                    {exam.aptechStatus === 'REJECTED' ? (
+                                                        <span className="text-danger fw-bold">0</span>
+                                                    ) : exam.score != null ? (
                                                         <span className={exam.score >= 80 ? "text-success fw-bold" : exam.score >= 60 ? "text-warning fw-bold" : "text-danger fw-bold"}>
                                                             {exam.score}
                                                         </span>
@@ -403,6 +409,8 @@ const AptechExamManagement = () => {
                                                         <span className="badge badge-status success">Đã duyệt</span>
                                                     ) : exam.aptechStatus === 'REJECTED' ? (
                                                         <span className="badge badge-status danger">Từ chối</span>
+                                                    ) : exam.score == null ? (
+                                                        <span className="text-muted small">Chưa có điểm</span>
                                                     ) : (
                                                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
                                                             <button
@@ -432,10 +440,15 @@ const AptechExamManagement = () => {
                                                                 title="Từ chối"
                                                                 onClick={async () => {
                                                                     const prev = exams;
-                                                                    setExams(prevEx => prevEx.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED' } : e));
+                                                                    setExams(prevEx => prevEx.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED', score: 0 } : e));
                                                                     try {
+                                                                        // First update the score to 0
+                                                                        await adminUpdateExamScore(exam.id, 0, 'FAIL');
+                                                                        // Then update the status to REJECTED
                                                                         await adminUpdateExamStatus(exam.id, 'REJECTED');
-                                                                        showToast('Thành công', 'Đã từ chối', 'success');
+                                                                        // Reload data from server to ensure consistency
+                                                                        await loadData();
+                                                                        showToast('Thành công', 'Đã từ chối và điểm số được đặt về 0', 'success');
                                                                     } catch (err) {
                                                                         setExams(prev);
                                                                         showToast('Lỗi', 'Không thể từ chối', 'danger');

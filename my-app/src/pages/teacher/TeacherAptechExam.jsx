@@ -67,6 +67,9 @@ const TeacherAptechExam = () => {
     };
 
     const getResultBadge = (exam) => {
+        // If exam is rejected, always show "Không đạt"
+        if (exam?.aptechStatus === 'REJECTED') return <span className={`badge badge-status danger`}>Không đạt</span>;
+        
         const s = exam && (exam.score !== null && exam.score !== undefined) ? Number(exam.score) : null;
         if (s === null) return <span className={`badge badge-status warning`}>Chờ thi</span>;
         if (s >= 80) return <span className={`badge badge-status success`}>Đạt</span>;
@@ -88,9 +91,15 @@ const TeacherAptechExam = () => {
     };
 
     const renderScoreCell = (exam) => {
-        const score = exam.score;
         const start = parseExamStart(exam);
         const now = new Date();
+
+        // If exam is rejected, display score as 0
+        if (exam.aptechStatus === 'REJECTED') {
+            return <span className="text-danger fw-bold">0</span>;
+        }
+
+        const score = exam.score;
 
         if (score !== null && score !== undefined) {
             const cls = score >= 80 ? 'text-success fw-bold' : score >= 60 ? 'text-warning fw-bold' : 'text-danger fw-bold';

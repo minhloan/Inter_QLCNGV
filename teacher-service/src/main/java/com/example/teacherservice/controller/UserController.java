@@ -132,6 +132,13 @@ public class UserController {
         userService.deleteUserById(id);
         return ResponseEntity.ok().build();
     }
+    //mới thêm
+    @DeleteMapping("/hard-delete/{id}")
+    public ResponseEntity<Void> hardDeleteUser(@PathVariable String id) {
+        userService.hardDeleteUserById(id);
+        return ResponseEntity.noContent().build();
+    }
+
 
     @PostMapping("/update-password")
     public ResponseEntity<Void> updatePassword(@RequestBody UpdatePassword request) {

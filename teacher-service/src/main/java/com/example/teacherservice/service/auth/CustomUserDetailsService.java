@@ -24,6 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
         
         AuthUserDto dto = modelMapper.map(user, AuthUserDto.class);
+        dto.setActive(user.getActive());//mới thêm
         if (user.getPrimaryRole() != null) {
             dto.setRole(user.getPrimaryRole());
             dto.getRoles().add(user.getPrimaryRole());

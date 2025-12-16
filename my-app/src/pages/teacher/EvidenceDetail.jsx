@@ -4,155 +4,162 @@ import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { useAuth } from '../../contexts/AuthContext';
-import { getEvidenceById } from '../../api/evidence';
+import { getEvidenceById, updateOCRText } from '../../api/evidence';
 import { getFile, getFileAsDataUrl, downloadEvidenceFile } from '../../api/file';
 
 const FilePreview = ({ evidence }) => {
-  const [fileUrl, setFileUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const [fileUrl, setFileUrl] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const loadFile = async () => {
-      if (!evidence.fileId) return;
+    useEffect(() => {
+        const loadFile = async () => {
+            if (!evidence.fileId) return;
 
-      try {
-        setLoading(true);
-        setError(null);
-        const url = await getFile(evidence.fileId);
-        setFileUrl(url);
-      } catch (err) {
-        console.error('Error loading file for preview:', err);
-        setError('Không thể tải file để xem trước');
-      } finally {
-        setLoading(false);
-      }
-    };
+            try {
+                setLoading(true);
+                setError(null);
+                const url = await getFile(evidence.fileId);
+                setFileUrl(url);
+            } catch (err) {
+                console.error('Error loading file for preview:', err);
+                setError('Không thể tải file để xem trước');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    loadFile();
-  }, [evidence.fileId]);
+        loadFile();
+    }, [evidence.fileId]);
 
-  if (loading) {
-    return (
-      <div className="preview-loading">
-        <div className="loading-spinner"></div>
-        <p>Đang tải file...</p>
-      </div>
-    );
-  }
+    if (loading) {
+        return (
+            <div className="preview-loading">
+                <div className="loading-spinner"></div>
+                <p>Đang tải file...</p>
+            </div>
+        );
+    }
 
-  if (error) {
-    return (
-      <div className="preview-error">
-        <i className="bi bi-exclamation-triangle text-warning"></i>
-        <p>{error}</p>
-      </div>
-    );
-  }
+    if (error) {
+        return (
+            <div className="preview-error">
+                <i className="bi bi-exclamation-triangle text-warning"></i>
+                <p>{error}</p>
+            </div>
+        );
+    }
 
-  const fileExtension = evidence.fileName ? evidence.fileName.split('.').pop().toLowerCase() : 'pdf';
-  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension);
-  const isPdf = fileExtension === 'pdf';
+    const fileExtension = evidence.fileName ? evidence.fileName.split('.').pop().toLowerCase() : 'pdf';
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension);
+    const isPdf = fileExtension === 'pdf';
 
-  if (isImage) {
-    return (
-      <div className="image-preview">
-        <img
-          src={fileUrl}
-          alt="Evidence Preview"
-          className="preview-image"
-          onError={() => setError('Không thể tải ảnh preview')}
-        />
-      </div>
-    );
-  } else if (isPdf) {
-    return (
-      <div className="pdf-preview">
-        <iframe
-          src={fileUrl}
-          className="preview-pdf"
-          title="PDF Preview"
-        ></iframe>
-      </div>
-    );
-  } else {
-    return (
-      <div className="file-preview">
-        <div className="file-info">
-          <i className="bi bi-file-earmark-text"></i>
-          <div>
-            <p><strong>Tên file:</strong> {evidence.fileName || 'N/A'}</p>
-            <p><strong>Loại file:</strong> {fileExtension.toUpperCase()}</p>
-            <p>File này không thể preview trực tiếp. Vui lòng tải xuống để xem.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    if (isImage) {
+        return (
+            <div className="image-preview">
+                <img
+                    src={fileUrl}
+                    alt="Evidence Preview"
+                    className="preview-image"
+                    onError={() => setError('Không thể tải ảnh preview')}
+                />
+            </div>
+        );
+    } else if (isPdf) {
+        return (
+            <div className="pdf-preview">
+                <iframe
+                    src={fileUrl}
+                    className="preview-pdf"
+                    title="PDF Preview"
+                ></iframe>
+            </div>
+        );
+    } else {
+        return (
+            <div className="file-preview">
+                <div className="file-info">
+                    <i className="bi bi-file-earmark-text"></i>
+                    <div>
+                        <p><strong>Tên file:</strong> {evidence.fileName || 'N/A'}</p>
+                        <p><strong>Loại file:</strong> {fileExtension.toUpperCase()}</p>
+                        <p>File này không thể preview trực tiếp. Vui lòng tải xuống để xem.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 };
 
 const EvidenceDetail = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [evidence, setEvidence] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showPreview, setShowPreview] = useState(false);
-  const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [evidence, setEvidence] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [showPreview, setShowPreview] = useState(false);
+    const [showOCREditModal, setShowOCREditModal] = useState(false);
+    const [ocrFormData, setOcrFormData] = useState({
+        ocrText: '',
+        ocrFullName: '',
+        ocrEvaluator: ''
+    });
+    const [savingOCR, setSavingOCR] = useState(false);
+    const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
 
-  useEffect(() => {
-    if (id) {
-      loadEvidenceDetail();
-    }
-  }, [id]);
+    useEffect(() => {
+        if (id) {
+            loadEvidenceDetail();
+        }
+    }, [id]);
 
-  const loadEvidenceDetail = async () => {
-    try {
-      setLoading(true);
-      const data = await getEvidenceById(id);
-      setEvidence(data);
-    } catch (error) {
-      console.error('Error loading evidence detail:', error);
-      showToast('Lỗi', 'Không thể tải chi tiết minh chứng', 'danger');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const loadEvidenceDetail = async () => {
+        try {
+            setLoading(true);
+            const data = await getEvidenceById(id);
+            setEvidence(data);
+        } catch (error) {
+            console.error('Error loading evidence detail:', error);
+            showToast('Lỗi', 'Không thể tải chi tiết minh chứng', 'danger');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const showToast = (title, message, type) => {
-    setToast({ show: true, title, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-  };
+    const showToast = (title, message, type) => {
+        setToast({ show: true, title, message, type });
+        setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+    };
 
-  const handleDownload = async () => {
-    if (evidence.fileId) {
-      try {
-        await downloadEvidenceFile(evidence.fileId, evidence.id, evidence.fileName);
-        showToast('Thành công', 'File đã được tải xuống', 'success');
-      } catch (error) {
-        console.error('Download failed:', error);
-        showToast('Lỗi', 'Không thể tải xuống file', 'danger');
-      }
-    }
-  };
+    const handleDownload = async () => {
+        if (evidence.fileId) {
+            try {
+                await downloadEvidenceFile(evidence.fileId, evidence.id, evidence.fileName);
+                showToast('Thành công', 'File đã được tải xuống', 'success');
+            } catch (error) {
+                console.error('Download failed:', error);
+                showToast('Lỗi', 'Không thể tải xuống file', 'danger');
+            }
+        }
+    };
 
-  const handlePreview = async () => {
-    if (evidence.fileId) {
-      try {
-        // Determine if it's an image or PDF based on file extension
-        const fileExtension = evidence.fileName ? evidence.fileName.split('.').pop().toLowerCase() : 'pdf';
-        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension);
-        const isPdf = fileExtension === 'pdf';
+    const handlePreview = async () => {
+        if (evidence.fileId) {
+            try {
+                // Determine if it's an image or PDF based on file extension
+                const fileExtension = evidence.fileName ? evidence.fileName.split('.').pop().toLowerCase() : 'pdf';
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(fileExtension);
+                const isPdf = fileExtension === 'pdf';
 
-        if (isImage || isPdf) {
-          // Use the proper API function to get the file URL
-          const fileUrl = await getFile(evidence.fileId);
+                if (isImage || isPdf) {
+                    // Use the proper API function to get the file URL
+                    const fileUrl = await getFile(evidence.fileId);
 
-          if (isImage) {
-            // For images, open in new window with proper image display
-            const previewWindow = window.open('', '_blank');
-            if (previewWindow) {
-              previewWindow.document.write(`
+                    if (isImage) {
+                        // For images, open in new window with proper image display
+                        const previewWindow = window.open('', '_blank');
+                        if (previewWindow) {
+                            previewWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
                   <head>
@@ -206,438 +213,695 @@ const EvidenceDetail = () => {
                   </body>
                 </html>
               `);
-              previewWindow.document.close();
+                            previewWindow.document.close();
+                        }
+                    } else if (isPdf) {
+                        // For PDFs, open in new tab
+                        window.open(fileUrl, '_blank');
+                    }
+                } else {
+                    // For other files, open directly in new tab
+                    const fileUrl = await getFile(evidence.fileId);
+                    window.open(fileUrl, '_blank');
+                }
+            } catch (error) {
+                console.error('Preview failed:', error);
+                showToast('Lỗi', 'Không thể xem trước file', 'danger');
             }
-          } else if (isPdf) {
-            // For PDFs, open in new tab
-            window.open(fileUrl, '_blank');
-          }
-        } else {
-          // For other files, open directly in new tab
-          const fileUrl = await getFile(evidence.fileId);
-          window.open(fileUrl, '_blank');
         }
-      } catch (error) {
-        console.error('Preview failed:', error);
-        showToast('Lỗi', 'Không thể xem trước file', 'danger');
-      }
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      VERIFIED: { label: 'Đã xác minh', class: 'success' },
-      REJECTED: { label: 'Từ chối', class: 'danger' },
-      PENDING: { label: 'Chờ xác minh', class: 'warning' }
     };
-    const statusInfo = statusMap[status] || { label: status, class: 'secondary' };
-    return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
-  };
 
-  if (loading) {
-    return <Loading fullscreen={true} message="Đang tải chi tiết minh chứng..." />;
-  }
+    const getStatusBadge = (status) => {
+        const statusMap = {
+            VERIFIED: { label: 'Đã xác minh', class: 'success' },
+            REJECTED: { label: 'Từ chối', class: 'danger' },
+            PENDING: { label: 'Chờ xác minh', class: 'warning' }
+        };
+        const statusInfo = statusMap[status] || { label: status, class: 'secondary' };
+        return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
+    };
 
-  if (!evidence) {
+    const handleEditOCR = () => {
+        setOcrFormData({
+            ocrText: evidence.ocrText || '',
+            ocrFullName: evidence.ocrFullName || '',
+            ocrEvaluator: evidence.ocrEvaluator || ''
+        });
+        setShowOCREditModal(true);
+    };
+
+    const handleSaveOCR = async () => {
+        try {
+            setSavingOCR(true);
+            await updateOCRText(evidence.id, ocrFormData);
+            showToast('Thành công', 'Đã cập nhật thông tin OCR', 'success');
+            setShowOCREditModal(false);
+            // Reload evidence data
+            await loadEvidenceDetail();
+        } catch (error) {
+            console.error('Error updating OCR text:', error);
+            showToast('Lỗi', 'Không thể cập nhật thông tin OCR', 'danger');
+        } finally {
+            setSavingOCR(false);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setShowOCREditModal(false);
+        setOcrFormData({
+            ocrText: '',
+            ocrFullName: '',
+            ocrEvaluator: ''
+        });
+    };
+
+    if (loading) {
+        return <Loading fullscreen={true} message="Đang tải chi tiết minh chứng..." />;
+    }
+
+    if (!evidence) {
+        return (
+            <MainLayout>
+                <div className="page-evidence-detail">
+                    <div className="content-header">
+                        <div className="content-title">
+                            <button className="back-button" onClick={() => navigate(-1)}>
+                                <i className="bi bi-arrow-left"></i>
+                            </button>
+                            <h1 className="page-title">Chi tiết Minh chứng</h1>
+                        </div>
+                    </div>
+                    <div className="text-center mt-5">
+                        <i className="bi bi-exclamation-triangle text-warning" style={{ fontSize: '3rem' }}></i>
+                        <p className="mt-3">Không tìm thấy minh chứng</p>
+                    </div>
+                </div>
+            </MainLayout>
+        );
+    }
+
     return (
-      <MainLayout>
-        <div className="page-evidence-detail">
-          <div className="content-header">
-            <div className="content-title">
-              <button className="back-button" onClick={() => navigate(-1)}>
-                <i className="bi bi-arrow-left"></i>
-              </button>
-              <h1 className="page-title">Chi tiết Minh chứng</h1>
-            </div>
-          </div>
-          <div className="text-center mt-5">
-            <i className="bi bi-exclamation-triangle text-warning" style={{ fontSize: '3rem' }}></i>
-            <p className="mt-3">Không tìm thấy minh chứng</p>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
+        <MainLayout>
+            <div className="page-evidence-detail">
+                <div className="content-header">
+                    <div className="content-title">
+                        <button className="back-button" onClick={() => navigate(-1)}>
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h1 className="page-title">Chi tiết Minh chứng</h1>
+                    </div>
+                </div>
 
-  return (
-    <MainLayout>
-      <div className="page-evidence-detail">
-        <div className="content-header">
-          <div className="content-title">
-            <button className="back-button" onClick={() => navigate(-1)}>
-              <i className="bi bi-arrow-left"></i>
-            </button>
-            <h1 className="page-title">Chi tiết Minh chứng</h1>
-          </div>
-        </div>
+                <div className="detail-container">
+                    {/* Evidence Information */}
+                    <div className="detail-section">
+                        <h3 className="section-title">
+                            <i className="bi bi-info-circle"></i>
+                            Thông tin Minh chứng
+                        </h3>
+                        <div className="row">
+                            <div className="col-md-6 detail-item">
+                                <label>Môn học:</label>
+                                <span>{evidence.subjectName || 'N/A'}</span>
+                            </div>
+                            <div className="col-md-6 detail-item">
+                                <label>Ngày nộp:</label>
+                                <span>{evidence.submittedDate || 'N/A'}</span>
+                            </div>
+                            <div className="col-md-6 detail-item">
+                                <label>Trạng thái:</label>
+                                {getStatusBadge(evidence.status)}
+                            </div>
+                            <div className="col-md-6 detail-item">
+                                <label>Ngày xác minh:</label>
+                                <span>{evidence.verifiedAt || 'Chưa xác minh'}</span>
+                            </div>
+                        </div>
+                    </div>
 
-        <div className="detail-container">
-          {/* Evidence Information */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <i className="bi bi-info-circle"></i>
-              Thông tin Minh chứng
-            </h3>
-            <div className="row">
-              <div className="col-md-6 detail-item">
-                <label>Môn học:</label>
-                <span>{evidence.subjectName || 'N/A'}</span>
-              </div>
-              <div className="col-md-6 detail-item">
-                <label>Ngày nộp:</label>
-                <span>{evidence.submittedDate || 'N/A'}</span>
-              </div>
-              <div className="col-md-6 detail-item">
-                <label>Trạng thái:</label>
-                {getStatusBadge(evidence.status)}
-              </div>
-              <div className="col-md-6 detail-item">
-                <label>Ngày xác minh:</label>
-                <span>{evidence.verifiedAt || 'Chưa xác minh'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* OCR Results */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <i className="bi bi-robot"></i>
-              Kết quả OCR
-            </h3>
-            <div className="row">
-              <div className="col-md-6 detail-item">
-                <label>Họ tên (OCR):</label>
-                <span>{evidence.ocrFullName || 'Chưa xử lý'}</span>
-              </div>
-              <div className="col-md-6 detail-item">
-                <label>Người đánh giá (OCR):</label>
-                <span>{evidence.ocrEvaluator || 'Chưa xử lý'}</span>
-              </div>
-              <div className="col-md-12 detail-item">
-                <label>Kết quả OCR:</label>
-                {evidence.ocrResult ? (
-                  <span className={`badge badge-status ${evidence.ocrResult === 'PASS' ? 'success' : 'danger'}`}>
+                    {/* OCR Results */}
+                    <div className="detail-section">
+                        <h3 className="section-title">
+                            <i className="bi bi-robot"></i>
+                            Kết quả OCR
+                            {(user?.role === 'Teacher' || user?.role === 'teacher' || user?.role === 'admin') && (
+                                <button
+                                    className="btn btn-outline-primary btn-sm edit-ocr-btn"
+                                    onClick={handleEditOCR}
+                                    title="Chỉnh sửa thông tin OCR"
+                                >
+                                    <i className="bi bi-pencil"></i>
+                                    Chỉnh sửa
+                                </button>
+                            )}
+                        </h3>
+                        <div className="row">
+                            <div className="col-md-6 detail-item">
+                                <label>Họ tên (OCR):</label>
+                                <span>{evidence.ocrFullName || 'Chưa xử lý'}</span>
+                            </div>
+                            <div className="col-md-6 detail-item">
+                                <label>Người đánh giá (OCR):</label>
+                                <span>{evidence.ocrEvaluator || 'Chưa xử lý'}</span>
+                            </div>
+                            <div className="col-md-12 detail-item">
+                                <label>Kết quả OCR:</label>
+                                {evidence.ocrResult ? (
+                                    <span className={`badge badge-status ${evidence.ocrResult === 'PASS' ? 'success' : 'danger'}`}>
                     {evidence.ocrResult === 'PASS' ? 'ĐẠT' : 'KHÔNG ĐẠT'}
                   </span>
-                ) : (
-                  <span>Chưa xử lý</span>
+                                ) : (
+                                    <span>Chưa xử lý</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* OCR Text */}
+                    {evidence.ocrText && (
+                        <div className="detail-section">
+                            <h3 className="section-title">
+                                <i className="bi bi-file-text"></i>
+                                Văn bản OCR
+                            </h3>
+                            <div className="ocr-text-container">
+                                <pre className="ocr-text">{evidence.ocrText}</pre>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* File Preview */}
+                    <div className="detail-section">
+                        <h3 className="section-title">
+                            <i className="bi bi-file-earmark"></i>
+                            File Minh chứng
+                        </h3>
+                        <div className="file-actions">
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => setShowPreview(!showPreview)}
+                                disabled={!evidence.fileId}
+                            >
+                                <i className="bi bi-eye"></i>
+                                {showPreview ? 'Ẩn Preview' : 'Xem Preview'}
+                            </button>
+                            <button
+                                className="btn btn-secondary"
+                                onClick={handleDownload}
+                                disabled={!evidence.fileId}
+                            >
+                                <i className="bi bi-download"></i>
+                                Tải xuống
+                            </button>
+                        </div>
+
+                        {showPreview && evidence.fileId && (
+                            <div className="preview-container">
+                                <FilePreview evidence={evidence} />
+                            </div>
+                        )}
+                    </div>
+
+                </div>
+
+                {toast.show && (
+                    <Toast
+                        title={toast.title}
+                        message={toast.message}
+                        type={toast.type}
+                        onClose={() => setToast(prev => ({ ...prev, show: false }))}
+                    />
                 )}
-              </div>
+
+                {/* OCR Edit Modal */}
+                {showOCREditModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h4 className="modal-title">Chỉnh sửa thông tin OCR</h4>
+                                <button
+                                    className="modal-close"
+                                    onClick={handleCancelEdit}
+                                >
+                                    <i className="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <div className="modal-body">
+                                <form>
+                                    <div className="form-group">
+                                        <label htmlFor="ocrFullName">Họ tên (OCR):</label>
+                                        <input
+                                            type="text"
+                                            id="ocrFullName"
+                                            className="form-control"
+                                            value={ocrFormData.ocrFullName}
+                                            onChange={(e) => setOcrFormData(prev => ({ ...prev, ocrFullName: e.target.value }))}
+                                            placeholder="Nhập họ tên từ OCR"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label htmlFor="ocrEvaluator">Người đánh giá (OCR):</label>
+                                        <input
+                                            type="text"
+                                            id="ocrEvaluator"
+                                            className="form-control"
+                                            value={ocrFormData.ocrEvaluator}
+                                            onChange={(e) => setOcrFormData(prev => ({ ...prev, ocrEvaluator: e.target.value }))}
+                                            placeholder="Nhập tên người đánh giá từ OCR"
+                                        />
+                                    </div>
+                                </form>
+                            </div>
+                            <div className="modal-footer">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={handleCancelEdit}
+                                    disabled={savingOCR}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleSaveOCR}
+                                    disabled={savingOCR}
+                                >
+                                    {savingOCR ? (
+                                        <>
+                                            <div className="loading-spinner-small"></div>
+                                            Đang lưu...
+                                        </>
+                                    ) : (
+                                        'Lưu thay đổi'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-          </div>
 
-          {/* OCR Text */}
-          {evidence.ocrText && (
-            <div className="detail-section">
-              <h3 className="section-title">
-                <i className="bi bi-file-text"></i>
-                Văn bản OCR
-              </h3>
-              <div className="ocr-text-container">
-                <pre className="ocr-text">{evidence.ocrText}</pre>
-              </div>
-            </div>
-          )}
+            <style jsx>{`
+                .page-evidence-detail {
+                    padding: 20px;
+                    margin-top: 0px;
+                }
 
-          {/* File Preview */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <i className="bi bi-file-earmark"></i>
-              File Minh chứng
-            </h3>
-            <div className="file-actions">
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowPreview(!showPreview)}
-                disabled={!evidence.fileId}
-              >
-                <i className="bi bi-eye"></i>
-                {showPreview ? 'Ẩn Preview' : 'Xem Preview'}
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={handleDownload}
-                disabled={!evidence.fileId}
-              >
-                <i className="bi bi-download"></i>
-                Tải xuống
-              </button>
-            </div>
+                .detail-container {
+                    margin-top: -20px;
+                    margin-left: -20px;
 
-            {showPreview && evidence.fileId && (
-              <div className="preview-container">
-                <FilePreview evidence={evidence} />
-              </div>
-            )}
-          </div>
+                }
 
-          {/* Additional Information */}
-          <div className="detail-section">
-            <h3 className="section-title">
-              <i className="bi bi-info-square"></i>
-              Thông tin bổ sung
-            </h3>
-            <div className="row">
-              <div className="col-md-6 detail-item">
-                <label>ID Minh chứng:</label>
-                <span>{evidence.id || 'N/A'}</span>
-              </div>
-              <div className="col-md-6 detail-item">
-                <label>ID File:</label>
-                <span>{evidence.fileId || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
+                .detail-section {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    margin-bottom: 24px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
 
-        </div>
+                .section-title {
+                    color: #333;
+                    margin-bottom: 20px;
+                    padding-bottom: 10px;
+                    border-bottom: 2px solid #f0f0f0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
 
-        {toast.show && (
-          <Toast
-            title={toast.title}
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(prev => ({ ...prev, show: false }))}
-          />
-        )}
-      </div>
+                .detail-item {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
 
-      <style jsx>{`
-        .page-evidence-detail {
-          padding: 20px;
-          margin-top: 0px;
-        }
+                .detail-item label {
+                    font-weight: 600;
+                    color: #666;
+                    font-size: 14px;
+                }
 
-        .detail-container {
-          margin-top: -20px;
-          margin-left: -20px;
-         
-        }
+                .detail-item span {
+                    color: #333;
+                    font-size: 16px;
+                }
 
-        .detail-section {
-          background: white;
-          border-radius: 8px;
-          padding: 24px;
-          margin-bottom: 24px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+                .ocr-text-container {
+                    background: #f8f9fa;
+                    border-radius: 4px;
+                    padding: 16px;
+                    border: 1px solid #e9ecef;
+                }
 
-        .section-title {
-          color: #333;
-          margin-bottom: 20px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid #f0f0f0;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
+                .ocr-text {
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    font-family: 'Courier New', monospace;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    color: #333;
+                    margin: 0;
+                }
 
-        .detail-item {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
+                .badge-status {
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
 
-        .detail-item label {
-          font-weight: 600;
-          color: #666;
-          font-size: 14px;
-        }
+                .badge-status.success {
+                    background-color: #d4edda;
+                    color: #155724;
+                }
 
-        .detail-item span {
-          color: #333;
-          font-size: 16px;
-        }
+                .badge-status.danger {
+                    background-color: #f8d7da;
+                    color: #721c24;
+                }
 
-        .ocr-text-container {
-          background: #f8f9fa;
-          border-radius: 4px;
-          padding: 16px;
-          border: 1px solid #e9ecef;
-        }
+                .badge-status.warning {
+                    background-color: #fff3cd;
+                    color: #856404;
+                }
 
-        .ocr-text {
-          white-space: pre-wrap;
-          word-wrap: break-word;
-          font-family: 'Courier New', monospace;
-          font-size: 14px;
-          line-height: 1.5;
-          color: #333;
-          margin: 0;
-        }
+                .badge-status.secondary {
+                    background-color: #e2e3e5;
+                    color: #383d41;
+                }
 
-        .badge-status {
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          font-weight: 600;
-        }
+                .text-center {
+                    text-align: center;
+                }
 
-        .badge-status.success {
-          background-color: #d4edda;
-          color: #155724;
-        }
+                .mt-5 {
+                    margin-top: 3rem;
+                }
 
-        .badge-status.danger {
-          background-color: #f8d7da;
-          color: #721c24;
-        }
+                .mt-3 {
+                    margin-top: 1rem;
+                }
 
-        .badge-status.warning {
-          background-color: #fff3cd;
-          color: #856404;
-        }
+                .text-warning {
+                    color: #ffc107;
+                }
 
-        .badge-status.secondary {
-          background-color: #e2e3e5;
-          color: #383d41;
-        }
+                .file-actions {
+                    display: flex;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
 
-        .text-center {
-          text-align: center;
-        }
+                .file-actions button {
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.2s ease;
+                }
 
-        .mt-5 {
-          margin-top: 3rem;
-        }
+                .file-actions button:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
 
-        .mt-3 {
-          margin-top: 1rem;
-        }
+                .file-actions .btn-primary {
+                    background-color: #007bff;
+                    color: white;
+                }
 
-        .text-warning {
-          color: #ffc107;
-        }
+                .file-actions .btn-primary:hover:not(:disabled) {
+                    background-color: #0056b3;
+                }
 
-        .file-actions {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 20px;
-        }
+                .file-actions .btn-secondary {
+                    background-color: #6c757d;
+                    color: white;
+                }
 
-        .file-actions button {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 4px;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          transition: all 0.2s ease;
-        }
+                .file-actions .btn-secondary:hover:not(:disabled) {
+                    background-color: #545b62;
+                }
 
-        .file-actions button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+                .preview-container {
+                    margin-top: 20px;
+                    border: 1px solid #e9ecef;
+                    border-radius: 4px;
+                    overflow: hidden;
+                }
 
-        .file-actions .btn-primary {
-          background-color: #007bff;
-          color: white;
-        }
+                .image-preview {
+                    text-align: center;
+                    padding: 20px;
+                    background: #f8f9fa;
+                }
 
-        .file-actions .btn-primary:hover:not(:disabled) {
-          background-color: #0056b3;
-        }
+                .preview-image {
+                    max-width: 100%;
+                    max-height: 600px;
+                    object-fit: contain;
+                    border-radius: 4px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
 
-        .file-actions .btn-secondary {
-          background-color: #6c757d;
-          color: white;
-        }
+                .preview-error {
+                    padding: 40px 20px;
+                    color: #dc3545;
+                    font-size: 16px;
+                }
 
-        .file-actions .btn-secondary:hover:not(:disabled) {
-          background-color: #545b62;
-        }
+                .pdf-preview {
+                    height: 600px;
+                    background: #f8f9fa;
+                }
 
-        .preview-container {
-          margin-top: 20px;
-          border: 1px solid #e9ecef;
-          border-radius: 4px;
-          overflow: hidden;
-        }
+                .preview-pdf {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                }
 
-        .image-preview {
-          text-align: center;
-          padding: 20px;
-          background: #f8f9fa;
-        }
+                .file-preview {
+                    padding: 40px 20px;
+                    background: #f8f9fa;
+                    text-align: center;
+                }
 
-        .preview-image {
-          max-width: 100%;
-          max-height: 600px;
-          object-fit: contain;
-          border-radius: 4px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+                .file-info {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 16px;
+                }
 
-        .preview-error {
-          padding: 40px 20px;
-          color: #dc3545;
-          font-size: 16px;
-        }
+                .file-info i {
+                    font-size: 3rem;
+                    color: #6c757d;
+                }
 
-        .pdf-preview {
-          height: 600px;
-          background: #f8f9fa;
-        }
+                .file-info p {
+                    margin: 0;
+                    color: #666;
+                    font-size: 14px;
+                }
 
-        .preview-pdf {
-          width: 100%;
-          height: 100%;
-          border: none;
-        }
+                .preview-loading {
+                    padding: 40px 20px;
+                    background: #f8f9fa;
+                    text-align: center;
+                    color: #666;
+                    font-size: 16px;
+                }
 
-        .file-preview {
-          padding: 40px 20px;
-          background: #f8f9fa;
-          text-align: center;
-        }
+                .loading-spinner {
+                    display: inline-block;
+                    width: 20px;
+                    height: 20px;
+                    border: 3px solid #f3f3f3;
+                    border-top: 3px solid #007bff;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin-right: 10px;
+                }
 
-        .file-info {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-        }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
 
-        .file-info i {
-          font-size: 3rem;
-          color: #6c757d;
-        }
+                .edit-ocr-btn {
+                    margin-left: auto;
+                    padding: 6px 12px;
+                    border: 1px solid #007bff;
+                    background-color: transparent;
+                    color: #007bff;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    transition: all 0.2s ease;
+                }
 
-        .file-info p {
-          margin: 0;
-          color: #666;
-          font-size: 14px;
-        }
+                .edit-ocr-btn:hover {
+                    background-color: #007bff;
+                    color: white;
+                }
 
-        .preview-loading {
-          padding: 40px 20px;
-          background: #f8f9fa;
-          text-align: center;
-          color: #666;
-          font-size: 16px;
-        }
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1050;
+                }
 
-        .loading-spinner {
-          display: inline-block;
-          width: 20px;
-          height: 20px;
-          border: 3px solid #f3f3f3;
-          border-top: 3px solid #007bff;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-right: 10px;
-        }
+                .modal-content {
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                    max-width: 500px;
+                    width: 90%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                }
 
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </MainLayout>
-  );
+                .modal-header {
+                    padding: 20px 24px;
+                    border-bottom: 1px solid #e9ecef;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .modal-title {
+                    margin: 0;
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .modal-close {
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    color: #6c757d;
+                    cursor: pointer;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: all 0.2s ease;
+                }
+
+                .modal-close:hover {
+                    background-color: #f8f9fa;
+                    color: #333;
+                }
+
+                .modal-body {
+                    padding: 24px;
+                }
+
+                .modal-footer {
+                    padding: 16px 24px;
+                    border-top: 1px solid #e9ecef;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                }
+
+                .form-group {
+                    margin-bottom: 20px;
+                }
+
+                .form-group label {
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 600;
+                    color: #333;
+                    font-size: 14px;
+                }
+
+                .form-control {
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 1px solid #ced4da;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    color: #333;
+                    background-color: #fff;
+                    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+                }
+
+                .form-control:focus {
+                    outline: 0;
+                    border-color: #007bff;
+                    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+                }
+
+                .form-control::placeholder {
+                    color: #6c757d;
+                }
+
+                .btn {
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.2s ease;
+                }
+
+                .btn:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .btn-secondary {
+                    background-color: #6c757d;
+                    color: white;
+                }
+
+                .btn-secondary:hover:not(:disabled) {
+                    background-color: #545b62;
+                }
+
+                .btn-primary {
+                    background-color: #007bff;
+                    color: white;
+                }
+
+                .btn-primary:hover:not(:disabled) {
+                    background-color: #0056b3;
+                }
+
+                .loading-spinner-small {
+                    width: 14px;
+                    height: 14px;
+                    border: 2px solid #f3f3f3;
+                    border-top: 2px solid #007bff;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+            `}</style>
+        </MainLayout>
+    );
 };
 
 export default EvidenceDetail;

@@ -5,7 +5,7 @@ import DeleteModal from '../components/Teacher/DeleteModal';
 import ExportImportModal from '../components/Teacher/ExportImportModal';
 import Toast from '../components/Common/Toast';
 import Loading from '../components/Common/Loading';
-import { getAllUsers, searchUsers, deleteUser, exportUsers, importUsers } from '../api/user';
+import { getAllUsers, searchUsers, deleteUser, updateUserById, exportUsers, importUsers } from '../api/user';
 
 const ManageTeacher = () => {
   const navigate = useNavigate();
@@ -172,34 +172,63 @@ const ManageTeacher = () => {
     navigate(`/add-teacher?mode=edit&id=${teacher.id}`);
   };
 
-  const handleDelete = (teacher) => {
-    setDeleteTeacher(teacher);
-    setShowDeleteModal(true);
-  };
+const handleDelete = (teacher) => {
+  setDeleteTeacher(teacher);
+  setShowDeleteModal(true);
+};
 
-  const confirmDelete = async () => {
-    if (!deleteTeacher) return;
+const confirmDelete = async () => {
+  if (!deleteTeacher) return;
 
-    try {
-      setLoading(true);
-      // Call API to delete user
-      await deleteUser(deleteTeacher.id);
-      showToast('Thành công', 'Xóa giáo viên thành công', 'success');
-      setShowDeleteModal(false);
-      const deletedId = deleteTeacher.id;
-      setDeleteTeacher(null);
-      setLoading(false);
-      if (searchTerm.trim()) {
-        await handleSearch(searchTerm, 1, serverPageSize);
-      } else {
-        await loadTeachers(1, serverPageSize);
-      }
-    } catch (error) {
-      console.error('Error deleting teacher:', error);
-      showToast('Lỗi', error.response?.data?.message || 'Không thể xóa giáo viên', 'danger');
-      setLoading(false);
+  try {
+    setLoading(true);
+
+    // ===== XÓA LẦN 1: ACTIVE → INACTIVE =====
+    if (deleteTeacher.status === 'active') {
+      await updateUserById({
+        id: deleteTeacher.id,
+        status: 'INACTIVE'
+      });
+
+      showToast(
+        'Thành công',
+        'Giáo viên đã chuyển sang trạng thái Không hoạt động',
+        'success'
+      );
     }
-  };
+    // ===== XÓA LẦN 2: INACTIVE → DELETE =====
+    else {
+      await deleteUser(deleteTeacher.id);
+
+      showToast(
+        'Thành công',
+        'Đã xóa giáo viên vĩnh viễn',
+        'success'
+      );
+    }
+
+    setShowDeleteModal(false);
+    setDeleteTeacher(null);
+
+    // Reload danh sách
+    if (searchTerm.trim()) {
+      await handleSearch(searchTerm, 1, serverPageSize);
+    } else {
+      await loadTeachers(1, serverPageSize);
+    }
+
+  } catch (error) {
+    console.error(error);
+    showToast(
+      'Lỗi',
+      error.response?.data?.message || 'Không thể thực hiện thao tác',
+      'danger'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleReset = () => {
     setSearchTerm('');
@@ -418,37 +447,65 @@ const ManageTeacher = () => {
                           </td>
                         </tr>
                       ) : (
-                        pageTeachers.map((teacher, index) => (
-                          <tr key={teacher.id} className="fade-in">
-                            <td><span className="teacher-code">{startIndex + index + 1}</span></td>
-                            <td>{teacher.username || 'N/A'}</td>
-                            <td>{teacher.email || 'N/A'}</td>
-                            <td>{teacher.phone || 'N/A'}</td>
-                            <td>
-                              <span className={`badge badge-status ${teacher.status === 'active' ? 'active' : 'inactive'}`}>
-                                {teacher.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-                              </span>
-                            </td>
-                            <td className="text-center">
-                              <div className="action-buttons">
-                                <button
-                                  className="btn btn-sm btn-primary btn-action"
-                                  onClick={() => handleEdit(teacher)}
-                                  title="Sửa"
+                        pageTeachers.map((teacher, index) => {
+                          const isActive = teacher.status === 'active';
+
+                          return (
+                            <tr key={teacher.id} className="fade-in">
+                              <td>
+                                <span className="teacher-code">
+                                  {startIndex + index + 1}
+                                </span>
+                              </td>
+
+                              <td>{teacher.username || 'N/A'}</td>
+                              <td>{teacher.email || 'N/A'}</td>
+                              <td>{teacher.phone || 'N/A'}</td>
+
+                              <td>
+                                <span
+                                  className={`badge badge-status ${
+                                    isActive ? 'active' : 'inactive'
+                                  }`}
                                 >
-                                  <i className="bi bi-pencil"></i>
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-danger btn-action"
-                                  onClick={() => handleDelete(teacher)}
-                                  title="Xóa"
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                                  {isActive ? 'Hoạt động' : 'Không hoạt động'}
+                                </span>
+                              </td>
+
+                              <td className="text-center">
+                                <div className="action-buttons">
+                                  <button
+                                    className="btn btn-sm btn-primary btn-action"
+                                    onClick={() => handleEdit(teacher)}
+                                    title="Sửa"
+                                  >
+                                    <i className="bi bi-pencil"></i>
+                                  </button>
+
+                                  {isActive ? (
+                                    /* LẦN 1: CHUYỂN SANG KHÔNG HOẠT ĐỘNG */
+                                    <button
+                                      className="btn btn-sm btn-warning btn-action"
+                                      onClick={() => handleDelete(teacher)}
+                                      title="Ngừng hoạt động"
+                                    >
+                                      <i className="bi bi-pause-circle"></i>
+                                    </button>
+                                  ) : (
+                                    /* LẦN 2: XOÁ VĨNH VIỄN */
+                                    <button
+                                      className="btn btn-sm btn-danger btn-action"
+                                      onClick={() => handleDelete(teacher)}
+                                      title="Xóa vĩnh viễn"
+                                    >
+                                      <i className="bi bi-trash"></i>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

@@ -2,6 +2,7 @@ package com.example.teacherservice.service.auth;
 
 import com.example.teacherservice.dto.auth.AuthUserDto;
 import com.example.teacherservice.enums.Role;
+import com.example.teacherservice.enums.Active;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -70,9 +71,9 @@ public class CustomUserDetails implements UserDetails {
         return true;
     }
 
-    @Override
+    @Override//mới thêm
     public boolean isEnabled() {
-        return true;
+        return user.getActive() == Active.ACTIVE;
     }
 }
 

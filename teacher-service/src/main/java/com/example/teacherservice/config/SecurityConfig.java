@@ -53,6 +53,14 @@ public class SecurityConfig {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(customUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
+        // MỚi thêm
+        authProvider.setPreAuthenticationChecks(userDetails -> {
+            if (!userDetails.isEnabled()) {
+                throw new org.springframework.security.authentication.DisabledException(
+                        "Tài khoản đã bị khóa hoặc không hoạt động"
+                );
+            }
+        });
         return authProvider;
     }
 

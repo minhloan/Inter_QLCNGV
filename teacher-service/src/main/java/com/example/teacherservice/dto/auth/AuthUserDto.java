@@ -1,6 +1,7 @@
 package com.example.teacherservice.dto.auth;
 
 import com.example.teacherservice.enums.Role;
+import com.example.teacherservice.enums.Active;
 import lombok.Data;
 
 import java.util.Set;
@@ -12,6 +13,7 @@ public class AuthUserDto {
     private String username;
     private String email;
     private String password;
+    private Active active;//mới thêm
     private Role role;
     private Set<Role> roles = new HashSet<>();
     

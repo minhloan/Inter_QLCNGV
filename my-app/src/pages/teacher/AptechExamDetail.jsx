@@ -185,6 +185,9 @@ const AptechExamDetail = () => {
     };
 
     const renderStatusBadgeByScore = (scoreVal) => {
+        // If exam is rejected, always show "Không đạt"
+        if (exam?.aptechStatus === 'REJECTED') return <span className="badge badge-status danger">Không đạt</span>;
+        
         if (scoreVal === null || scoreVal === undefined || scoreVal === '') return null;
         const s = Number(scoreVal);
         if (s >= 80) return <span className="badge badge-status success">Đạt</span>;
@@ -202,6 +205,8 @@ const AptechExamDetail = () => {
 
     const canUploadFinalCertificate = () => {
         if (!examHasProof) return false;
+        // Cannot upload if exam is rejected
+        if (exam?.aptechStatus === 'REJECTED') return false;
         const currentScore = exam?.score ?? score;
         if (currentScore === null || currentScore === undefined || currentScore === '') return false;
         return Number(currentScore) >= 80;
@@ -255,7 +260,9 @@ const AptechExamDetail = () => {
                                                     <div className="d-flex flex-wrap align-items-center gap-2">
                                                         {exam && exam.aptechStatus !== 'PENDING' ? (
                                                             <>
-                                                                {score !== null && score !== '' ? (
+                                                                {exam.aptechStatus === 'REJECTED' ? (
+                                                                    <span className="fs-3 fw-bold text-danger">0</span>
+                                                                ) : score !== null && score !== '' ? (
                                                                     <span className={`fs-3 fw-bold ${Number(score) >= 80 ? 'text-success' : Number(score) >= 60 ? 'text-warning' : 'text-danger'}`}>
                                                                         {score}
                                                                     </span>

@@ -21,6 +21,7 @@ public interface UserService {
     User getUserByUsername(String username);
     User updateUserById(UserUpdateRequest request, MultipartFile file, MultipartFile coverFile);
     void deleteUserById(String id);
+    void hardDeleteUserById(String id);//mới thêm
     User findUserById(String id);
     User findUserByUsername(String username);
     User findUserByEmail(String email);

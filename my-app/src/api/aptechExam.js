@@ -145,6 +145,14 @@ export const adminUpdateExamStatus = async (id, status) => {
     return response.data;
 };
 
+// Admin: update exam score
+export const adminUpdateExamScore = async (id, score, result) => {
+    const adminApi = createApiInstance(`${API_URL}/admin`);
+    const payload = { score, result };
+    const response = await adminApi.put(`/${id}/score`, payload);
+    return response.data;
+};
+
 // Export endpoints (server-generated documents)
 export const exportSummary = async (options = {}) => {
     const adminApi = createApiInstance(`${API_URL}`);

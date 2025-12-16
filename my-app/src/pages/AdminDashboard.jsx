@@ -206,7 +206,7 @@ const AdminDashboard = () => {
             <div className="card-modern card-stat">
               <div className="d-flex align-items-center justify-content-between">
                 <div>
-                  <div className="label">Môn chưa phê duyệt</div>
+                  <div className="label">Môn thi chưa phê duyệt</div>
                   <div className="value">{stats?.pendingApprovals || 0}</div>
                 </div>
                 <div className={`rounded-circle bg-danger d-flex align-items-center justify-content-center`} style={{ width: 52, height: 52 }}>

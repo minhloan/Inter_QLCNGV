@@ -9,5 +9,10 @@ import java.util.Map;
 @Getter
 public class ValidationException extends RuntimeException {
     private Map<String, String> validationErrors;
+
+    public ValidationException(Map<String, String> validationErrors) {
+        super("Validation error");
+        this.validationErrors = validationErrors;
+    }
 }
 

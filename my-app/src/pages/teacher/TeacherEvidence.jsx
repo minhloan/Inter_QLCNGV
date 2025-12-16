@@ -1,19 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/Layout/MainLayout';
 import Toast from '../../components/Common/Toast';
 import Loading from '../../components/Common/Loading';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  uploadEvidence, 
-  getEvidencesByTeacher, 
-  reprocessOCR 
+import {
+  uploadEvidence,
+  getEvidencesByTeacher,
+  reprocessOCR
 } from '../../api/evidence';
 import { getAllSubjects } from '../../api/subject';
 
 const TeacherEvidence = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const dropdownRef = useRef(null);
   const [evidences, setEvidences] = useState([]);
   const [filteredEvidences, setFilteredEvidences] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -23,6 +24,8 @@ const TeacherEvidence = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState({ show: false, title: '', message: '', type: 'info' });
@@ -37,6 +40,19 @@ const TeacherEvidence = () => {
   useEffect(() => {
     applyFilters();
   }, [evidences, statusFilter]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowSubjectDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const loadSubjects = async () => {
     try {
@@ -179,6 +195,28 @@ const TeacherEvidence = () => {
     return <span className={`badge badge-status ${statusInfo.class}`}>{statusInfo.label}</span>;
   };
 
+  const filteredSubjects = subjects.filter(subject =>
+    (subject.subjectName || '').toLowerCase().includes(subjectSearch.toLowerCase()) ||
+    (subject.subjectCode || '').toLowerCase().includes(subjectSearch.toLowerCase())
+  );
+
+  const getSelectedSubjectName = () => {
+    if (!selectedSubject) return '';
+    const subject = subjects.find(s => String(s.id) === selectedSubject);
+    return subject ? (subject.subjectName || subject.subjectCode) : '';
+  };
+
+  const handleSubjectSelect = (subjectId) => {
+    setSelectedSubject(subjectId);
+    setSubjectSearch('');
+    setShowSubjectDropdown(false);
+  };
+
+  const handleSubjectSearchChange = (e) => {
+    setSubjectSearch(e.target.value);
+    setShowSubjectDropdown(true);
+  };
+
   const totalPages = Math.ceil(filteredEvidences.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const pageEvidences = filteredEvidences.slice(startIndex, startIndex + pageSize);
@@ -280,15 +318,6 @@ const TeacherEvidence = () => {
                         >
                           <i className="bi bi-eye"></i>
                         </button>
-                        {(!evidence.ocr_text || evidence.status === 'PENDING') && (
-                          <button
-                            className="btn btn-sm btn-warning btn-action"
-                            onClick={() => handleReprocessOCR(evidence.id)}
-                            title="Xử lý OCR lại"
-                          >
-                            <i className="bi bi-arrow-clockwise"></i>
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -343,20 +372,88 @@ const TeacherEvidence = () => {
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="modal-content" style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '90%', maxWidth: '600px' }}>
             <h3 style={{ marginBottom: '20px' }}>Upload Minh chứng</h3>
-            <div className="form-group" style={{ marginBottom: '20px' }}>
+            <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
               <label className="form-label">Chọn Môn học (Tùy chọn)</label>
-              <select
-                className="form-control"
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-              >
-                <option value="">-- Chọn môn học --</option>
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.subjectName || subject.subjectCode}
-                  </option>
-                ))}
-              </select>
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="-- Tìm kiếm môn học --"
+                  value={selectedSubject ? getSelectedSubjectName() : subjectSearch}
+                  onChange={handleSubjectSearchChange}
+                  onFocus={() => setShowSubjectDropdown(true)}
+                />
+                {selectedSubject && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    style={{
+                      position: 'absolute',
+                      right: '5px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      padding: '2px 6px'
+                    }}
+                    onClick={() => {
+                      setSelectedSubject('');
+                      setSubjectSearch('');
+                    }}
+                    title="Xóa lựa chọn"
+                  >
+                    <i className="bi bi-x"></i>
+                  </button>
+                )}
+                {showSubjectDropdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: 'white',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      zIndex: 1001,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {filteredSubjects.length === 0 ? (
+                      <div style={{ padding: '10px', textAlign: 'center', color: '#666' }}>
+                        Không tìm thấy môn học nào
+                      </div>
+                    ) : (
+                      filteredSubjects.map((subject) => (
+                        <div
+                          key={subject.id}
+                          style={{
+                            padding: '10px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #eee',
+                            background: selectedSubject === subject.id ? '#f8f9fa' : 'white'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubjectSelect(subject.id);
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = '#f8f9fa'}
+                          onMouseLeave={(e) => e.target.style.background = selectedSubject === subject.id ? '#f8f9fa' : 'white'}
+                        >
+                          <div style={{ fontWeight: 'bold' }}>
+                            {subject.subjectName || subject.subjectCode}
+                          </div>
+                          {subject.subjectCode && subject.subjectName && (
+                            <div style={{ fontSize: '0.9em', color: '#666' }}>
+                              Mã: {subject.subjectCode}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label className="form-label">Chọn File</label>
@@ -372,6 +469,8 @@ const TeacherEvidence = () => {
                 setShowUploadModal(false);
                 setSelectedFile(null);
                 setSelectedSubject('');
+                setSubjectSearch('');
+                setShowSubjectDropdown(false);
               }}>
                 Hủy
               </button>
