@@ -260,6 +260,19 @@ public class AptechExamController {
         return ResponseEntity.ok("Score updated");
     }
 
+    @PutMapping("/admin/{id}/score")
+    public ResponseEntity<?> adminUpdateScore(
+            @PathVariable String id,
+            @RequestBody AptechExamScoreUpdateDto request) {
+        try {
+            examService.updateScore(id, request.getScore(), request.getResult());
+            return ResponseEntity.ok("Score updated");
+        } catch (Exception e) {
+            log.error("Failed to update aptech exam score for id {}", id, e);
+            return ResponseEntity.internalServerError().body("Failed to update score");
+        }
+    }
+
     @PutMapping("/admin/{id}/status")
     public ResponseEntity<?> adminUpdateStatus(
             @PathVariable String id,

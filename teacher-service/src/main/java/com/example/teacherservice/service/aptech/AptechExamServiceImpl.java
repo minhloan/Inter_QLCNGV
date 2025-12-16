@@ -475,6 +475,13 @@ public class AptechExamServiceImpl implements AptechExamService {
             com.example.teacherservice.enums.AptechStatus s = com.example.teacherservice.enums.AptechStatus
                     .valueOf(status.trim().toUpperCase(java.util.Locale.ROOT));
             exam.setAptechStatus(s);
+            
+            // Khi từ chối (REJECTED), tự động đặt điểm về 0
+            if (s == com.example.teacherservice.enums.AptechStatus.REJECTED) {
+                exam.setScore(0);
+                exam.setResult(com.example.teacherservice.enums.ExamResult.FAIL);
+            }
+            
             examRepository.save(exam);
 
             // Gửi thông báo cho giảng viên khi trạng thái thay đổi

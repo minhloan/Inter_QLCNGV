@@ -11,8 +11,7 @@ import {
     getAptechExamSessions,
     exportSummary,
     exportList,
-    exportStats,
-    adminUpdateExamScore
+    exportStats
 } from '../../api/aptechExam.js';
 
 const AptechExamManagement = () => {
@@ -442,13 +441,9 @@ const AptechExamManagement = () => {
                                                                     const prev = exams;
                                                                     setExams(prevEx => prevEx.map(e => e.id === exam.id ? { ...e, aptechStatus: 'REJECTED', score: 0 } : e));
                                                                     try {
-                                                                        // First update the score to 0
-                                                                        await adminUpdateExamScore(exam.id, 0, 'FAIL');
-                                                                        // Then update the status to REJECTED
+                                                                        // Update the status to REJECTED (backend will handle setting score to 0)
                                                                         await adminUpdateExamStatus(exam.id, 'REJECTED');
-                                                                        // Reload data from server to ensure consistency
-                                                                        await loadData();
-                                                                        showToast('Thành công', 'Đã từ chối và điểm số được đặt về 0', 'success');
+                                                                        showToast('Thành công', 'Đã từ chối', 'success');
                                                                     } catch (err) {
                                                                         setExams(prev);
                                                                         showToast('Lỗi', 'Không thể từ chối', 'danger');
